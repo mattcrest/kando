@@ -1,0 +1,11 @@
+{
+  "vaults": {
+    "venubase": "/absolute/path/to/venubase-web/docs/roadmap",
+    "other": "/optional/second-vault-root"
+  },
+  "colors": {
+    "venubase": "#d27a32",
+    "other": "#8b5cf6"
+  },
+  "default": "venubase"
+}

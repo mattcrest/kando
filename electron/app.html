@@ -1,0 +1,3021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Venubase Roadmap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --bg: #f4f4f9;
+  --surface: #ffffff;
+  --surface-sub: #fafafa;
+  --border: rgba(15,15,30,0.08);
+  --border-md: rgba(15,15,30,0.13);
+  --text-1: #0d0d1a;
+  --text-2: #575774;
+  --text-3: #9898b4;
+  --accent: #5b5bd6;
+  --accent-light: #eeeeff;
+  --accent-hover: #4646c0;
+  --done-c: #0d7a5f;
+  --done-bg: #eafaf5;
+  --defer-c: #b45309;
+  --defer-bg: #fef9ee;
+  --r-xs: 5px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --shadow-card: 0 1px 3px rgba(15,15,30,.05), 0 1px 2px rgba(15,15,30,.04);
+  --shadow-card-hover: 0 4px 16px rgba(15,15,30,.09), 0 2px 5px rgba(15,15,30,.05);
+  --shadow-modal: 0 32px 100px rgba(10,10,24,.22), 0 8px 28px rgba(10,10,24,.12);
+  --col-w: 316px;
+  --header-h: 58px;
+}
+
+html { font-family: var(--font); -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--text-1); min-height: 100vh; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a2e;
+    --surface: #2d2d44;
+    --surface-sub: #3a3a52;
+    --border: rgba(255,255,255,.08);
+    --border-md: rgba(255,255,255,.13);
+    --text-1: #e8e8f0;
+    --text-2: #b8b8cc;
+    --text-3: #8888a0;
+  }
+}
+
+html[data-theme="light"] {
+  --bg: #f4f4f9;
+  --surface: #ffffff;
+  --surface-sub: #fafafa;
+  --border: rgba(15,15,30,0.08);
+  --border-md: rgba(15,15,30,0.13);
+  --text-1: #0d0d1a;
+  --text-2: #575774;
+  --text-3: #9898b4;
+}
+
+html[data-theme="dark"] {
+  --bg: #1a1a2e;
+  --surface: #2d2d44;
+  --surface-sub: #3a3a52;
+  --border: rgba(255,255,255,.08);
+  --border-md: rgba(255,255,255,.13);
+  --text-1: #e8e8f0;
+  --text-2: #b8b8cc;
+  --text-3: #8888a0;
+}
+
+/* ── Header ─────────────────────────────────── */
+.header {
+  height: var(--header-h);
+  background: #0b0b16;
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center;
+  padding: 0 20px;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  -webkit-app-region: drag;
+  padding-top: 12px;
+}
+.logo {
+  width: 30px; height: 30px;
+  background: var(--accent);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; letter-spacing: -.5px;
+  flex-shrink: 0;
+}
+.header-brand { color: #fff; font-size: 14.5px; font-weight: 600; letter-spacing: -.2px; }
+.header-divider { color: rgba(255,255,255,.18); font-size: 14px; }
+.header-sub { color: rgba(255,255,255,.4); font-size: 13px; }
+.header-spacer { flex: 1; }
+
+.header-reset-btn {
+  border: 1px solid rgba(255,255,255,.12);
+  background: transparent;
+  color: rgba(255,255,255,.45);
+  font-size: 11px;
+  font-family: var(--font);
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  letter-spacing: .01em;
+}
+.header-reset-btn:hover { color: rgba(255,255,255,.75); border-color: rgba(255,255,white,.25); }
+
+.header-theme-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.header-theme-btn {
+  border: 1px solid rgba(255,255,255,.12);
+  background: transparent;
+  color: rgba(255,255,255,.45);
+  padding: 5px 8px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+}
+.header-theme-btn:hover { color: rgba(255,255,white,.75); border-color: rgba(255,255,white,.25); }
+
+.theme-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.theme-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #2d2d44;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  padding: 4px;
+  margin-top: 4px;
+  min-width: 140px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .15s, transform .15s;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+
+.theme-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.theme-option {
+  padding: 8px 12px;
+  color: rgba(255,255,255,.75);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all .1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-option:hover {
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,1);
+}
+
+.theme-option.active {
+  background: var(--accent);
+  color: white;
+}
+
+.theme-option-icon {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Vault Switcher ────────────────────────── */
+.header-vault-switcher {
+  display: flex; align-items: center; gap: 8px;
+  position: relative;
+}
+.header-vault-switcher.hidden { display: none; }
+
+.vault-switcher-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.85);
+  border: 1px solid rgba(255,255,255,.12);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all .15s;
+}
+.vault-switcher-btn:hover {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.2);
+  color: rgba(255,255,255,1);
+}
+.vault-switcher-btn .vault-icon {
+  width: 4px; height: 4px;
+  background: currentColor;
+  border-radius: 50%;
+}
+.vault-switcher-btn .vault-arrow {
+  width: 4px; height: 4px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg) translateY(-1px);
+  opacity: .6;
+}
+
+.vault-switcher-menu {
+  position: absolute; top: 100%; left: 0;
+  background: #2d2d44;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  padding: 4px;
+  margin-top: 4px;
+  min-width: 160px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .15s, transform .15s;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+.vault-switcher-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.vault-switcher-item {
+  padding: 8px 12px;
+  color: rgba(255,255,255,.75);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all .1s;
+  display: flex; align-items: center; gap: 6px;
+}
+.vault-switcher-item:hover {
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,1);
+}
+.vault-switcher-item.active {
+  background: var(--accent);
+  color: white;
+}
+.vault-switcher-item .vault-indicator {
+  display: none;
+}
+
+.vault-switcher-item.manage-vaults {
+  border-top: 1px solid rgba(255,255,255,.1);
+  margin-top: 4px;
+  padding-top: 8px;
+  color: rgba(255,255,255,.5);
+  font-size: 11px;
+}
+.vault-switcher-item.manage-vaults:hover {
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.8);
+}
+
+/* ── Search ──────────────────────────────────── */
+.header-search-wrapper {
+  display: flex; align-items: center; gap: 8px;
+  margin-left: 12px;
+}
+.header-search-btn {
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-sm);
+  color: rgba(255,255,255,.5);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  transition: background .15s, color .15s, border-color .15s;
+  flex-shrink: 0;
+}
+.header-search-btn:hover {
+  background: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.7);
+  border-color: rgba(255,255,255,.2);
+}
+.header-search-input {
+  width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 13px;
+  outline: none;
+  transition: width .2s ease;
+  border-bottom: 1px solid rgba(255,255,255,.2);
+}
+.header-search-wrapper.active .header-search-input {
+  width: 200px;
+  padding: 6px 8px 4px;
+}
+.header-search-input::placeholder { color: rgba(255,255,255,.3); }
+
+/* ── Vault Selector ──────────────────────────── */
+.header-vault-select {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.7);
+  padding: 6px 28px 6px 10px;
+  font-size: 12px;
+  font-family: var(--font);
+  font-weight: 500;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  outline: none;
+  transition: background .15s, color .15s, border-color .15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23b8b8cc' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px;
+}
+.header-vault-select:hover {
+  background-color: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.9);
+  border-color: rgba(255,255,255,.2);
+}
+.header-vault-select option {
+  background: #1a1a2e;
+  color: #e8e8f0;
+}
+
+.header-vault-mgr-btn {
+  display: none;
+}
+
+/* ── Vault Manager Modal ────────────────────── */
+.vault-modal {
+  position: fixed; inset: 0;
+  background: rgba(8,8,18,.52);
+  backdrop-filter: blur(5px);
+  z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s;
+}
+.vault-modal.open { opacity: 1; pointer-events: all; }
+
+.vault-modal-content {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-modal);
+  width: 100%; max-width: 500px;
+  max-height: 70vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.vault-modal-header {
+  padding: 20px 24px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.vault-modal-title {
+  font-size: 18px; font-weight: 700; color: var(--text-1);
+}
+
+.vault-modal-close {
+  width: 30px; height: 30px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border-md);
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-2);
+  font-size: 15px;
+  transition: background .1s, color .1s;
+}
+.vault-modal-close:hover { background: var(--bg); color: var(--text-1); }
+
+.vault-modal-body {
+  flex: 1; overflow-y: auto; padding: 20px 24px;
+}
+
+.vault-list {
+  margin-bottom: 24px;
+}
+
+.vault-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.vault-item:last-child { border-bottom: none; }
+
+.vault-item-info {
+  flex: 1; min-width: 0;
+}
+
+.vault-item-name {
+  font-size: 13px; font-weight: 600; color: var(--text-1); margin-bottom: 2px;
+}
+
+.vault-item-path {
+  font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.vault-item-color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,.12);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform .1s, box-shadow .1s;
+}
+
+.vault-item-color-swatch:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.vault-item-color-input {
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.vault-item-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.vault-item-badge {
+  font-size: 10px; background: var(--accent-light); color: var(--accent); padding: 2px 6px; border-radius: 10px; white-space: nowrap;
+}
+
+.vault-item-delete {
+  width: 26px; height: 26px;
+  padding: 0;
+  border-radius: var(--r-xs);
+  border: 1px solid rgba(255,0,0,.2);
+  background: rgba(255,0,0,.05);
+  color: #cc4444;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .1s, border-color .1s;
+}
+.vault-item-delete:hover {
+  background: rgba(255,0,0,.15);
+  border-color: rgba(255,0,0,.3);
+}
+.vault-item-delete:disabled {
+  opacity: .5; cursor: not-allowed;
+}
+
+.vault-item.edit-mode {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vault-item.edit-mode .vault-item-info {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vault-item-edit-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-family: var(--font);
+  background: var(--surface-sub);
+  color: var(--text-1);
+  outline: none;
+  transition: border-color .1s;
+}
+
+.vault-item-edit-input:focus {
+  border-color: var(--accent);
+}
+
+.vault-item-edit-input.name-input {
+  min-width: 120px;
+}
+
+.vault-item-edit-input.path-input {
+  width: 100%;
+  font-family: 'SFMono-Regular', 'Consolas', monospace;
+  font-size: 11px;
+}
+
+.vault-item-actions {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 100%;
+}
+
+.vault-item-btn {
+  height: 26px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border-md);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background .1s, border-color .1s, color .1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.vault-item-actions .vault-item-btn {
+  height: auto;
+  padding: 5px 12px;
+  flex: 1;
+  font-size: 12px;
+}
+
+.vault-item-btn.columns {
+  background: transparent;
+  color: var(--text-2);
+  border-color: var(--border-md);
+}
+
+.vault-item-btn.columns:hover {
+  background: var(--bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.vault-item-btn.edit {
+  background: transparent;
+  color: var(--text-2);
+  border-color: var(--border-md);
+}
+
+.vault-item-btn.edit:hover {
+  background: var(--bg);
+  color: var(--text-1);
+  border-color: var(--accent);
+}
+
+.vault-item-btn.save {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.vault-item-btn.save:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.vault-item-btn.cancel {
+  background: transparent;
+  color: var(--text-2);
+  border-color: var(--border-md);
+}
+
+.vault-item-btn.cancel:hover {
+  background: var(--bg);
+  color: var(--text-1);
+}
+
+.vault-item-btn.make-default {
+  background: transparent;
+  color: var(--text-3);
+  border-color: var(--border-md);
+}
+
+.vault-item-btn.make-default:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(91,91,214,.08);
+}
+
+.vault-add-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font);
+  color: var(--accent);
+  cursor: pointer;
+  transition: color .1s;
+}
+.vault-add-toggle:hover { color: var(--accent-hover); }
+
+.vault-add-wrapper {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .2s ease;
+}
+.vault-add-wrapper.expanded { max-height: 300px; }
+
+.vault-add-form {
+  padding-top: 14px;
+}
+
+.vault-form-group {
+  margin-bottom: 12px;
+}
+
+.vault-form-label {
+  display: block; font-size: 11px; font-weight: 600; color: var(--text-2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em;
+}
+
+.vault-form-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-family: var(--font);
+  background: var(--surface-sub);
+  color: var(--text-1);
+  outline: none;
+  transition: border-color .1s;
+}
+.vault-form-input:focus { border-color: var(--accent); }
+
+.vault-form-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .1s;
+}
+.vault-form-btn:hover { background: var(--accent-hover); }
+.vault-form-btn:disabled {
+  opacity: .6; cursor: not-allowed;
+}
+
+/* ── Column Editor ───────────────────────────── */
+.col-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: var(--surface-sub);
+  border-radius: var(--r-sm);
+  margin-bottom: 8px;
+}
+.col-row-body {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+.col-row-handle {
+  cursor: grab;
+  opacity: 0.4;
+  font-size: 13px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.col-row-key {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 72px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.col-row-label {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--text-1);
+  outline: none;
+  transition: border-color .1s;
+}
+.col-row-label:focus { border-color: var(--accent); }
+.col-row-remove {
+  width: 28px; height: 28px;
+  padding: 0;
+  background: rgba(255,0,0,.08);
+  color: #cc4444;
+  border: 1px solid rgba(255,0,0,.2);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .1s, border-color .1s;
+}
+.col-row-remove:hover { background: rgba(255,0,0,.15); border-color: rgba(255,0,0,.3); }
+
+/* ── Board ───────────────────────────────────── */
+.board-wrap {
+  overflow-x: auto;
+  padding: 24px 20px 40px;
+  min-height: calc(100vh - var(--header-h));
+}
+.board {
+  display: flex; gap: 14px;
+  align-items: flex-start;
+  min-width: max-content;
+}
+
+/* ── Column ──────────────────────────────────── */
+.column { width: var(--col-w); flex-shrink: 0; }
+.col-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 2px; margin-bottom: 10px;
+}
+.col-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.col-dot.active  { background: var(--accent); }
+.col-dot.deferred{ background: var(--defer-c); }
+.col-dot.done    { background: var(--done-c); }
+
+.col-name { font-size: 12.5px; font-weight: 600; color: var(--text-1); flex: 1; letter-spacing: -.1px; }
+.col-count {
+  background: var(--border);
+  color: var(--text-2);
+  font-size: 10.5px; font-weight: 600;
+  padding: 2px 7px; border-radius: 20px;
+}
+.col-body {
+  display: flex; flex-direction: column; gap: 7px;
+  min-height: 100px;
+  padding: 6px;
+  border-radius: var(--r-lg);
+  transition: background .12s, outline .12s;
+  outline: 2px solid transparent;
+}
+.col-body.drag-over {
+  background: rgba(91,91,214,.05);
+  outline-color: rgba(91,91,214,.25);
+}
+.col-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 28px 16px;
+  color: var(--text-3); font-size: 12px;
+  border: 1.5px dashed var(--border-md);
+  border-radius: var(--r-md);
+  min-height: 80px;
+}
+.drop-indicator {
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin: 2px 0;
+  opacity: .7;
+}
+
+.col-toggle { cursor: pointer; color: var(--text-3); padding: 4px 2px; font-size: 12px; flex-shrink: 0; }
+.col-toggle:hover { color: var(--text-2); }
+
+.column.collapsed { width: 40px; }
+.column.collapsed .col-head { flex-direction: column; gap: 4px; }
+.column.collapsed .col-name { writing-mode: vertical-rl; text-orientation: mixed; font-size: 11px; transform: rotate(180deg); }
+.column.collapsed .col-body { display: none; }
+.column.collapsed .col-count { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 9px; padding: 1px 4px; }
+
+/* ── Card ────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 13px 15px;
+  cursor: grab;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow .15s, border-color .15s, transform .15s, opacity .15s;
+  user-select: none;
+  position: relative;
+}
+.card:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--border-md);
+  transform: translateY(-1px);
+}
+.card:active { cursor: grabbing; }
+.card.dragging { opacity: .35; transform: scale(.97); }
+
+.card-top { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 9px; }
+.card-order {
+  width: 22px; height: 22px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: var(--r-xs);
+  font-size: 10.5px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+  letter-spacing: -.2px;
+}
+.card-title {
+  font-size: 13px; font-weight: 600; line-height: 1.42;
+  color: var(--text-1); letter-spacing: -.15px; flex: 1;
+}
+.card-summary {
+  font-size: 12px; line-height: 1.4; color: var(--text-2);
+  margin: 7px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-tag {
+  display: inline-flex; align-items: center;
+  font-size: 10.5px; font-weight: 500;
+  padding: 2px 8px; border-radius: 20px;
+  letter-spacing: -.05px; white-space: nowrap;
+}
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 9px;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+}
+.card-footer > div:first-child { flex-shrink: 0; }
+.card-footer > div:last-child { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 1; min-width: 0; }
+.card-progress { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
+.progress-bar { flex: 1; max-width: 72px; height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s; }
+.card-progress-label { font-size: 10.5px; color: var(--text-3); font-weight: 500; white-space: nowrap; }
+.card-deps { font-size: 10.5px; color: var(--text-3); white-space: nowrap; }
+.card-shipped { font-size: 10.5px; color: var(--done-c); font-weight: 500; white-space: nowrap; }
+.card-pr {
+  font-size: 10.5px; color: var(--accent); font-weight: 500;
+  text-decoration: none; white-space: nowrap;
+}
+.card-pr:hover { text-decoration: underline; }
+
+/* ── Overlay + Modal ─────────────────────────── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(8,8,18,.52);
+  backdrop-filter: blur(5px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-modal);
+  width: 100%; max-width: 900px;
+  max-height: calc(100vh - 40px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transform: scale(.97) translateY(10px);
+  transition: transform .2s cubic-bezier(.16,1,.3,1);
+  border: 1px solid var(--border);
+}
+.overlay.open .modal { transform: scale(1) translateY(0); }
+
+/* modal header */
+.modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.modal-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.modal-arrows { display: flex; gap: 5px; }
+.modal-arrow-btn, .modal-close-btn {
+  width: 30px; height: 30px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border-md);
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-2); font-size: 13px;
+  transition: background .1s, color .1s;
+  flex-shrink: 0;
+}
+.modal-arrow-btn:hover, .modal-close-btn:hover { background: var(--bg); color: var(--text-1); }
+.modal-arrow-btn:disabled { opacity: .3; cursor: default; }
+.modal-close-btn { margin-left: 6px; font-size: 15px; }
+
+.modal-title-row {
+  display: flex; align-items: baseline; gap: 14px; justify-content: space-between;
+}
+
+.modal-title-input {
+  flex: 1; min-width: 0;
+  font-size: 19px; font-weight: 700; letter-spacing: -.45px; line-height: 1.3;
+  color: var(--text-1);
+  border: none; outline: none; background: transparent;
+  font-family: var(--font);
+  resize: none; cursor: text; overflow: hidden;
+  border-radius: var(--r-sm);
+  padding: 2px 4px; margin: -2px -4px;
+  transition: background .1s;
+  box-sizing: border-box;
+}
+.modal-title-input:focus { background: var(--bg); }
+
+.modal-badges {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  flex-shrink: 0; justify-content: flex-end;
+}
+.status-select {
+  appearance: none;
+  border: 1px solid var(--border-md);
+  border-radius: 18px;
+  padding: 3px 20px 3px 9px;
+  font-size: 11px; font-weight: 600; font-family: var(--font);
+  cursor: pointer; outline: none; white-space: nowrap;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6b8a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  transition: border-color .15s;
+}
+.status-select:hover { border-color: var(--accent); }
+
+/* modal body */
+.modal-body { display: flex; flex: 1; overflow: hidden; }
+
+.modal-sidebar {
+  width: 220px; flex-shrink: 0;
+  padding: 0 18px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.sidebar-section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-section:last-child { border-bottom: none; padding-bottom: 12px; }
+.sidebar-label {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--text-3); margin-bottom: 7px;
+}
+.sidebar-val { font-size: 12.5px; color: var(--text-1); font-weight: 500; line-height: 1.5; }
+.sidebar-val-sub { font-size: 11.5px; color: var(--text-2); margin-top: 2px; line-height: 1.4; }
+
+.order-input {
+  width: 68px;
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-xs);
+  padding: 4px 8px;
+  font-size: 13px; font-weight: 500; font-family: var(--font);
+  color: var(--text-1); outline: none; background: transparent;
+  transition: border-color .15s;
+}
+.order-input:focus { border-color: var(--accent); }
+
+.dep-chip {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 500;
+  padding: 3px 8px; border-radius: var(--r-xs);
+  background: var(--bg); border: 1px solid var(--border-md);
+  color: var(--text-2); cursor: pointer; margin: 2px 2px 0 0;
+  transition: border-color .1s, color .1s;
+  white-space: nowrap;
+}
+.dep-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.pr-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 500; padding: 3px 0;
+}
+.pr-item a { color: var(--accent); text-decoration: none; }
+.pr-item a:hover { text-decoration: underline; }
+.pr-pending { font-size: 11.5px; color: var(--text-3); font-style: italic; }
+
+.progress-sidebar {}
+.progress-sidebar-bar-wrap {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.progress-sidebar-bar {
+  flex: 1; height: 5px;
+  background: var(--border); border-radius: 99px; overflow: hidden;
+}
+.progress-sidebar-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.progress-sidebar-text { font-size: 11.5px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+
+/* modal content */
+.modal-content-wrap {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;
+}
+.modal-content-edit-btn {
+  position: absolute; top: 12px; right: 14px; z-index: 2;
+  padding: 3px 10px; font-size: 11px; font-weight: 500; font-family: var(--font);
+  background: var(--surface-sub); border: 1px solid var(--border-md);
+  border-radius: var(--r-xs); cursor: pointer; color: var(--text-3);
+  transition: background .1s, color .1s, border-color .1s;
+}
+.modal-content-edit-btn:hover { background: var(--bg); color: var(--text-1); border-color: var(--accent); }
+.modal-content-edit-btn.editing {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.modal-content-area {
+  flex: 1; overflow-y: auto;
+  padding: 22px 26px 32px;
+}
+.modal-content-area.edit-hidden { display: none; }
+.modal-content-textarea {
+  display: none; flex: 1;
+  padding: 20px 26px; border: none; outline: none; resize: none;
+  font-family: 'SFMono-Regular', 'Consolas', monospace;
+  font-size: 13px; line-height: 1.7;
+  background: var(--surface); color: var(--text-1);
+  box-sizing: border-box; overflow-y: auto;
+}
+.modal-content-textarea.edit-active { display: block; }
+.sidebar-input {
+  width: 100%; padding: 4px 7px;
+  border: 1px solid var(--border-md); border-radius: var(--r-xs);
+  font-family: var(--font); font-size: 12px;
+  background: var(--surface-sub); color: var(--text-1);
+  outline: none; transition: border-color .1s;
+  box-sizing: border-box;
+}
+.sidebar-input:focus { border-color: var(--accent); }
+
+/* markdown styles */
+.md h1 { display: none; }
+.md h2 {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--text-3);
+  margin: 28px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.md h2:first-child { margin-top: 0; }
+.md h3 { font-size: 13.5px; font-weight: 600; color: var(--text-2); margin: 18px 0 7px; }
+.md p { font-size: 13.5px; line-height: 1.65; color: var(--text-2); margin-bottom: 10px; }
+.md strong { color: var(--text-1); font-weight: 600; }
+.md em { color: var(--text-2); }
+.md a { color: var(--accent); text-decoration: none; }
+.md a:hover { text-decoration: underline; }
+.md ul,.md ol { padding-left: 18px; margin-bottom: 10px; }
+.md li { font-size: 13.5px; line-height: 1.6; color: var(--text-2); margin-bottom: 3px; }
+.md li strong { color: var(--text-1); }
+.md code {
+  font-family: 'SFMono-Regular','Consolas',monospace;
+  font-size: 12px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 5px;
+  color: var(--text-1);
+}
+.md pre {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 14px 16px;
+  overflow-x: auto; margin-bottom: 12px;
+}
+.md pre code { background: none; border: none; padding: 0; font-size: 12.5px; }
+.md table { border-collapse: collapse; width: 100%; margin-bottom: 14px; font-size: 12.5px; }
+.md th { background: var(--bg); font-weight: 600; color: var(--text-1); text-align: left; padding: 8px 12px; border: 1px solid var(--border-md); }
+.md td { padding: 7px 12px; border: 1px solid var(--border); color: var(--text-2); line-height: 1.5; }
+.md blockquote { border-left: 3px solid var(--border-md); padding-left: 14px; color: var(--text-2); margin: 10px 0; }
+.md hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+/* custom AC list */
+.ac-section {}
+.ac-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 7px 9px; border-radius: var(--r-sm);
+  cursor: pointer; transition: background .1s;
+}
+.ac-item:hover { background: var(--bg); }
+.ac-item.checked .ac-text { text-decoration: line-through; color: var(--text-3); }
+.ac-box {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--border-md);
+  border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s, border-color .12s;
+}
+.ac-item.checked .ac-box { background: var(--accent); border-color: var(--accent); }
+.ac-check-svg { width: 9px; height: 9px; stroke: white; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.ac-text { font-size: 13.5px; color: var(--text-2); line-height: 1.5; }
+
+/* modal footer */
+.modal-footer {
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; gap: 8px;
+}
+.modal-footer-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.modal-footer-path { font-size: 11px; color: var(--text-3); font-family: 'SFMono-Regular', monospace; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.modal-copy-path-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.modal-copy-path-btn:hover { background: var(--bg); color: var(--text-2); }
+.modal-copy-path-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.modal-copy-path-btn svg { display: block; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--r-sm);
+  font-size: 12.5px; font-weight: 500; font-family: var(--font);
+  cursor: pointer; border: none; transition: all .15s; line-height: 1;
+  white-space: nowrap;
+}
+.btn-ghost { background: transparent; border: 1px solid var(--border-md); color: var(--text-2); }
+.btn-ghost:hover { background: var(--bg); color: var(--text-1); }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent-hover); }
+
+/* saved flash */
+@keyframes flash-save {
+  0% { opacity: 0; transform: translateY(4px); }
+  20% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.save-toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 500;
+  background: #0d0d1a; color: rgba(255,255,255,.85);
+  font-size: 12.5px; font-weight: 500; font-family: var(--font);
+  padding: 9px 16px; border-radius: var(--r-sm);
+  pointer-events: none; opacity: 0;
+  animation: flash-save 2s forwards;
+}
+
+/* unsaved indicator */
+.unsaved-dot {
+  width: 6px; height: 6px;
+  background: var(--accent); border-radius: 50%;
+  display: inline-block; margin-left: 4px;
+  opacity: 0; transition: opacity .2s;
+}
+.unsaved-dot.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo" id="logo" title="Vault">V</div>
+  <div class="header-vault-switcher hidden" id="vault-switcher">
+    <button class="vault-switcher-btn" id="vault-switcher-btn" title="Switch vault">
+      <span id="vault-switcher-name">Venubase</span>
+      <div class="vault-arrow"></div>
+    </button>
+    <div class="vault-switcher-menu" id="vault-switcher-menu"></div>
+  </div>
+  <span class="header-divider">/</span>
+  <span class="header-sub">Roadmap</span>
+  <div class="header-spacer"></div>
+  <button class="header-vault-mgr-btn" id="vault-mgr-btn" title="Manage vaults" style="display:none;"></button>
+  <div class="header-theme-selector">
+    <button class="header-theme-btn" id="theme-btn" title="Theme">
+      <svg class="theme-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="8" y1="1" x2="8" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="8" y1="14" x2="8" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="15" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="2" y1="8" x2="1" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12.7" y1="3.3" x2="12" y2="2.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="4" y1="12" x2="3.3" y2="12.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12.7" y1="12.7" x2="12" y2="13.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="4" y1="4" x2="3.3" y2="3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="theme-menu" id="theme-menu">
+      <div class="theme-option active" data-theme="light">
+        <div class="theme-option-icon">☀️</div>
+        <span>Light</span>
+      </div>
+      <div class="theme-option" data-theme="dark">
+        <div class="theme-option-icon">🌙</div>
+        <span>Dark</span>
+      </div>
+      <div class="theme-option" data-theme="system">
+        <div class="theme-option-icon">💻</div>
+        <span>System</span>
+      </div>
+    </div>
+  </div>
+  <div class="header-search-wrapper" id="search-wrapper">
+    <button class="header-search-btn" id="search-btn" title="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 10L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <input type="text" class="header-search-input" id="search-input" placeholder="Search cards...">
+  </div>
+  <button class="header-reset-btn" id="reset-btn" title="Reset to source data">Reset</button>
+</header>
+
+<div class="board-wrap">
+  <div class="board" id="board"></div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div class="modal-topbar">
+        <div class="modal-arrows">
+          <button class="modal-arrow-btn" id="modal-prev" title="Previous card (←)">←</button>
+          <button class="modal-arrow-btn" id="modal-next" title="Next card (→)">→</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="unsaved-dot" id="unsaved-dot"></span>
+          <button class="btn btn-primary" id="modal-save" style="display:none">Save</button>
+          <button class="modal-close-btn" id="modal-close" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div class="modal-title-row">
+        <textarea class="modal-title-input" id="modal-title" rows="1"></textarea>
+        <div class="modal-badges">
+          <select class="status-select" id="modal-status" data-dynamic></select>
+          <span id="modal-cat-tag" class="card-tag"></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <aside class="modal-sidebar" id="modal-sidebar"></aside>
+      <div class="modal-content-wrap">
+        <button class="modal-content-edit-btn" id="modal-content-toggle">Edit</button>
+        <div class="modal-content-area md" id="modal-content"></div>
+        <textarea class="modal-content-textarea" id="modal-content-edit" placeholder="Markdown content..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-left">
+        <span class="modal-footer-path" id="modal-path"></span>
+        <button type="button" class="modal-copy-path-btn" id="modal-copy-path" title="Copy filename" aria-label="Copy filename to clipboard">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="modal-open-tolaria">Open in Tolaria</button>
+        <button class="btn btn-ghost" id="modal-open-cursor">Open in Cursor</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vault Manager Modal -->
+<div class="vault-modal" id="vault-modal">
+  <div class="vault-modal-content">
+    <div class="vault-modal-header">
+      <div class="vault-modal-title">Manage Vaults</div>
+      <button class="vault-modal-close" id="vault-modal-close">✕</button>
+    </div>
+    <div class="vault-modal-body" id="vault-modal-body">
+      <div class="vault-list" id="vault-list"></div>
+      <button type="button" id="vault-add-toggle" class="vault-add-toggle">+ Add vault</button>
+      <div id="vault-add-wrapper" class="vault-add-wrapper">
+        <form class="vault-add-form" id="vault-add-form">
+          <div class="vault-form-group">
+            <label class="vault-form-label">Vault Name</label>
+            <input type="text" class="vault-form-input" id="vault-name-input" placeholder="e.g. playerpath" required>
+          </div>
+          <div class="vault-form-group">
+            <label class="vault-form-label">Directory Path</label>
+            <input type="text" class="vault-form-input" id="vault-path-input" placeholder="/path/to/vault/Tolaria" required>
+          </div>
+          <button type="submit" class="vault-form-btn">Add Vault</button>
+        </form>
+      </div>
+    </div>
+    <div class="vault-modal-body" id="column-editor" style="display:none">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+        <h3 id="column-editor-title" style="margin:0; font-size:16px; font-weight:600"></h3>
+        <button class="vault-modal-close" id="column-editor-close" style="width:auto; padding:4px 8px">← Save & Back</button>
+      </div>
+      <div id="column-list" style="margin-bottom:16px"></div>
+      <div style="display:flex; gap:8px">
+        <select id="column-add-select" style="flex:1; padding:8px; border:1px solid var(--border-md); border-radius:var(--r-sm); font-family:var(--font)">
+          <option value="">Add a column...</option>
+        </select>
+        <button id="column-add-btn" style="padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:var(--r-sm); cursor:pointer; font-weight:500">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── API Configuration ──────────────────────── */
+const API_URL = 'http://localhost:3001';
+const VAULT_STORAGE_KEY = 'venubase-kanban-vault';
+let currentVault = localStorage.getItem(VAULT_STORAGE_KEY) || 'venubase';
+let vaultColors = {}; // Cache vault colors from API
+
+function apiUrl(endpoint) {
+  return `${API_URL}${endpoint}?vault=${currentVault}`;
+}
+
+/* ── Data Cache (Tolaria content) ──────────── */
+const cardContents = {}; // { cardId: markdown content }
+
+/* ── Data helpers ─────────────────────────────── */
+const STORAGE_KEY = 'venubase-kanban-v2';
+let SOURCE_META = []; // Will be fetched from API
+
+function getContent(id){
+  return cardContents[id] || '';
+}
+
+function parseAC(content){
+  const lines = content.split('\n');
+  const items = [];
+  let inAC = false;
+  for(const line of lines){
+    if(/^## Acceptance criteria/i.test(line)){ inAC=true; continue; }
+    if(inAC && /^##\s/.test(line)){ inAC=false; continue; }
+    if(inAC){
+      const done = line.match(/^- \[x\] (.+)/i);
+      const todo = line.match(/^- \[ \] (.+)/);
+      if(done) items.push({ text: done[1].trim(), done: true });
+      else if(todo) items.push({ text: todo[1].trim(), done: false });
+    }
+  }
+  return items;
+}
+
+function parseDeps(content){
+  const sec = content.match(/## Dependencies\n([\s\S]*?)(?=\n## |\n---|\n*$)/);
+  if(!sec) return [];
+  const found = [];
+  for(const m of sec[1].matchAll(/\[\[release-([^\]]+)\]\]/g)){
+    found.push('release-'+m[1]);
+  }
+  return found;
+}
+
+function parsePRs(content){
+  const sec = content.match(/## PRs\n([\s\S]*?)(?=\n## |\n---|\n*$)/);
+  if(!sec) return [];
+  const urls = [];
+  for(const m of sec[1].matchAll(/https:\/\/github\.com\/[^\s\)>\]]+/g)){
+    urls.push(m[0]);
+  }
+  return urls;
+}
+
+function countAC(content){
+  let done=0,total=0;
+  for(const line of content.split('\n')){
+    if(/^- \[x\] /i.test(line)){ done++; total++; }
+    else if(/^- \[ \] /.test(line)){ total++; }
+  }
+  return {done,total};
+}
+
+function getSummary(content){
+  const sec = content.match(/## Summary\n([\s\S]*?)(?=\n## )/);
+  if(!sec) return '';
+  return sec[1].trim().split('\n').slice(0,2).join(' ').trim();
+}
+
+/* ── State ────────────────────────────────────── */
+let state = { cards: [], ac: {}, kanbanConfig: null }; // ac: { cardId: { 0: bool, 1: bool, ... } }
+let currentKanbanConfig = null;
+
+function buildInitialState(){
+  return {
+    cards: SOURCE_META.map(m => ({...m})),
+    ac: {},
+    kanbanConfig: currentKanbanConfig
+  };
+}
+
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.cards)) return parsed;
+    }
+  } catch(e){}
+  return null;
+}
+
+function saveState(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+}
+
+function initState(){
+  const saved = loadState();
+  state = saved || buildInitialState();
+  // Ensure any new cards from source not in saved state are added
+  if(saved){
+    const savedIds = new Set(saved.cards.map(c=>c.id));
+    for(const m of SOURCE_META){
+      if(!savedIds.has(m.id)) state.cards.push({...m});
+    }
+  }
+}
+
+function getCard(id){ return state.cards.find(c=>c.id===id); }
+
+/* ── Board rendering ─────────────────────────── */
+const STATUS_LABELS = {
+  'Done': 'Shipped',
+  'Active': 'Active Queue',
+  'Prioritized': 'Prioritized',
+  'Backlog': 'Backlog',
+  'Blocked': 'Blocked'
+};
+const STATUS_DOTS = {
+  'Done': 'done',
+  'Active': 'active',
+  'Prioritized': 'active',
+  'Backlog': 'backlog',
+  'Blocked': 'deferred'
+};
+
+function getColumns() {
+  if(currentKanbanConfig?.columns) {
+    return currentKanbanConfig.columns.map(col => ({
+      key: col.key,
+      label: col.label || STATUS_LABELS[col.key] || col.key,
+      dot: STATUS_DOTS[col.key] || 'backlog'
+    }));
+  }
+  const statuses = new Set(state.cards.map(c => c.status));
+  const statusOrder = ['Done', 'Active', 'Prioritized', 'Backlog', 'Blocked'];
+  const ordered = statusOrder.filter(s => statuses.has(s));
+  return ordered.map(key => ({
+    key,
+    label: STATUS_LABELS[key] || key,
+    dot: STATUS_DOTS[key] || 'backlog'
+  }));
+}
+
+function cardPosition(card) {
+  const cols = getColumns();
+  const orderedCol = cols.find(c => c.key === card.status);
+  if(!orderedCol) return null;
+  const ordered = state.cards.filter(c => c.status === card.status).sort((a,b) => (a.roadmap_order||0) - (b.roadmap_order||0));
+  return ordered.findIndex(c => c.id === card.id) + 1;
+}
+
+function formatDate(d){
+  if(!d) return '';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function renderCard(card, position){
+  const content = getContent(card.id);
+  const {done:acDone, total:acTotal} = countAC(content);
+  const deps = parseDeps(content);
+  const prs = parsePRs(content);
+  const pct = acTotal > 0 ? Math.round(acDone/acTotal*100) : 0;
+  const summary = getSummary(content);
+
+  let bottom = '';
+  const tag = `<span class="card-tag" style="${catStyle(card.category)}">${esc(card.category)}</span>`;
+
+  if(card.status === 'Done'){
+    const pr = prs[0];
+    const prNum = pr ? pr.match(/\/pull\/(\d+)/)?.[1] : null;
+    bottom = `
+      <div class="card-footer">
+        <div>${tag}</div>
+        <div>
+          <span class="card-shipped">Shipped ${formatDate(card.shipped_at)}</span>
+          ${prNum ? `<a class="card-pr" href="${pr}" target="_blank" rel="noopener">PR #${prNum}</a>` : ''}
+        </div>
+      </div>`;
+  } else if(acTotal > 0){
+    bottom = `
+      <div class="card-footer">
+        <div>${tag}</div>
+        <div class="card-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <span class="card-progress-label">${acDone}/${acTotal}</span>
+        </div>
+        ${deps.length>0 ? `<span class="card-deps">${deps.length} dep${deps.length>1?'s':''}</span>` : ''}
+      </div>`;
+  } else if(deps.length > 0){
+    bottom = `
+      <div class="card-footer">
+        <div>${tag}</div>
+        <span class="card-deps">${deps.length} dep${deps.length>1?'s':''}</span>
+      </div>`;
+  } else {
+    bottom = `<div class="card-footer"><div>${tag}</div></div>`;
+  }
+
+  return `<div class="card" data-card="${card.id}" draggable="true">
+    <div class="card-top">
+      ${position ? `<div class="card-order">${position}</div>` : ''}
+      <div class="card-title">${esc(card.title)}</div>
+    </div>
+    ${summary ? `<div class="card-summary">${renderInline(summary)}</div>` : ''}
+    ${bottom}
+  </div>`;
+}
+
+function renderBoard(){
+  const board = document.getElementById('board');
+  const cols = getColumns();
+  let html = '';
+  for(const col of cols){
+    let cards = state.cards.filter(c=>c.status===col.key);
+    if(col.key==='Done') cards.sort((a,b)=>new Date(b.shipped_at||0)-new Date(a.shipped_at||0));
+    else cards.sort((a,b)=>(a.roadmap_order||0)-(b.roadmap_order||0));
+
+    const showPosition = col.key === 'Active' || col.key === 'Prioritized';
+    const cardsHtml = cards.length
+      ? cards.map((c,i)=>renderCard(c, showPosition ? i+1 : null)).join('')
+      : `<div class="col-empty"><span style="font-size:18px;opacity:.3">${col.key==='Done'?'✓':'○'}</span><span>No items</span></div>`;
+
+    const isCollapsed = JSON.parse(localStorage.getItem('COLLAPSED_COLS')||'{}')[col.key];
+    html += `<div class="column${isCollapsed?' collapsed':''}" data-col="${col.key}">
+      <div class="col-head">
+        <div class="col-dot ${col.dot}"></div>
+        <span class="col-name">${col.label}</span>
+        <span class="col-count">${cards.length}</span>
+        <span class="col-toggle" data-col="${col.key}">${isCollapsed?'▶':'◀'}</span>
+      </div>
+      <div class="col-body" data-col="${col.key}" id="col-${col.key}">${cardsHtml}</div>
+    </div>`;
+  }
+  board.innerHTML = html;
+  bindCardEvents();
+  bindColumnEvents();
+  bindDragEvents();
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderInline(s){
+  return esc(s||'')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code style="font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:1px 4px">$1</code>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
+
+/* ── Drag & drop ─────────────────────────────── */
+let drag = null;
+
+function bindDragEvents(){
+  document.querySelectorAll('.card').forEach(el=>{
+    el.addEventListener('dragstart', e=>{
+      drag = el.dataset.card;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', drag);
+      requestAnimationFrame(()=>el.classList.add('dragging'));
+    });
+    el.addEventListener('dragend', ()=>{
+      document.querySelectorAll('.card.dragging').forEach(c=>c.classList.remove('dragging'));
+      document.querySelectorAll('.drop-indicator').forEach(d=>d.remove());
+      document.querySelectorAll('.col-body.drag-over').forEach(c=>c.classList.remove('drag-over'));
+      drag = null;
+    });
+  });
+
+  document.querySelectorAll('.col-body').forEach(col=>{
+    col.addEventListener('dragover', e=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      col.classList.add('drag-over');
+
+      col.querySelectorAll('.drop-indicator').forEach(d=>d.remove());
+      const cards = [...col.querySelectorAll('.card:not(.dragging)')];
+      let insertBefore = null;
+      for(const c of cards){
+        const rect = c.getBoundingClientRect();
+        if(e.clientY < rect.top + rect.height/2){ insertBefore=c; break; }
+      }
+      const ind = document.createElement('div');
+      ind.className = 'drop-indicator';
+      insertBefore ? col.insertBefore(ind, insertBefore) : col.appendChild(ind);
+    });
+
+    col.addEventListener('dragleave', e=>{
+      if(!col.contains(e.relatedTarget)){
+        col.classList.remove('drag-over');
+        col.querySelectorAll('.drop-indicator').forEach(d=>d.remove());
+      }
+    });
+
+    col.addEventListener('drop', e=>{
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      col.querySelectorAll('.drop-indicator').forEach(d=>d.remove());
+      if(!drag) return;
+
+      const newStatus = col.dataset.col;
+      const card = getCard(drag);
+      if(!card) return;
+
+      // Calculate target index from DOM
+      const domCards = [...col.querySelectorAll('.card:not(.dragging)')];
+      let insertIdx = domCards.length;
+      for(let i=0;i<domCards.length;i++){
+        const rect = domCards[i].getBoundingClientRect();
+        if(e.clientY < rect.top + rect.height/2){ insertIdx=i; break; }
+      }
+
+      moveCard(drag, newStatus, domCards.map(c=>c.dataset.card), insertIdx);
+    });
+  });
+}
+
+async function moveCard(cardId, newStatus, siblingIds, insertIdx){
+  const card = getCard(cardId);
+  if(!card) return;
+  const oldStatus = card.status;
+  card.status = newStatus;
+
+  const orderedCols = ['Active', 'Prioritized'];
+  if(orderedCols.includes(newStatus)){
+    const newOrder = [...siblingIds];
+    newOrder.splice(insertIdx, 0, cardId);
+    const statusCards = state.cards.filter(c=>c.status===newStatus);
+    const orderMap = {};
+    newOrder.forEach((id,i)=>{ orderMap[id]=i; });
+    statusCards.forEach(c=>{
+      c.roadmap_order = ((orderMap[c.id]??100) + 1) * 10;
+    });
+  } else if(newStatus === 'Done'){
+    if(!card.shipped_at) card.shipped_at = new Date().toISOString().split('T')[0];
+    delete card.roadmap_order;
+  } else {
+    delete card.roadmap_order;
+  }
+
+  saveState();
+
+  // Persist to API
+  try {
+    const updates = {
+      status: card.status,
+      roadmap_order: card.roadmap_order || null,
+      shipped_at: card.shipped_at || null
+    };
+    await fetch(apiUrl(`/api/cards/${cardId}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+  } catch(err){
+    console.error('Failed to save card to API:', err);
+  }
+
+  renderBoard();
+
+  if(newStatus !== oldStatus){
+    showToast(newStatus === 'Done' ? 'Marked as shipped ✓' : `Moved to ${newStatus}`);
+  }
+
+  if(modalCardId === cardId) openModal(cardId);
+}
+
+/* ── Card click → open modal ─────────────────── */
+let modalCardId = null;
+let modalUnsaved = false;
+let contentEdited = false;
+
+function bindCardEvents(){
+  document.querySelectorAll('.card').forEach(el=>{
+    el.addEventListener('click', ()=>openModal(el.dataset.card));
+  });
+}
+
+function bindColumnEvents(){
+  document.querySelectorAll('.col-toggle').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const colKey = el.dataset.col;
+      const collapsed = JSON.parse(localStorage.getItem('COLLAPSED_COLS')||'{}');
+      collapsed[colKey] = !collapsed[colKey];
+      localStorage.setItem('COLLAPSED_COLS', JSON.stringify(collapsed));
+      renderBoard();
+    });
+  });
+}
+
+/* ── Modal ───────────────────────────────────── */
+function visibleCards(){
+  return state.cards;
+}
+
+function openModal(id){
+  modalCardId = id;
+  modalUnsaved = false;
+  const card = getCard(id);
+  if(!card) return;
+
+  const content = getContent(id);
+  const deps = parseDeps(content);
+  const prs = parsePRs(content);
+  const acItems = parseAC(content);
+  const acState = state.ac[id] || {};
+  const acTotal = acItems.length;
+  const acDone = acItems.filter((item,i)=> item.done || acState[i]).length;
+
+  // Header
+  const titleEl = document.getElementById('modal-title');
+  titleEl.value = card.title;
+  titleEl.style.height = 'auto';
+  titleEl.style.height = titleEl.scrollHeight + 'px';
+  const sel = document.getElementById('modal-status');
+  const cols = getColumns();
+  sel.innerHTML = cols.map(col => `<option value="${col.key}">${col.label}</option>`).join('');
+  sel.value = card.status;
+  sel.style = statusStyle(card.status);
+
+  const catTag = document.getElementById('modal-cat-tag');
+  catTag.textContent = card.category;
+  catTag.style = catStyle(card.category);
+
+  // Sidebar
+  renderSidebar(card, deps, prs, acDone, acTotal);
+
+  // Content (strip AC section — rendered separately in sidebar)
+  const contentForMd = content.replace(/^## Acceptance criteria[\s\S]*?(?=^## |\Z)/m, '');
+  document.getElementById('modal-content').innerHTML = renderMd(contentForMd);
+
+  // Footer
+  document.getElementById('modal-path').textContent = card.path;
+
+  // Nav buttons
+  const all = visibleCards();
+  const idx = all.findIndex(c=>c.id===id);
+  document.getElementById('modal-prev').disabled = idx <= 0;
+  document.getElementById('modal-next').disabled = idx >= all.length-1;
+
+  // Reset content edit mode
+  document.getElementById('modal-content').classList.remove('edit-hidden');
+  document.getElementById('modal-content-edit').classList.remove('edit-active');
+  const toggleBtn = document.getElementById('modal-content-toggle');
+  toggleBtn.textContent = 'Edit';
+  toggleBtn.classList.remove('editing');
+  contentEdited = false;
+
+  // Unsaved indicator
+  document.getElementById('unsaved-dot').classList.remove('visible');
+  document.getElementById('modal-save').style.display = 'none';
+
+  // Show
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('modal-title').focus();
+}
+
+function renderSidebar(card, deps, prs, acDone, acTotal){
+  const content = getContent(card.id);
+  const acItems = parseAC(content);
+  const acState = state.ac[card.id] || {};
+
+  let html = '';
+
+  // Order (editable)
+  html += `<div class="sidebar-section">
+    <div class="sidebar-label">Order</div>
+    <input class="order-input" type="number" id="modal-order" value="${card.roadmap_order||''}" min="1" step="10" placeholder="—">
+  </div>`;
+
+  // Category
+  html += `<div class="sidebar-section">
+    <div class="sidebar-label">Category</div>
+    <input class="sidebar-input" id="modal-category" value="${esc(card.category||'')}" placeholder="e.g. platform">
+  </div>`;
+
+  // Plan anchor
+  if(card.plan_anchor){
+    html += `<div class="sidebar-section">
+      <div class="sidebar-label">Plan anchor</div>
+      <div class="sidebar-val-sub">${esc(card.plan_anchor)}</div>
+    </div>`;
+  }
+
+  // Acceptance criteria
+  if(acItems.length > 0){
+    const doneCount = acItems.filter((item,i)=>item.done || acState[i]).length;
+    const pct = Math.round(doneCount/acItems.length*100);
+    html += `<div class="sidebar-section">
+      <div class="sidebar-label">Acceptance criteria</div>
+      <div class="progress-sidebar">
+        <div class="progress-sidebar-bar-wrap">
+          <div class="progress-sidebar-bar">
+            <div class="progress-sidebar-fill" style="width:${pct}%"></div>
+          </div>
+          <span class="progress-sidebar-text">${doneCount}/${acItems.length}</span>
+        </div>
+        <div class="ac-section">
+          ${acItems.map((item,i)=>{
+            const checked = item.done || !!acState[i];
+            return `<div class="ac-item${checked?' checked':''}" data-ac-idx="${i}" data-card-id="${card.id}">
+              <div class="ac-box">
+                <svg class="ac-check-svg" viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg>
+              </div>
+              <span class="ac-text">${renderInline(item.text)}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Dependencies
+  if(deps.length > 0){
+    html += `<div class="sidebar-section">
+      <div class="sidebar-label">Dependencies</div>
+      <div>${deps.map(depId=>{
+        const depCard = getCard(depId);
+        const label = depCard ? depCard.title.replace(/^(Shipped: |release-)/i,'').substring(0,30) : depId.replace('release-','');
+        return `<span class="dep-chip" data-dep="${depId}" title="${depCard?depCard.title:depId}">${esc(label)}</span>`;
+      }).join('')}</div>
+    </div>`;
+  }
+
+  // PRs
+  html += `<div class="sidebar-section">
+    <div class="sidebar-label">PRs</div>
+    <div>${prs.length
+      ? prs.map(url=>{
+          const num = url.match(/\/pull\/(\d+)/)?.[1];
+          return `<div class="pr-item"><a href="${url}" target="_blank" rel="noopener">PR #${num||'link'} ↗</a></div>`;
+        }).join('')
+      : '<div class="pr-pending">Not yet open</div>'
+    }</div>
+  </div>`;
+
+  // Shipped date (only when Done)
+  if(card.shipped_at){
+    html += `<div class="sidebar-section">
+      <div class="sidebar-label">Shipped</div>
+      <div class="sidebar-val">${formatDate(card.shipped_at)}</div>
+    </div>`;
+  }
+
+  document.getElementById('modal-sidebar').innerHTML = html;
+
+  // Bind category input — also live-syncs the header badge
+  const catInput = document.getElementById('modal-category');
+  if(catInput) catInput.addEventListener('input', () => {
+    const tag = document.getElementById('modal-cat-tag');
+    if(tag){ tag.textContent = catInput.value; tag.style = catStyle(catInput.value || ''); }
+    markUnsaved();
+  });
+
+  // Bind order input (shown for all statuses)
+  const orderInput2 = document.getElementById('modal-order');
+  if(orderInput2) orderInput2.addEventListener('input', markUnsaved);
+
+  // Bind AC toggles
+  document.querySelectorAll('.ac-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const idx = +el.dataset.acIdx;
+      const cid = el.dataset.cardId;
+      if(!state.ac[cid]) state.ac[cid] = {};
+      const items = parseAC(getContent(cid));
+      const curDone = items[idx].done || !!state.ac[cid][idx];
+      state.ac[cid][idx] = !curDone;
+      saveState();
+      // Re-render sidebar only
+      const c = getCard(cid);
+      const d2 = parseDeps(getContent(cid));
+      const p2 = parsePRs(getContent(cid));
+      const ac2 = parseAC(getContent(cid));
+      const acDone2 = ac2.filter((item,i)=>item.done||!!(state.ac[cid]||{})[i]).length;
+      renderSidebar(c, d2, p2, acDone2, ac2.length);
+      // Update card on board
+      renderBoard();
+    });
+  });
+
+  // Bind dep chip clicks
+  document.querySelectorAll('.dep-chip[data-dep]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      closeModal();
+      setTimeout(()=>openModal(el.dataset.dep), 60);
+    });
+  });
+
+  // Bind order input
+  const orderInput = document.getElementById('modal-order');
+  if(orderInput){
+    orderInput.addEventListener('change', ()=>markUnsaved());
+  }
+}
+
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  modalCardId = null;
+  modalUnsaved = false;
+}
+
+function markUnsaved(){
+  modalUnsaved = true;
+  document.getElementById('unsaved-dot').classList.add('visible');
+  document.getElementById('modal-save').style.display = '';
+}
+
+async function saveModalChanges(){
+  if(!modalCardId) return;
+  const card = getCard(modalCardId);
+  if(!card) return;
+
+  // Title
+  const newTitle = document.getElementById('modal-title').value.trim();
+  if(newTitle) card.title = newTitle;
+
+  // Status
+  const newStatus = document.getElementById('modal-status').value;
+  if(newStatus !== card.status){
+    if(newStatus === 'Done' && !card.shipped_at) card.shipped_at = new Date().toISOString().split('T')[0];
+    if(newStatus === 'Active' && !card.roadmap_order){
+      const maxOrder = Math.max(0,...state.cards.filter(c=>c.status==='Active').map(c=>c.roadmap_order||0));
+      card.roadmap_order = maxOrder + 10;
+    }
+    card.status = newStatus;
+  }
+
+  // Order
+  const orderInput = document.getElementById('modal-order');
+  if(orderInput){
+    const val = parseInt(orderInput.value,10);
+    if(!isNaN(val) && val > 0) card.roadmap_order = val;
+    else if(orderInput.value === '') card.roadmap_order = null;
+  }
+
+  // Category
+  const catInput = document.getElementById('modal-category');
+  if(catInput) card.category = catInput.value.trim();
+
+  saveState();
+
+  // Persist frontmatter to API
+  try {
+    const updates = {
+      status: card.status,
+      roadmap_order: card.roadmap_order || null,
+      shipped_at: card.shipped_at || null,
+      plan_anchor: card.title,
+      category: card.category || null,
+    };
+    await fetch(apiUrl(`/api/cards/${modalCardId}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+  } catch(err){
+    console.error('Failed to save card to API:', err);
+  }
+
+  // Persist content to API if edited
+  if(contentEdited){
+    const rawContent = document.getElementById('modal-content-edit').value;
+    try {
+      await fetch(apiUrl(`/api/cards/${modalCardId}/content`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: rawContent })
+      });
+      cardContents[modalCardId] = rawContent;
+      contentEdited = false;
+      // Refresh rendered preview
+      const contentForMd = rawContent.replace(/^## Acceptance criteria[\s\S]*?(?=^## |\Z)/m, '');
+      document.getElementById('modal-content').innerHTML = renderMd(contentForMd);
+    } catch(err){
+      console.error('Failed to save card content to API:', err);
+    }
+  }
+
+  modalUnsaved = false;
+  document.getElementById('unsaved-dot').classList.remove('visible');
+  document.getElementById('modal-save').style.display = 'none';
+  renderBoard();
+  showToast('Saved');
+}
+
+/* ── Event binding ───────────────────────────── */
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('overlay').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
+document.getElementById('modal-save').addEventListener('click', saveModalChanges);
+
+document.getElementById('modal-content-toggle').addEventListener('click', () => {
+  const btn = document.getElementById('modal-content-toggle');
+  const rendered = document.getElementById('modal-content');
+  const textarea = document.getElementById('modal-content-edit');
+  const isEditing = textarea.classList.contains('edit-active');
+  if(isEditing){
+    // Switch to preview — update rendered view from textarea
+    const raw = textarea.value;
+    const forMd = raw.replace(/^## Acceptance criteria[\s\S]*?(?=^## |\Z)/m, '');
+    rendered.innerHTML = renderMd(forMd);
+    rendered.classList.remove('edit-hidden');
+    textarea.classList.remove('edit-active');
+    btn.textContent = 'Edit';
+    btn.classList.remove('editing');
+  } else {
+    // Switch to edit mode
+    textarea.value = getContent(modalCardId);
+    rendered.classList.add('edit-hidden');
+    textarea.classList.add('edit-active');
+    btn.textContent = 'Preview';
+    btn.classList.add('editing');
+    textarea.focus();
+  }
+});
+
+document.getElementById('modal-content-edit').addEventListener('input', () => {
+  contentEdited = true;
+  markUnsaved();
+});
+
+document.getElementById('modal-title').addEventListener('input', function(){
+  this.style.height = 'auto';
+  this.style.height = this.scrollHeight + 'px';
+  markUnsaved();
+});
+document.getElementById('modal-status').addEventListener('change', ()=>{
+  const val = document.getElementById('modal-status').value;
+  document.getElementById('modal-status').style = statusStyle(val);
+  markUnsaved();
+});
+
+document.getElementById('modal-prev').addEventListener('click', ()=>{
+  const all = visibleCards();
+  const idx = all.findIndex(c=>c.id===modalCardId);
+  if(idx>0) openModal(all[idx-1].id);
+});
+document.getElementById('modal-next').addEventListener('click', ()=>{
+  const all = visibleCards();
+  const idx = all.findIndex(c=>c.id===modalCardId);
+  if(idx<all.length-1) openModal(all[idx+1].id);
+});
+
+document.getElementById('modal-open-tolaria').addEventListener('click', ()=>{
+  if(!modalCardId) return;
+  const card = getCard(modalCardId);
+  if(!card) return;
+  const path = card.path;
+  const vaultPath = encodeURIComponent('Venubase - Tolaria');
+  const filePath = encodeURIComponent(path.replace(/\.md$/,''));
+  window.open(`obsidian://open?vault=${vaultPath}&file=${filePath}`, '_blank');
+});
+
+document.getElementById('modal-open-cursor').addEventListener('click', ()=>{
+  if(!modalCardId) return;
+  openInCursor(modalCardId);
+});
+
+document.getElementById('modal-copy-path').addEventListener('click', async () => {
+  const pathEl = document.getElementById('modal-path');
+  const text = (pathEl && pathEl.textContent) ? pathEl.textContent.trim() : '';
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Copied');
+  } catch (err) {
+    console.error(err);
+    showToast('Copy failed');
+  }
+});
+
+async function openInCursor(cardId){
+  const card = getCard(cardId);
+  if(!card) return;
+
+  const content = getContent(cardId);
+  const summary = getSummary(content);
+  const prompt = `Let's plan our approach to building this: ${summary}\n\n${content}`;
+
+  try {
+    // Try to spawn Cursor with the card file
+    const resp = await fetch(`${API_URL}/api/cursor/open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cardId: card.id,
+        cardPath: card.path,
+        vault: currentVault
+      })
+    });
+
+    if(resp.ok){
+      showToast('Opening in Cursor...');
+      return;
+    }
+  } catch(err){
+    console.log('Cursor spawn failed, falling back to clipboard:', err);
+  }
+
+  // Fallback: copy to clipboard
+  try {
+    await navigator.clipboard.writeText(prompt);
+    showToast('Prompt copied to clipboard. Paste in Cursor to continue.');
+  } catch(err){
+    console.error('Failed to copy to clipboard:', err);
+    alert('Could not open Cursor or copy to clipboard. Please check that Cursor is installed.');
+  }
+}
+
+document.getElementById('reset-btn').addEventListener('click', ()=>{
+  if(confirm('Reset to source data? All local changes will be lost.')) {
+    localStorage.removeItem(STORAGE_KEY);
+    state = buildInitialState();
+    closeModal();
+    renderBoard();
+    showToast('Reset to source data');
+  }
+});
+
+/* ── Theme Selector ────────────────────────── */
+function initTheme(){
+  const saved = localStorage.getItem('theme-preference') || 'system';
+  applyTheme(saved);
+  updateThemeMenu(saved);
+}
+
+function getEffectiveTheme(preference){
+  if(preference === 'system'){
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return preference;
+}
+
+function applyTheme(preference){
+  const effective = getEffectiveTheme(preference);
+  document.documentElement.setAttribute('data-theme', effective);
+}
+
+function setThemePreference(preference){
+  localStorage.setItem('theme-preference', preference);
+  applyTheme(preference);
+  updateThemeMenu(preference);
+  closeThemeMenu();
+}
+
+function updateThemeMenu(preference){
+  const options = document.querySelectorAll('.theme-option');
+  options.forEach(opt => {
+    if(opt.getAttribute('data-theme') === preference){
+      opt.classList.add('active');
+    } else {
+      opt.classList.remove('active');
+    }
+  });
+}
+
+function toggleThemeMenu(){
+  const menu = document.getElementById('theme-menu');
+  menu.classList.toggle('open');
+}
+
+function closeThemeMenu(){
+  const menu = document.getElementById('theme-menu');
+  menu.classList.remove('open');
+}
+
+document.getElementById('theme-btn').addEventListener('click', toggleThemeMenu);
+
+document.querySelectorAll('.theme-option').forEach(option => {
+  option.addEventListener('click', ()=>{
+    const theme = option.getAttribute('data-theme');
+    setThemePreference(theme);
+  });
+});
+
+document.addEventListener('click', (e)=>{
+  const selector = document.querySelector('.header-theme-selector');
+  if(!selector.contains(e.target)){
+    closeThemeMenu();
+  }
+});
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
+  const pref = localStorage.getItem('theme-preference');
+  if(pref === 'system'){
+    applyTheme('system');
+  }
+});
+
+initTheme();
+
+/* ── Search ──────────────────────────────────── */
+let searchActive = false;
+const searchWrapper = document.getElementById('search-wrapper');
+const searchBtn = document.getElementById('search-btn');
+const searchInput = document.getElementById('search-input');
+
+function filterCards(query){
+  const q = query.toLowerCase().trim();
+  const cards = document.querySelectorAll('.card');
+  let visible = 0;
+  cards.forEach(card=>{
+    const title = card.querySelector('.card-title')?.textContent || '';
+    const summary = card.querySelector('.card-summary')?.textContent || '';
+    const tags = card.querySelector('.card-tag')?.textContent || '';
+    const matches = q === '' ||
+      title.toLowerCase().includes(q) ||
+      summary.toLowerCase().includes(q) ||
+      tags.toLowerCase().includes(q);
+    card.style.display = matches ? '' : 'none';
+    if(matches) visible++;
+  });
+}
+
+searchBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  searchActive = !searchActive;
+  searchWrapper.classList.toggle('active', searchActive);
+  if(searchActive){
+    searchInput.focus();
+  } else {
+    searchInput.value = '';
+    filterCards('');
+  }
+});
+
+searchInput.addEventListener('input', e=>{
+  filterCards(e.target.value);
+});
+
+searchInput.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){
+    searchActive = false;
+    searchWrapper.classList.remove('active');
+    searchInput.value = '';
+    filterCards('');
+  }
+});
+
+document.addEventListener('click', e=>{
+  if(searchActive && !searchWrapper.contains(e.target)){
+    searchActive = false;
+    searchWrapper.classList.remove('active');
+    searchInput.value = '';
+    filterCards('');
+  }
+});
+
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && document.getElementById('overlay').classList.contains('open')){
+    if(modalUnsaved){
+      if(confirm('You have unsaved changes. Discard them?')) closeModal();
+    } else {
+      closeModal();
+    }
+  }
+  if(document.getElementById('overlay').classList.contains('open')){
+    if((e.key==='ArrowLeft'||e.key==='ArrowRight') && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='TEXTAREA'){
+      e.preventDefault();
+      const all = visibleCards();
+      const idx = all.findIndex(c=>c.id===modalCardId);
+      if(e.key==='ArrowLeft' && idx>0) openModal(all[idx-1].id);
+      if(e.key==='ArrowRight' && idx<all.length-1) openModal(all[idx+1].id);
+    }
+  }
+});
+
+/* ── Toast ───────────────────────────────────── */
+function showToast(msg){
+  const existing = document.querySelector('.save-toast');
+  if(existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'save-toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2200);
+}
+
+/* ── Utilities ────────────────────────────────── */
+function catStyle(cat){
+  const colors = {
+    'Infra': { bg:'#fef3c7', text:'#92400e' },
+    'Auth': { bg:'#dbeafe', text:'#1e40af' },
+    'Admin': { bg:'#f3e8ff', text:'#6b21a8' },
+    'UX/Design': { bg:'#fce7f3', text:'#9d174d' },
+    'Commerce': { bg:'#dcfce7', text:'#166534' },
+    'Email': { bg:'#ede9fe', text:'#5b21b6' },
+  };
+  const c = colors[cat] || { bg:'#f3f4f6', text:'#374151' };
+  return `background:${c.bg};color:${c.text}`;
+}
+
+function statusStyle(status){
+  const colors = {
+    'Active': { bg:'#eeeeff', text:'#5b5bd6' },
+    'Backlog': { bg:'#fef9ee', text:'#b45309' },
+    'Blocked': { bg:'#fee2e2', text:'#991b1b' },
+    'Done': { bg:'#eafaf5', text:'#0d7a5f' },
+  };
+  const c = colors[status] || { bg:'#f3f4f6', text:'#374151' };
+  return `background:${c.bg};color:${c.text}`;
+}
+
+function renderMd(md){
+  function inlineFormat(text){
+    return text
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/_([^_]+)_/g, '<em>$1</em>');
+  }
+
+  const lines = md.split('\n');
+  const out = [];
+  let i = 0;
+
+  while(i < lines.length){
+    const line = lines[i];
+
+    // Headings
+    if(/^### /.test(line)){ out.push(`<h3>${inlineFormat(line.slice(4))}</h3>`); i++; continue; }
+    if(/^## /.test(line)){ out.push(`<h2>${inlineFormat(line.slice(3))}</h2>`); i++; continue; }
+    if(/^# /.test(line)){ out.push(`<h1>${inlineFormat(line.slice(2))}</h1>`); i++; continue; }
+
+    // Unordered list block
+    if(/^[-*] /.test(line)){
+      out.push('<ul>');
+      while(i < lines.length && /^[-*] /.test(lines[i])){
+        const item = lines[i].slice(2);
+        if(/^\[( |x)\] /i.test(item)){
+          const checked = item[1].toLowerCase() === 'x';
+          out.push(`<li class="task-item"><input type="checkbox" disabled ${checked ? 'checked' : ''}> ${inlineFormat(item.slice(4))}</li>`);
+        } else {
+          out.push(`<li>${inlineFormat(item)}</li>`);
+        }
+        i++;
+      }
+      out.push('</ul>');
+      continue;
+    }
+
+    // Ordered list block
+    if(/^\d+\. /.test(line)){
+      out.push('<ol>');
+      while(i < lines.length && /^\d+\. /.test(lines[i])){
+        const item = lines[i].replace(/^\d+\. /, '');
+        out.push(`<li>${inlineFormat(item)}</li>`);
+        i++;
+      }
+      out.push('</ol>');
+      continue;
+    }
+
+    // Blank line
+    if(line.trim() === ''){ i++; continue; }
+
+    // Paragraph: accumulate consecutive non-block lines
+    const para = [];
+    while(i < lines.length && lines[i].trim() !== '' && !/^#{1,6} /.test(lines[i]) && !/^[-*] /.test(lines[i]) && !/^\d+\. /.test(lines[i])){
+      para.push(inlineFormat(lines[i]));
+      i++;
+    }
+    if(para.length) out.push(`<p>${para.join('<br>')}</p>`);
+    else i++; // safety: skip unrecognised line to prevent infinite loop
+  }
+
+  return out.join('\n');
+}
+
+/* ── Boot ────────────────────────────────────── */
+async function loadCards(){
+  try {
+    // Fetch kanban config for current vault
+    const vaultsResp = await fetch(`${API_URL}/api/vaults`);
+    if(vaultsResp.ok) {
+      const { vaults } = await vaultsResp.json();
+      const vault = vaults.find(v => v.key === currentVault || v.name.toLowerCase() === currentVault.toLowerCase());
+      if(vault?.kanban) {
+        currentKanbanConfig = vault.kanban;
+      }
+    }
+
+    const resp = await fetch(apiUrl('/api/cards'));
+    if(!resp.ok) throw new Error(`API error: ${resp.status}`);
+    SOURCE_META = await resp.json();
+
+    // Fetch content for each card
+    for(const card of SOURCE_META){
+      try {
+        const contentResp = await fetch(apiUrl(`/api/cards/${card.id}`));
+        if(contentResp.ok){
+          const cardData = await contentResp.json();
+          cardContents[card.id] = cardData.content;
+        }
+      } catch(err){
+        console.error(`Failed to fetch content for ${card.id}:`, err);
+      }
+    }
+
+    initState();
+    renderBoard();
+  } catch(err){
+    console.error('Failed to load cards from API:', err);
+    alert('Failed to load kanban data. Is the API server running on localhost:3001?');
+  }
+}
+
+/* ── Vault Initialization ────────────────────── */
+async function initializeVaultSelector(){
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults`);
+    if(!resp.ok) throw new Error('Failed to fetch vaults');
+    const { vaults } = await resp.json();
+
+    // Cache vault colors
+    for(const vault of vaults){
+      vaultColors[vault.name.toLowerCase()] = vault.color;
+    }
+
+    const switcher = document.getElementById('vault-switcher');
+    const menu = document.getElementById('vault-switcher-menu');
+    const btn = document.getElementById('vault-switcher-btn');
+    const nameSpan = document.getElementById('vault-switcher-name');
+    const logo = document.getElementById('logo');
+
+    // Update logo with current vault
+    const currentVaultObj = vaults.find(v => v.key === currentVault);
+    const currentVaultName = currentVaultObj?.name || currentVault;
+    if(logo) {
+      logo.textContent = currentVaultName.charAt(0).toUpperCase();
+      updateLogoColor(currentVaultName);
+    }
+
+    // Hide switcher if only 1 vault
+    if(vaults.length <= 1){
+      switcher.classList.add('hidden');
+      return;
+    }
+    switcher.classList.remove('hidden');
+
+    // Update button text with current vault
+    const displayName = currentVaultName.charAt(0).toUpperCase() + currentVaultName.slice(1);
+    nameSpan.textContent = displayName;
+
+    // Populate menu
+    menu.innerHTML = '';
+    for(const vault of vaults){
+      const vaultName = String(vault.name || '');
+      const item = document.createElement('div');
+      item.className = 'vault-switcher-item';
+      if(vault.key === currentVault){
+        item.classList.add('active');
+      }
+      item.innerHTML = `<span>${vaultName}</span>`;
+      item.addEventListener('click', ()=>switchVault(vault.key, vaultName));
+      menu.appendChild(item);
+    }
+
+    // Add Manage Vaults option
+    const manageItem = document.createElement('div');
+    manageItem.className = 'vault-switcher-item manage-vaults';
+    manageItem.innerHTML = '<span>Manage Vaults</span>';
+    manageItem.addEventListener('click', function(){
+      const menu = document.getElementById('vault-switcher-menu');
+      if(menu) menu.classList.remove('open');
+      setTimeout(() => openVaultModal(), 0);
+    });
+    menu.appendChild(manageItem);
+  } catch(err){
+    console.error('Failed to initialize vault selector:', err);
+  }
+}
+
+function switchVault(vaultKey, vaultName){
+  if(vaultKey !== currentVault){
+    currentVault = vaultKey;
+    currentKanbanConfig = null;
+    localStorage.setItem(VAULT_STORAGE_KEY, vaultKey);
+    localStorage.removeItem(STORAGE_KEY);
+    Object.keys(cardContents).forEach(key => delete cardContents[key]);
+    state = {};
+    closeModal();
+    closeVaultMenu();
+    // Update switcher button text and menu
+    const nameSpan = document.getElementById('vault-switcher-name');
+    if(nameSpan) nameSpan.textContent = vaultName;
+    // Update logo
+    const logo = document.getElementById('logo');
+    if(logo) {
+      logo.textContent = vaultName.charAt(0).toUpperCase();
+      updateLogoColor(vaultName);
+    }
+    // Update menu item active states
+    const items = document.querySelectorAll('.vault-switcher-item');
+    items.forEach(item => {
+      if(item.querySelector('span').textContent === vaultName){
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+    showToast(`Switched to ${vaultName}`);
+    loadCards();
+  }
+}
+
+function updateLogoColor(vaultName) {
+  const logo = document.getElementById('logo');
+  if(!logo) return;
+  const color = vaultColors[vaultName.toLowerCase()] || '#5b5bd6';
+  logo.style.background = color;
+}
+
+function closeVaultMenu(){
+  const menu = document.getElementById('vault-switcher-menu');
+  menu.classList.remove('open');
+}
+
+/* ── Vault Switcher Events ────────────────── */
+document.getElementById('vault-switcher-btn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const menu = document.getElementById('vault-switcher-menu');
+  menu.classList.toggle('open');
+});
+
+document.addEventListener('click', (e)=>{
+  const switcher = document.getElementById('vault-switcher');
+  if(!switcher.contains(e.target)){
+    closeVaultMenu();
+  }
+});
+
+/* ── Vault Manager Modal ────────────────────── */
+const vaultModal = document.getElementById('vault-modal');
+const vaultMgrBtn = document.getElementById('vault-mgr-btn');
+const vaultModalClose = document.getElementById('vault-modal-close');
+const vaultList = document.getElementById('vault-list');
+const vaultAddForm = document.getElementById('vault-add-form');
+
+function openVaultModal(){
+  vaultModal.classList.add('open');
+  updateVaultList();
+}
+
+function closeVaultModal(){
+  vaultModal.classList.remove('open');
+  vaultAddForm.reset();
+  const wrapper = document.getElementById('vault-add-wrapper');
+  const toggle = document.getElementById('vault-add-toggle');
+  if (wrapper) { wrapper.classList.remove('expanded'); toggle.textContent = '+ Add vault'; }
+}
+
+async function updateVaultList(){
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults`);
+    if(!resp.ok) throw new Error('Failed to fetch vaults');
+    const { vaults } = await resp.json();
+
+    vaultList.innerHTML = '';
+    for(const vault of vaults){
+      const item = document.createElement('div');
+      item.className = 'vault-item';
+      item.dataset.vaultName = vault.name;
+      item.innerHTML = `
+        <div class="vault-item-color-picker">
+          <div class="vault-item-color-swatch" style="background: ${vault.color}" title="Click to change color"></div>
+          <input type="color" class="vault-item-color-input" value="${vault.color}" data-vault="${vault.name}">
+        </div>
+        <div class="vault-item-info">
+          <div class="vault-item-name">${vault.name}</div>
+          <div class="vault-item-path">${vault.path}</div>
+        </div>
+        <div class="vault-item-controls">
+          ${vault.isDefault ? '<div class="vault-item-badge">Default</div>' : `<button type="button" class="vault-item-btn make-default">Set default</button>`}
+          <button type="button" class="vault-item-btn columns" data-vault-key="${vault.key}" data-vault-json="${btoa(JSON.stringify(vault))}">Columns</button>
+          <button type="button" class="vault-item-btn edit">Rename</button>
+          <button type="button" class="vault-item-delete" data-vault="${vault.name}" ${vault.isDefault ? 'disabled title="Cannot remove the default vault"' : 'title="Remove vault"'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
+        </div>
+      `;
+      vaultList.appendChild(item);
+    }
+
+    // Add event listeners to color pickers
+    document.querySelectorAll('.vault-item-color-input').forEach(input => {
+      input.addEventListener('input', (e) => {
+        const vaultName = input.getAttribute('data-vault');
+        const newColor = e.target.value;
+        // Update immediately for live feedback
+        vaultColors[vaultName.toLowerCase()] = newColor;
+        const swatch = input.closest('.vault-item-color-picker').querySelector('.vault-item-color-swatch');
+        if(swatch) swatch.style.background = newColor;
+        if(vaultName.toLowerCase() === currentVault.toLowerCase()){
+          updateLogoColor(vaultName);
+        }
+      });
+      input.addEventListener('change', (e) => {
+        const vaultName = input.getAttribute('data-vault');
+        const newColor = e.target.value;
+        // Send to API when done selecting
+        updateVaultColorAPI(vaultName, newColor);
+      });
+    });
+
+    // Add event listeners to color swatches
+    document.querySelectorAll('.vault-item-color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const input = swatch.closest('.vault-item-color-picker').querySelector('.vault-item-color-input');
+        input.click();
+      });
+    });
+
+    // Add event listeners to edit buttons
+    document.querySelectorAll('.vault-item-btn.edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const item = btn.closest('.vault-item');
+        enterEditMode(item);
+      });
+    });
+
+    // Add event listeners to make-default buttons
+    document.querySelectorAll('.vault-item-btn.make-default').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const item = btn.closest('.vault-item');
+        const vaultName = item.dataset.vaultName;
+        setVaultAsDefault(vaultName);
+      });
+    });
+
+    // Add event listeners to delete buttons
+    document.querySelectorAll('.vault-item-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const vault = btn.getAttribute('data-vault');
+        if(confirm(`Remove vault "${vault}"?`)){
+          removeVault(vault);
+        }
+      });
+    });
+
+  } catch(err){
+    console.error('Failed to update vault list:', err);
+  }
+}
+
+function enterEditMode(item){
+  const name = item.dataset.vaultName;
+  const nameEl = item.querySelector('.vault-item-name');
+  const pathEl = item.querySelector('.vault-item-path');
+  const currentName = nameEl.textContent;
+  const currentPath = pathEl.textContent;
+
+  item.classList.add('edit-mode');
+  item.innerHTML = `
+    <div class="vault-item-info">
+      <input type="text" class="vault-item-edit-input name-input" value="${currentName}" placeholder="Vault name" data-field="name">
+      <input type="text" class="vault-item-edit-input path-input" value="${currentPath}" placeholder="/path/to/vault" data-field="path">
+    </div>
+    <div class="vault-item-actions">
+      <button type="button" class="vault-item-btn save">Save</button>
+      <button type="button" class="vault-item-btn cancel">Cancel</button>
+    </div>
+  `;
+
+  const saveBtn = item.querySelector('.vault-item-btn.save');
+  const cancelBtn = item.querySelector('.vault-item-btn.cancel');
+  const nameInput = item.querySelector('.vault-item-edit-input[data-field="name"]');
+
+  nameInput.focus();
+
+  saveBtn.addEventListener('click', async () => {
+    const newName = item.querySelector('.vault-item-edit-input[data-field="name"]').value.trim();
+    const newPath = item.querySelector('.vault-item-edit-input[data-field="path"]').value.trim();
+
+    if(!newName || !newPath){
+      alert('Name and path are required');
+      return;
+    }
+
+    await updateVault(name, newName, newPath);
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    updateVaultList();
+  });
+}
+
+async function updateVault(oldName, newName, newPath){
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/${oldName}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName, path: newPath })
+    });
+    if(!resp.ok){
+      const err = await resp.json();
+      throw new Error(err.error || 'Failed to update vault');
+    }
+    // If currently active vault was renamed, update currentVault
+    if(oldName.toLowerCase() === currentVault.toLowerCase()){
+      currentVault = newName.toLowerCase();
+      localStorage.setItem(VAULT_STORAGE_KEY, currentVault);
+    }
+    await initializeVaultSelector();
+    updateVaultList();
+    showToast(`Updated vault "${newName}"`);
+  } catch(err){
+    console.error('Failed to update vault:', err);
+    alert(`Error updating vault: ${err.message}`);
+    updateVaultList();
+  }
+}
+
+async function removeVault(name){
+  try {
+    const resp = await fetch(apiUrl(`/api/vaults/${name}`), { method: 'DELETE' });
+    if(!resp.ok) throw new Error('Failed to remove vault');
+    await initializeVaultSelector();
+    updateVaultList();
+    showToast(`Removed vault "${name}"`);
+  } catch(err){
+    console.error('Failed to remove vault:', err);
+    alert(`Error removing vault: ${err.message}`);
+  }
+}
+
+async function setVaultAsDefault(name){
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/${name}/set-default`, { method: 'POST' });
+    if(!resp.ok){
+      const err = await resp.json();
+      throw new Error(err.error || 'Failed to set default vault');
+    }
+    await initializeVaultSelector();
+    updateVaultList();
+    showToast(`${name} is now the default vault`);
+  } catch(err){
+    console.error('Failed to set default vault:', err);
+    alert(`Error setting default vault: ${err.message}`);
+  }
+}
+
+async function updateVaultColorAPI(vaultName, color){
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/${vaultName}/color`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ color })
+    });
+    if(!resp.ok){
+      const err = await resp.json();
+      throw new Error(err.error || 'Failed to update vault color');
+    }
+    showToast(`Updated ${vaultName} color`);
+  } catch(err){
+    console.error('Failed to update vault color:', err);
+    alert(`Error updating vault color: ${err.message}`);
+    updateVaultList();
+  }
+}
+
+async function addVault(name, path){
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, path })
+    });
+    if(!resp.ok){
+      const err = await resp.json();
+      throw new Error(err.error || 'Failed to add vault');
+    }
+    await initializeVaultSelector();
+    updateVaultList();
+    vaultAddForm.reset();
+    const wrapper = document.getElementById('vault-add-wrapper');
+    const toggle = document.getElementById('vault-add-toggle');
+    wrapper.classList.remove('expanded');
+    toggle.textContent = '+ Add vault';
+    showToast(`Added vault "${name}"`);
+  } catch(err){
+    console.error('Failed to add vault:', err);
+    alert(`Error adding vault: ${err.message}`);
+  }
+}
+
+/* ── Column Editor ──────────────────────────── */
+let editingVault = null;
+
+function openColumnEditor(vault) {
+  editingVault = vault;
+  const body = document.getElementById('vault-modal-body');
+  const editor = document.getElementById('column-editor');
+  const title = document.getElementById('column-editor-title');
+  const columnList = document.getElementById('column-list');
+  const addSelect = document.getElementById('column-add-select');
+
+  title.textContent = `Columns: ${vault.name}`;
+  body.style.display = 'none';
+  editor.style.display = 'block';
+
+  // Populate available statuses
+  const allStatuses = ['Backlog', 'Active', 'Prioritized', 'Done', 'Blocked'];
+  const usedStatuses = new Set(vault.kanban.columns.map(c => c.key));
+  const available = allStatuses.filter(s => !usedStatuses.has(s));
+
+  addSelect.innerHTML = '<option value="">Add a column...</option>';
+  for (const status of available) {
+    const opt = document.createElement('option');
+    opt.value = status;
+    opt.textContent = status;
+    addSelect.appendChild(opt);
+  }
+
+  // Render columns
+  columnList.innerHTML = vault.kanban.columns.map((col, idx) => `
+    <div class="col-row" data-index="${idx}">
+      <div class="col-row-body">
+        <span class="col-row-handle">⋮⋮</span>
+        <div class="col-row-key">${col.key}</div>
+        <input type="text" value="${col.label}" class="col-row-label" placeholder="Label" data-label="${idx}">
+      </div>
+      <button type="button" class="col-row-remove" data-remove="${idx}" title="Remove column"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
+    </div>
+  `).join('');
+
+  // Add event listeners
+  columnList.querySelectorAll('input[data-label]').forEach(input => {
+    input.addEventListener('change', () => {
+      const idx = parseInt(input.getAttribute('data-label'));
+      editingVault.kanban.columns[idx].label = input.value;
+    });
+  });
+
+  columnList.querySelectorAll('button[data-remove]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-remove'));
+      editingVault.kanban.columns.splice(idx, 1);
+      openColumnEditor(editingVault);
+    });
+  });
+
+  // Drag to reorder
+  let draggedEl = null;
+  columnList.querySelectorAll('div[data-index]').forEach(el => {
+    el.draggable = true;
+    el.addEventListener('dragstart', () => { draggedEl = el; });
+    el.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const idx = parseInt(el.getAttribute('data-index'));
+      const dragIdx = parseInt(draggedEl.getAttribute('data-index'));
+      if (idx !== dragIdx) {
+        const col = editingVault.kanban.columns.splice(dragIdx, 1)[0];
+        editingVault.kanban.columns.splice(idx, 0, col);
+        openColumnEditor(editingVault);
+      }
+    });
+  });
+
+  addSelect.addEventListener('change', () => {
+    if(addSelect.value) {
+      editingVault.kanban.columns.push({ key: addSelect.value, label: addSelect.value });
+      openColumnEditor(editingVault);
+    }
+  });
+
+  document.getElementById('column-editor-close').addEventListener('click', closeColumnEditor);
+}
+
+async function closeColumnEditor() {
+  if (!editingVault) return;
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/${editingVault.key}/kanban`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ columns: editingVault.kanban.columns })
+    });
+    if (!resp.ok) throw new Error('Failed to save column config');
+    showToast('Columns updated');
+    editingVault = null;
+    document.getElementById('column-editor').style.display = 'none';
+    document.getElementById('vault-modal-body').style.display = 'block';
+    loadCards();
+  } catch(err) {
+    console.error('Failed to save column config:', err);
+    alert(`Error saving columns: ${err.message}`);
+  }
+}
+
+// Event delegation for vault list buttons
+vaultList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.vault-item-btn');
+  if (!btn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (btn.classList.contains('columns')) {
+    try {
+      const vaultJson = btn.getAttribute('data-vault-json');
+      if (!vaultJson) {
+        console.error('No vault JSON found on button');
+        return;
+      }
+      const vault = JSON.parse(atob(vaultJson));
+      openColumnEditor(vault);
+    } catch(err) {
+      console.error('Failed to open column editor:', err);
+    }
+  } else if (btn.classList.contains('edit')) {
+    const item = btn.closest('.vault-item');
+    if (item) enterEditMode(item);
+  } else if (btn.classList.contains('make-default')) {
+    const item = btn.closest('.vault-item');
+    const vaultName = item?.dataset.vaultName;
+    if (vaultName) setVaultAsDefault(vaultName);
+  }
+});
+
+vaultList.addEventListener('click', (e) => {
+  if (e.target.classList.contains('vault-item-delete')) {
+    const vault = e.target.getAttribute('data-vault');
+    if (confirm(`Remove vault "${vault}"?`)) {
+      removeVault(vault);
+    }
+  }
+});
+
+vaultMgrBtn.addEventListener('click', openVaultModal);
+vaultModalClose.addEventListener('click', closeVaultModal);
+
+document.getElementById('vault-add-toggle').addEventListener('click', () => {
+  const wrapper = document.getElementById('vault-add-wrapper');
+  const toggle = document.getElementById('vault-add-toggle');
+  const isOpen = wrapper.classList.toggle('expanded');
+  toggle.textContent = isOpen ? '− Cancel' : '+ Add vault';
+});
+
+vaultModal.addEventListener('click', (e) => {
+  if(e.target === vaultModal) closeVaultModal();
+});
+
+vaultAddForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = document.getElementById('vault-name-input').value.trim();
+  const path = document.getElementById('vault-path-input').value.trim();
+  if(name && path){
+    addVault(name, path);
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && vaultModal.classList.contains('open')){
+    closeVaultModal();
+  }
+});
+
+initializeVaultSelector();
+loadCards();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "kando",
+  "version": "1.0.0",
+  "description": "Kanban app for managing roadmaps with markdown content",
+  "type": "module",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node kando-start.js",
+    "server": "node electron/server.js",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "electron": "^30.5.1",
+    "electron-builder": "^25.1.8"
+  }
+}

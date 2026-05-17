@@ -1,0 +1,34 @@
+{
+  "appId": "com.kando.app",
+  "productName": "Kando",
+  "files": [
+    "electron/",
+    "node_modules/",
+    "package.json"
+  ],
+  "directories": {
+    "buildResources": "assets"
+  },
+  "mac": {
+    "target": [
+      "dmg",
+      "zip"
+    ],
+    "category": "public.app-category.productivity"
+  },
+  "dmg": {
+    "contents": [
+      {
+        "x": 110,
+        "y": 150,
+        "type": "file"
+      },
+      {
+        "x": 240,
+        "y": 150,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ]
+  }
+}

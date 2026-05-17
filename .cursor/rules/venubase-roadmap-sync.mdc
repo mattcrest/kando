@@ -1,0 +1,113 @@
+# Venubase Roadmap Sync Rule
+
+## When to use the roadmap skill
+
+Use `/venubase-roadmap` skill when:
+
+- **Starting a feature**: Change card status to "Active", add start timestamp
+- **Making progress**: Update card with current progress percentage and blockers
+- **Completing work**: Mark card as "Shipped" with PR link
+- **Discovering issues**: Update card to reflect actual scope changes or blockers
+
+## Workflow
+
+For each feature or bug being worked on:
+
+1. **Before starting**: Find the roadmap card
+   - Search by feature name or PR title
+   - Read current status and description
+
+2. **After first commit**: Update card status
+   - Mark as "Active" if not already
+   - Add note like "Started implementation"
+   - Commit the roadmap update
+
+3. **During development**: Keep progress updated
+   - At each meaningful checkpoint (e.g., API done, UI started)
+   - Update card with percentage complete
+   - Add what's done and what's next
+   - Include any blockers or dependencies
+
+4. **When PR is created**: Reference it in the card
+   - Add PR link and number
+   - Note current completion status
+
+5. **When merged**: Mark as shipped
+   - Change status to "Shipped"
+   - Add shipped date
+   - Reference the merged PR
+
+## What to update
+
+### Status field (required)
+- `Active` - Currently being worked on
+- `Backlog` - Planned but not started
+- `Shipped` - Completed and merged
+- `On Hold` - Blocked or deprioritized
+
+### Content sections (add to the card)
+
+```markdown
+## Implementation Progress
+- [x] API endpoints
+- [ ] Admin UI
+- [ ] Tests
+- [ ] Documentation
+```
+
+```markdown
+## Current Status
+75% complete - API done, UI in progress, targeting PR by Friday
+Blocker: Waiting for design approval on time picker
+```
+
+```markdown
+## Related PR
+- [PR #234](https://github.com/mattcrest/venubase-web/pull/234) - Initial implementation
+```
+
+## Keep user informed
+
+After updating a card, provide a summary like:
+
+```
+✓ Roadmap Updated: [Card Title]
+  Status: [Old] → [New]
+  Progress: [Notes about current state]
+  Next: [What comes next]
+```
+
+This keeps the user aware without requiring them to manually check the roadmap.
+
+## Example workflow
+
+```
+User: "Build the admin operating hours editor"
+
+Claude:
+  1. Searches roadmap for "operating hours"
+  2. Finds: release-admin-operating-hours-crud
+  3. Updates: status → Active, adds "Started: Building CRUD UI"
+  4. Commits: "roadmap: Start operating hours CRUD (PR #234)"
+  5. Notifies user: "✓ Roadmap Updated: Operating Hours (Active)"
+
+  [Works on the feature...]
+
+  6. After API done: Updates card → "60% complete - API done, UI next"
+  7. Commits: "roadmap: Progress on operating hours (API complete)"
+  8. Notifies: "✓ Progress: Operating Hours (60%)"
+
+  [Work continues...]
+
+  9. After PR merged: Updates → "Shipped" with PR link
+  10. Commits: "roadmap: Ship operating hours CRUD (PR #234)"
+  11. Notifies: "✓ Shipped: Admin Operating Hours CRUD"
+```
+
+## Benefits
+
+- **Single source of truth**: Roadmap matches actual implementation status
+- **Visibility**: You always know what's in progress across the team
+- **Planning**: Clear picture of what's done vs. what's left
+- **History**: Git tracks all roadmap changes with commits
+- **Collaboration**: Agents can auto-update when building features
