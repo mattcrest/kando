@@ -1,0 +1,18 @@
+---
+description: >-
+  Start, stop, or restart the local Kando dev server when the user wants to run,
+  open, or launch Kando or the roadmap kanban at localhost:3001.
+alwaysApply: false
+---
+
+# Kando dev server
+
+When the user wants Kando running locally, use the **kando-dev-server** skill and run:
+
+```bash
+./scripts/kando-dev.sh start   # or stop | restart | status
+```
+
+Always serve from **this repository**, not an old Venubase worktree copy. Verify with `status` that `cwd` is the Kando repo before saying it is running.
+
+Report the URL: **http://127.0.0.1:3001**
