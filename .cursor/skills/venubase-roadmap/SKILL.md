@@ -12,10 +12,10 @@ Keep roadmap cards up-to-date as you work on features and bugs.
 
 ## Roadmap Location
 
-- **Repository**: `mattcrest/venubase-web`
-- **Directory**: `/docs/roadmap/`
-- **Files**: Individual markdown cards (one per feature/item) + `kanban.json`
-- **Access**: Can be referenced with `-c /path/to/venubase-web` context flag for agents
+- **Repository**: `mattcrest/venubase-roadmap` (canonical)
+- **In venubase-web**: `docs/roadmap/` (git submodule → venubase-roadmap)
+- **Directory**: `/docs/roadmap/` when working in venubase-web clone, or clone venubase-roadmap directly
+- **Access**: Cursor `-c /path/to/venubase-web` or `-c /path/to/venubase-roadmap`
 
 ## Common Tasks
 

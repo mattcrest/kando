@@ -1,6 +1,6 @@
 # Kando
 
-Local web kanban over Markdown “release” cards. **Card files stay in the Venubase repo** under `venubase-web/docs/roadmap`; this repo is only the UI + API server.
+Local web kanban over Markdown “release” cards. **Card files live in [venubase-roadmap](https://github.com/mattcrest/venubase-roadmap)** — a dedicated repo, checked out inside `venubase-web` as `docs/roadmap/` (git submodule). This repo is only the UI + API server.
 
 ## Layout
 
@@ -8,16 +8,21 @@ Expected sibling directories on disk:
 
 ```text
 dev/
-  kando/              ← this repo
+  kando/                    ← this repo (UI + API)
+  venubase-roadmap/         ← canonical roadmap cards (optional direct clone)
   venubase/
     venubase-web/
-      docs/roadmap/   ← canonical vault (git-tracked)
+      docs/roadmap/         ← git submodule → venubase-roadmap
 ```
+
+After cloning venubase-web: `git submodule update --init docs/roadmap`
 
 If your paths differ, set an absolute path:
 
 ```bash
 export VENUBASE_ROADMAP_DIR=/path/to/venubase-web/docs/roadmap
+# or clone venubase-roadmap directly:
+export VENUBASE_ROADMAP_DIR=/path/to/venubase-roadmap
 ```
 
 ## Setup
@@ -50,6 +55,25 @@ This repo includes a **kando-dev-server** skill and rule (`.cursor/skills/`, `.c
 
 - Per-machine overrides: **`vaults.json`** (gitignored). Copy from `vaults.example.json`.
 - Merged with defaults from `electron/server.js` (`venubase` → `VENUBASE_ROADMAP_DIR` or sibling path above).
+
+### Git sync
+
+When a vault directory is a git repo (e.g. the `venubase-roadmap` submodule), Kando shows **Commit & Push** in the header.
+
+Optional auto-commit on every card save — in `vaults.json`:
+
+```json
+"git": {
+  "venubase": {
+    "autoCommit": true,
+    "autoPush": false
+  }
+}
+```
+
+Or set `KANDO_AUTO_GIT_COMMIT=1` for all vaults. Auto-push requires `"autoPush": true`.
+
+API: `GET /api/vaults/:name/git/status`, `POST /api/vaults/:name/git/sync`
 
 ## Scripts
 

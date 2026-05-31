@@ -5,6 +5,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { commitAll, commitAndPush, getGitStatus, push } from './git-vault.js';
 
 const app = express();
 const PORT = 3001;
@@ -33,6 +34,7 @@ let VAULT_COLORS = {
   venubase: '#5b5bd6',
   playerpath: '#8b5cf6',
 };
+let VAULT_GIT = {};
 
 // Load vaults from config file if it exists
 async function loadVaultsConfig() {
@@ -45,6 +47,9 @@ async function loadVaultsConfig() {
     }
     if (config.default && VAULTS[config.default]) {
       DEFAULT_VAULT = config.default;
+    }
+    if (config.git) {
+      VAULT_GIT = config.git;
     }
     console.log('Loaded vaults from config:', Object.keys(VAULTS));
     console.log('Default vault:', DEFAULT_VAULT);
@@ -79,7 +84,8 @@ async function saveVaultsConfig() {
     const config = {
       vaults: customVaults,
       colors: Object.keys(customColors).length > 0 ? customColors : undefined,
-      default: DEFAULT_VAULT
+      default: DEFAULT_VAULT,
+      git: Object.keys(VAULT_GIT).length > 0 ? VAULT_GIT : undefined,
     };
     await fs.writeFile(VAULTS_CONFIG_FILE, JSON.stringify(config, null, 2));
   } catch (err) {
@@ -90,14 +96,47 @@ async function saveVaultsConfig() {
 app.use(cors());
 app.use(express.json());
 
+// Helper to resolve vault key from request
+function getVaultKey(req) {
+  const vault = req.query.vault || req.params?.name || DEFAULT_VAULT;
+  if (VAULTS[vault]) return vault;
+  const lowerVault = vault.toLowerCase();
+  return Object.keys(VAULTS).find(k => k.toLowerCase() === lowerVault) || DEFAULT_VAULT;
+}
+
 // Helper to get vault directory from request
 function getVaultDir(req) {
-  const vault = req.query.vault || DEFAULT_VAULT;
-  // Try exact match first, then case-insensitive match
-  if (VAULTS[vault]) return VAULTS[vault];
-  const lowerVault = vault.toLowerCase();
-  const matchedVault = Object.keys(VAULTS).find(k => k.toLowerCase() === lowerVault);
-  return matchedVault ? VAULTS[matchedVault] : VAULTS[DEFAULT_VAULT];
+  const key = getVaultKey(req);
+  return VAULTS[key];
+}
+
+function getVaultGitOptions(vaultKey) {
+  const vaultGit = VAULT_GIT[vaultKey] || {};
+  const envAuto = process.env.KANDO_AUTO_GIT_COMMIT === '1';
+  return {
+    autoCommit: vaultGit.autoCommit ?? envAuto,
+    autoPush: vaultGit.autoPush ?? false,
+    remote: vaultGit.remote || 'origin',
+    branch: vaultGit.branch || null,
+  };
+}
+
+async function maybeAutoCommitVault(vaultKey, vaultDir, message) {
+  const opts = getVaultGitOptions(vaultKey);
+  if (!opts.autoCommit) return null;
+  try {
+    const result = await commitAll(vaultDir, message);
+    if (opts.autoPush) {
+      const status = await getGitStatus(vaultDir);
+      if (result.committed || status.ahead > 0) {
+        await push(vaultDir, opts.remote, opts.branch);
+      }
+    }
+    return result;
+  } catch (err) {
+    console.warn(`Auto git commit failed (${vaultKey}):`, err.message);
+    return null;
+  }
 }
 
 // Helper to extract card ID from filename
@@ -250,6 +289,9 @@ app.put('/api/cards/:cardId', async (req, res) => {
     const updatedContent = matter.stringify(markdownContent, orderedData);
     await fs.writeFile(cardPath, updatedContent, 'utf-8');
 
+    const vaultKey = getVaultKey(req);
+    await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} metadata`);
+
     res.json({ id: cardId, success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -270,6 +312,9 @@ app.put('/api/cards/:cardId/content', async (req, res) => {
     // Reconstruct markdown with preserved frontmatter and new content
     const updatedContent = matter.stringify(newContent, data);
     await fs.writeFile(cardPath, updatedContent, 'utf-8');
+
+    const vaultKey = getVaultKey(req);
+    await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} content`);
 
     res.json({ id: cardId, success: true });
   } catch (err) {
@@ -467,7 +512,53 @@ app.put('/api/vaults/:name/kanban', async (req, res) => {
       return res.status(500).json({ error: 'Failed to save kanban config' });
     }
 
+    await maybeAutoCommitVault(name, vaultDir, `roadmap: update ${name} kanban columns`);
+
     res.json({ success: true, config });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/vaults/:name/git/status - Git status for vault directory
+app.get('/api/vaults/:name/git/status', async (req, res) => {
+  try {
+    const name = req.params.name;
+    if (!VAULTS[name]) {
+      return res.status(404).json({ error: `Vault '${name}' not found` });
+    }
+    const status = await getGitStatus(VAULTS[name]);
+    const gitOptions = getVaultGitOptions(name);
+    res.json({ ...status, autoCommit: gitOptions.autoCommit, autoPush: gitOptions.autoPush });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/vaults/:name/git/sync - Commit (optional message) and push
+app.post('/api/vaults/:name/git/sync', async (req, res) => {
+  try {
+    const name = req.params.name;
+    if (!VAULTS[name]) {
+      return res.status(404).json({ error: `Vault '${name}' not found` });
+    }
+    const vaultDir = VAULTS[name];
+    const { message, push: doPush = true } = req.body || {};
+    const commitMessage = message || `roadmap: sync from Kando (${new Date().toISOString()})`;
+    const opts = getVaultGitOptions(name);
+
+    let result;
+    if (doPush) {
+      result = await commitAndPush(vaultDir, commitMessage, {
+        remote: opts.remote,
+        branch: opts.branch,
+      });
+    } else {
+      result = await commitAll(vaultDir, commitMessage);
+    }
+
+    const status = await getGitStatus(vaultDir);
+    res.json({ success: true, ...result, status });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

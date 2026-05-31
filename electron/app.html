@@ -116,6 +116,43 @@ html[data-theme="dark"] {
 }
 .header-reset-btn:hover { color: rgba(255,255,255,.75); border-color: rgba(255,255,white,.25); }
 
+.header-git-sync {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 8px;
+}
+
+.header-git-sync.hidden { display: none; }
+
+.header-git-status {
+  font-size: 10px;
+  color: rgba(255,255,255,.35);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-git-status.dirty { color: #fbbf24; }
+.header-git-status.synced { color: rgba(255,255,255,.35); }
+
+.header-git-btn {
+  border: 1px solid rgba(255,255,255,.12);
+  background: transparent;
+  color: rgba(255,255,255,.55);
+  font-size: 11px;
+  font-family: var(--font);
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, opacity .15s;
+}
+.header-git-btn:hover:not(:disabled) { color: rgba(255,255,255,.85); border-color: rgba(255,255,255,.25); }
+.header-git-btn:disabled { opacity: .45; cursor: default; }
+.header-git-btn.syncing { opacity: .7; }
+
 .header-theme-selector {
   position: relative;
   display: flex;
@@ -1254,6 +1291,10 @@ html[data-theme="dark"] {
     </button>
     <input type="text" class="header-search-input" id="search-input" placeholder="Search cards...">
   </div>
+  <div class="header-git-sync hidden" id="git-sync-wrap">
+    <span class="header-git-status" id="git-status-label" title="Git status"></span>
+    <button class="header-git-btn" id="git-sync-btn" title="Commit and push roadmap changes">Commit &amp; Push</button>
+  </div>
   <button class="header-reset-btn" id="reset-btn" title="Reset to source data">Reset</button>
 </header>
 
@@ -1713,6 +1754,8 @@ async function moveCard(cardId, newStatus, siblingIds, insertIdx){
     console.error('Failed to save card to API:', err);
   }
 
+  refreshGitStatus();
+
   renderBoard();
 
   if(newStatus !== oldStatus){
@@ -2039,6 +2082,7 @@ async function saveModalChanges(){
   document.getElementById('modal-save').style.display = 'none';
   renderBoard();
   showToast('Saved');
+  refreshGitStatus();
 }
 
 /* ── Event binding ───────────────────────────── */
@@ -2559,6 +2603,7 @@ function switchVault(vaultKey, vaultName){
     });
     showToast(`Switched to ${vaultName}`);
     loadCards();
+    refreshGitStatus();
   }
 }
 
@@ -2940,6 +2985,7 @@ async function closeColumnEditor() {
     document.getElementById('column-editor').style.display = 'none';
     document.getElementById('vault-modal-body').style.display = 'block';
     loadCards();
+    refreshGitStatus();
   } catch(err) {
     console.error('Failed to save column config:', err);
     alert(`Error saving columns: ${err.message}`);
@@ -3014,8 +3060,95 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+/* ── Vault git sync ──────────────────────────── */
+let gitSyncInFlight = false;
+
+async function refreshGitStatus(){
+  const wrap = document.getElementById('git-sync-wrap');
+  const label = document.getElementById('git-status-label');
+  const btn = document.getElementById('git-sync-btn');
+  if(!wrap || !label || !btn) return;
+
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/${currentVault}/git/status`);
+    if(!resp.ok) {
+      wrap.classList.add('hidden');
+      return;
+    }
+    const status = await resp.json();
+    if(!status.isRepo){
+      wrap.classList.add('hidden');
+      return;
+    }
+
+    wrap.classList.remove('hidden');
+    label.classList.remove('dirty', 'synced');
+
+    if(status.clean && status.ahead === 0){
+      label.textContent = status.branch ? `${status.branch} · synced` : 'synced';
+      label.classList.add('synced');
+      btn.disabled = true;
+    } else if(status.clean && status.ahead > 0){
+      label.textContent = `${status.ahead} commit(s) to push`;
+      label.classList.add('dirty');
+      btn.disabled = gitSyncInFlight;
+    } else {
+      const n = status.changed.length;
+      label.textContent = n === 1 ? '1 uncommitted change' : `${n} uncommitted changes`;
+      label.classList.add('dirty');
+      btn.disabled = gitSyncInFlight;
+    }
+  } catch(err){
+    console.error('Git status check failed:', err);
+    wrap.classList.add('hidden');
+  }
+}
+
+async function syncVaultGit(){
+  if(gitSyncInFlight) return;
+  const btn = document.getElementById('git-sync-btn');
+  gitSyncInFlight = true;
+  if(btn){
+    btn.disabled = true;
+    btn.classList.add('syncing');
+    btn.textContent = 'Syncing…';
+  }
+
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/${currentVault}/git/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ push: true })
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Sync failed');
+
+    if(data.committed){
+      showToast('Committed & pushed ✓');
+    } else if(data.pushed){
+      showToast('Pushed ✓');
+    } else {
+      showToast('Already up to date');
+    }
+  } catch(err){
+    console.error('Git sync failed:', err);
+    alert(`Git sync failed: ${err.message}`);
+  } finally {
+    gitSyncInFlight = false;
+    if(btn){
+      btn.classList.remove('syncing');
+      btn.textContent = 'Commit & Push';
+    }
+    refreshGitStatus();
+  }
+}
+
+document.getElementById('git-sync-btn')?.addEventListener('click', syncVaultGit);
+
 initializeVaultSelector();
 loadCards();
+refreshGitStatus();
+setInterval(refreshGitStatus, 30000);
 </script>
 </body>
 </html>
