@@ -5,7 +5,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { commitAll, commitAndPush, getGitStatus, push } from './git-vault.js';
+import { commitAll, getGitStatus, syncVault } from './git-vault.js';
 
 const app = express();
 const PORT = 3001;
@@ -549,9 +549,10 @@ app.post('/api/vaults/:name/git/sync', async (req, res) => {
 
     let result;
     if (doPush) {
-      result = await commitAndPush(vaultDir, commitMessage, {
+      result = await syncVault(vaultDir, commitMessage, {
         remote: opts.remote,
         branch: opts.branch,
+        pullIfBehind: true,
       });
     } else {
       result = await commitAll(vaultDir, commitMessage);

@@ -119,23 +119,54 @@ html[data-theme="dark"] {
 .header-git-sync {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-right: 8px;
 }
 
 .header-git-sync.hidden { display: none; }
 
+.header-git-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.header-git-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255,255,255,.25);
+}
+
+.header-git-dot.synced {
+  background: #4ade80;
+  box-shadow: 0 0 6px rgba(74, 222, 128, .55);
+}
+
+.header-git-dot.needs-sync {
+  background: #fb923c;
+  box-shadow: 0 0 8px rgba(251, 146, 60, .65);
+  animation: git-pulse 2s ease-in-out infinite;
+}
+
+@keyframes git-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .65; transform: scale(.92); }
+}
+
 .header-git-status {
   font-size: 10px;
   color: rgba(255,255,255,.35);
-  max-width: 120px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.header-git-status.dirty { color: #fbbf24; }
-.header-git-status.synced { color: rgba(255,255,255,.35); }
+.header-git-status.synced { color: #86efac; }
+.header-git-status.needs-sync { color: #fdba74; }
 
 .header-git-btn {
   border: 1px solid rgba(255,255,255,.12);
@@ -147,11 +178,33 @@ html[data-theme="dark"] {
   padding: 5px 10px;
   border-radius: var(--r-xs);
   cursor: pointer;
-  transition: color .15s, border-color .15s, opacity .15s;
+  transition: color .15s, border-color .15s, background .15s, box-shadow .15s, opacity .15s;
 }
 .header-git-btn:hover:not(:disabled) { color: rgba(255,255,255,.85); border-color: rgba(255,255,255,.25); }
 .header-git-btn:disabled { opacity: .45; cursor: default; }
 .header-git-btn.syncing { opacity: .7; }
+
+.header-git-btn.needs-sync {
+  background: linear-gradient(180deg, #fdba74 0%, #fb923c 100%);
+  border-color: #f97316;
+  color: #1c1008;
+  font-weight: 600;
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, .35), 0 2px 10px rgba(251, 146, 60, .35);
+}
+.header-git-btn.needs-sync:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fed7aa 0%, #fdba74 100%);
+  color: #1c1008;
+  border-color: #fb923c;
+}
+
+.header-git-btn.synced-state {
+  background: rgba(74, 222, 128, .12);
+  border-color: rgba(74, 222, 128, .25);
+  color: rgba(134, 239, 172, .85);
+  opacity: 1;
+  cursor: default;
+}
 
 .header-theme-selector {
   position: relative;
@@ -1292,8 +1345,11 @@ html[data-theme="dark"] {
     <input type="text" class="header-search-input" id="search-input" placeholder="Search cards...">
   </div>
   <div class="header-git-sync hidden" id="git-sync-wrap">
-    <span class="header-git-status" id="git-status-label" title="Git status"></span>
-    <button class="header-git-btn" id="git-sync-btn" title="Commit and push roadmap changes">Commit &amp; Push</button>
+    <div class="header-git-pill" id="git-sync-pill" title="Git sync status">
+      <span class="header-git-dot" id="git-status-dot" aria-hidden="true"></span>
+      <span class="header-git-status" id="git-status-label"></span>
+    </div>
+    <button class="header-git-btn" id="git-sync-btn" title="Commit and push roadmap changes to origin/main">Commit &amp; Push</button>
   </div>
   <button class="header-reset-btn" id="reset-btn" title="Reset to source data">Reset</button>
 </header>
@@ -1451,12 +1507,9 @@ function parsePRs(content){
 }
 
 function countAC(content){
-  let done=0,total=0;
-  for(const line of content.split('\n')){
-    if(/^- \[x\] /i.test(line)){ done++; total++; }
-    else if(/^- \[ \] /.test(line)){ total++; }
-  }
-  return {done,total};
+  const items = parseAC(content);
+  const done = items.filter(i => i.done).length;
+  return { done, total: items.length };
 }
 
 function getSummary(content){
@@ -1495,11 +1548,22 @@ function saveState(){
 function initState(){
   const saved = loadState();
   state = saved || buildInitialState();
-  // Ensure any new cards from source not in saved state are added
+  const metaById = Object.fromEntries(SOURCE_META.map(m => [m.id, m]));
   if(saved){
     const savedIds = new Set(saved.cards.map(c=>c.id));
     for(const m of SOURCE_META){
       if(!savedIds.has(m.id)) state.cards.push({...m});
+    }
+    // Keep board layout local but refresh status/metadata from vault files
+    for(const card of state.cards){
+      const meta = metaById[card.id];
+      if(!meta) continue;
+      card.status = meta.status;
+      card.roadmap_order = meta.roadmap_order;
+      card.shipped_at = meta.shipped_at;
+      card.category = meta.category;
+      card.title = meta.title;
+      card.plan_anchor = meta.plan_anchor;
     }
   }
 }
@@ -3062,12 +3126,77 @@ document.addEventListener('keydown', (e) => {
 
 /* ── Vault git sync ──────────────────────────── */
 let gitSyncInFlight = false;
+let gitSyncButtonDefault = 'Commit & Push';
+
+function applyGitUiState({ label, dot, btn, wrap, pill, statusText, btnText, state }) {
+  wrap.classList.remove('hidden');
+  label.textContent = statusText;
+  pill.title = statusText;
+
+  label.classList.remove('synced', 'needs-sync');
+  dot.classList.remove('synced', 'needs-sync');
+  btn.classList.remove('needs-sync', 'synced-state', 'syncing');
+
+  if (state === 'synced') {
+    label.classList.add('synced');
+    dot.classList.add('synced');
+    btn.classList.add('synced-state');
+    btn.textContent = btnText;
+    btn.disabled = true;
+  } else {
+    label.classList.add('needs-sync');
+    dot.classList.add('needs-sync');
+    btn.classList.add('needs-sync');
+    btn.textContent = btnText;
+    btn.disabled = gitSyncInFlight;
+  }
+}
+
+function describeGitStatus(status) {
+  const branch = status.branch || 'main';
+  const remote = status.upstream || `origin/${branch}`;
+
+  if (status.syncedWithRemote) {
+    return {
+      state: 'synced',
+      statusText: `Up to date with ${remote}`,
+      btnText: 'Synced with main',
+    };
+  }
+
+  const parts = [];
+  if (!status.clean) {
+    const n = status.changed.length;
+    parts.push(n === 1 ? '1 uncommitted change' : `${n} uncommitted changes`);
+  }
+  if (status.behind > 0) {
+    parts.push(`${status.behind} commit(s) behind ${remote}`);
+  }
+  if (status.ahead > 0) {
+    parts.push(`${status.ahead} commit(s) to push`);
+  }
+
+  let btnText = 'Commit & Push';
+  if (!status.clean && status.behind > 0) btnText = 'Pull, Commit & Push';
+  else if (!status.clean) btnText = 'Commit & Push';
+  else if (status.behind > 0 && status.ahead > 0) btnText = 'Pull & Push';
+  else if (status.behind > 0) btnText = 'Pull from main';
+  else if (status.ahead > 0) btnText = 'Push to main';
+
+  return {
+    state: 'needs-sync',
+    statusText: parts.join(' · ') || 'Sync needed',
+    btnText,
+  };
+}
 
 async function refreshGitStatus(){
   const wrap = document.getElementById('git-sync-wrap');
+  const pill = document.getElementById('git-sync-pill');
   const label = document.getElementById('git-status-label');
+  const dot = document.getElementById('git-status-dot');
   const btn = document.getElementById('git-sync-btn');
-  if(!wrap || !label || !btn) return;
+  if(!wrap || !pill || !label || !dot || !btn) return;
 
   try {
     const resp = await fetch(`${API_URL}/api/vaults/${currentVault}/git/status`);
@@ -3081,22 +3210,10 @@ async function refreshGitStatus(){
       return;
     }
 
-    wrap.classList.remove('hidden');
-    label.classList.remove('dirty', 'synced');
-
-    if(status.clean && status.ahead === 0){
-      label.textContent = status.branch ? `${status.branch} · synced` : 'synced';
-      label.classList.add('synced');
-      btn.disabled = true;
-    } else if(status.clean && status.ahead > 0){
-      label.textContent = `${status.ahead} commit(s) to push`;
-      label.classList.add('dirty');
-      btn.disabled = gitSyncInFlight;
-    } else {
-      const n = status.changed.length;
-      label.textContent = n === 1 ? '1 uncommitted change' : `${n} uncommitted changes`;
-      label.classList.add('dirty');
-      btn.disabled = gitSyncInFlight;
+    const ui = describeGitStatus(status);
+    applyGitUiState({ label, dot, btn, wrap, pill, ...ui });
+    if (ui.state === 'needs-sync') {
+      gitSyncButtonDefault = ui.btnText;
     }
   } catch(err){
     console.error('Git status check failed:', err);
@@ -3137,7 +3254,6 @@ async function syncVaultGit(){
     gitSyncInFlight = false;
     if(btn){
       btn.classList.remove('syncing');
-      btn.textContent = 'Commit & Push';
     }
     refreshGitStatus();
   }
