@@ -1,28 +1,29 @@
 # Kando
 
-Local web kanban over Markdown “release” cards. **Card files live in [venubase-roadmap](https://github.com/mattcrest/venubase-roadmap)** — a dedicated repo, checked out inside `venubase-web` as `docs/roadmap/` (git submodule). This repo is only the UI + API server.
+Local web kanban over Markdown “release” cards. **Card files live in [venubase-roadmap](https://github.com/mattcrest/venubase-roadmap)** — checked out inside `venubase-web` as `docs/roadmap/` (git submodule). This repo is only the UI + API server.
 
 ## Layout
 
-Expected sibling directories on disk:
-
 ```text
 dev/
-  kando/                    ← this repo (UI + API)
-  venubase-roadmap/         ← canonical roadmap cards (optional direct clone)
+  kando/                         ← this repo (UI + API)
   venubase/
     venubase-web/
-      docs/roadmap/         ← git submodule → venubase-roadmap
+      docs/roadmap/              ← git submodule → venubase-roadmap (canonical edit path)
 ```
 
-After cloning venubase-web: `git submodule update --init docs/roadmap`
+**Use one path for edits:** `venubase-web/docs/roadmap/`. Point Kando’s venubase vault there. Avoid a second standalone `venubase-roadmap` clone unless you `git pull` it every session.
 
-If your paths differ, set an absolute path:
+After cloning venubase-web:
+
+```bash
+git submodule update --init docs/roadmap
+```
+
+Override path in `vaults.json` or:
 
 ```bash
 export VENUBASE_ROADMAP_DIR=/path/to/venubase-web/docs/roadmap
-# or clone venubase-roadmap directly:
-export VENUBASE_ROADMAP_DIR=/path/to/venubase-roadmap
 ```
 
 ## Setup
@@ -31,7 +32,6 @@ export VENUBASE_ROADMAP_DIR=/path/to/venubase-roadmap
 cd /path/to/kando
 npm install
 cp vaults.example.json vaults.json
-# Edit vaults.json if you use extra vaults or non-default paths
 npm run dev
 ```
 
@@ -49,18 +49,16 @@ Opens **http://127.0.0.1:3001** (see `kando-start.js`).
 
 ### Cursor agent
 
-This repo includes a **kando-dev-server** skill and rule (`.cursor/skills/`, `.cursor/rules/`). In chat, ask to **start Kando** and the agent should run `scripts/kando-dev.sh` and confirm http://127.0.0.1:3001 is healthy.
+**kando-dev-server** skill — start/stop Kando. **venubase-roadmap** skill — card edits. **venubase-roadmap-submodule** — pointer to venubase-web for submodule bumps.
 
 ## Vault config
 
 - Per-machine overrides: **`vaults.json`** (gitignored). Copy from `vaults.example.json`.
-- Merged with defaults from `electron/server.js` (`venubase` → `VENUBASE_ROADMAP_DIR` or sibling path above).
+- Default venubase path: `../venubase/venubase-web/docs/roadmap` (see `electron/server.js`).
 
 ### Git sync
 
-When a vault directory is a git repo (e.g. the `venubase-roadmap` submodule), Kando shows **Commit & Push** in the header.
-
-Optional auto-commit on every card save — in `vaults.json`:
+Kando **Commit & Push** updates **venubase-roadmap** only (not venubase-web).
 
 ```json
 "git": {
@@ -71,7 +69,7 @@ Optional auto-commit on every card save — in `vaults.json`:
 }
 ```
 
-Or set `KANDO_AUTO_GIT_COMMIT=1` for all vaults. Auto-push requires `"autoPush": true`.
+Or `KANDO_AUTO_GIT_COMMIT=1`. Submodule bump in venubase-web: `./scripts/bump-roadmap-submodule.sh` (see venubase-web **venubase-roadmap-submodule** skill). Bump lazily — PR roadmap links use `github.com/mattcrest/venubase-roadmap/...`.
 
 API: `GET /api/vaults/:name/git/status`, `POST /api/vaults/:name/git/sync`
 
@@ -79,7 +77,7 @@ API: `GET /api/vaults/:name/git/status`, `POST /api/vaults/:name/git/sync`
 
 | Script | Purpose |
 |--------|---------|
-| `./scripts/kando-dev.sh` | Start / stop / restart / status (preferred for agents and port checks) |
+| `./scripts/kando-dev.sh` | Start / stop / restart / status |
 | `npm run dev` | Start API + static UI, open browser |
-| `npm run server` | API only (`node electron/server.js`) |
-| `npm start` | Electron shell (desktop) |
+| `npm run server` | API only |
+| `npm start` | Electron shell |
