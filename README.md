@@ -1,144 +1,180 @@
 # Kando
 
-Local web kanban over Markdown “release” cards. **Card files live in [venubase-roadmap](https://github.com/mattcrest/venubase-roadmap)** — checked out inside `venubase-web` as `docs/roadmap/` (git submodule). This repo is only the UI + API server.
+Local kanban UI and HTTP API for **Markdown roadmap cards** (`release-*.md`) in [Tolaria](https://github.com/refactoringhq/tolaria)-style vaults. Kando does not own your card files — it points at one or more vault directories on disk and can sync each vault’s git repo independently.
 
-## Layout
+Use it to plan releasable slices, drag cards across columns, and let coding agents resolve **which roadmap belongs to which app repo** via a single config file.
 
-```text
-dev/
-  kando/                         ← this repo (UI + API)
-  venubase/
-    venubase-web/
-      docs/roadmap/              ← git submodule → venubase-roadmap (canonical edit path)
-```
+## Features
 
-**Use one path for edits:** `venubase-web/docs/roadmap/`. Point Kando’s venubase vault there. Avoid a second standalone `venubase-roadmap` clone unless you `git pull` it every session.
+- **Multi-vault** — Venubase, PlayerPath, or any project; switch vaults in the UI
+- **Cross-project routing** — `vaults.json` maps app repo paths → roadmap vault + convention files
+- **Agent-agnostic API** — `GET /api/routing/resolve` for Cursor, Claude Code, Codex, Copilot, Gemini, or custom tools
+- **Bundled agent integrations** — optional install scripts for common assistants ([templates/agents/README.md](templates/agents/README.md))
+- **Git sync per vault** — commit/push roadmap changes from the Kando header (optional auto-commit on save)
 
-After cloning venubase-web:
+## Quick start
 
 ```bash
-git submodule update --init docs/roadmap
-```
-
-Override path in `vaults.json` or:
-
-```bash
-export VENUBASE_ROADMAP_DIR=/path/to/venubase-web/docs/roadmap
-```
-
-## Setup
-
-```bash
-cd /path/to/kando
+git clone <your-fork-or-origin-url> kando
+cd kando
 npm install
 cp vaults.example.json vaults.json
+# Edit vaults.json: set vault paths and routing.workspaceRoots for your machine
 npm run dev
 ```
 
-Opens **http://127.0.0.1:3001** (see `kando-start.js`).
-
-### Dev server helper
+Opens **http://127.0.0.1:3001** (or run `./scripts/kando-dev.sh start`).
 
 ```bash
-./scripts/kando-dev.sh start    # install deps if needed, start, wait for health
-./scripts/kando-dev.sh status
+./scripts/kando-dev.sh status   # check health
 ./scripts/kando-dev.sh stop
 ./scripts/kando-dev.sh restart
-./scripts/kando-dev.sh stop --force   # free port 3001 if another process holds it
 ```
 
-### Agents (any tool)
+## How it fits together
 
-**[docs/agent-routing.md](docs/agent-routing.md)** — agent-agnostic workflow: resolve workspace via HTTP API, read per-project conventions, edit `release-*.md`. Works without Cursor.
-
-**[AGENTS.md](AGENTS.md)** — entry point; also read by many agents automatically.
-
-### Agent integrations (optional)
-
-Bundled **skills** live in `.cursor/skills/` (Cursor format; also used by Codex and Claude Code installers).
-
-**One command** (Cursor, Codex, Claude, Copilot, Gemini + optional app repos):
-
-```bash
-./scripts/install-agent-integrations.sh --all
-
-# Or map your app repos explicitly:
-./scripts/install-agent-integrations.sh --cursor \
-  --app-repo ~/dev/venubase/venubase-web \
-  --app-repo ~/dev/playerpath/playerpath-web
+```text
+  app repo (e.g. venubase-web, playerpath-web)
+       │
+       │  routing.workspaceRoots in vaults.json
+       ▼
+  Kando (:3001)  ──►  roadmap vault directory
+       │                 release-*.md
+       │                 roadmap-conventions.md
+       │                 roadmap-index.md
+       └── git sync ──►  vault’s own git repo (may differ from app repo)
 ```
 
-| Skill | Purpose |
-|-------|---------|
-| `kando-roadmap-router` | Resolve workspace → vault via `routing`; edit cards per project conventions |
-| `kando-dev-server` | Start/stop Kando on port 3001 |
-| `venubase-roadmap` | Venubase card workflow (optional; after router) |
-| `venubase-roadmap-submodule` | Venubase `docs/roadmap` submodule bump |
+**This repo** = UI + API only. **Roadmap markdown** lives wherever you configure each vault path (submodule, sibling repo, or folder inside an app repo).
 
-Per-tool scripts: `install-cursor-skills.sh`, `install-codex-skills.sh`, `install-claude-skills.sh`, etc. See [templates/agents/README.md](templates/agents/README.md).
+## Configuration (`vaults.json`)
 
-## Vault config
+Copy [`vaults.example.json`](vaults.example.json) → `vaults.json` (gitignored). Set absolute paths on your machine.
 
-- Per-machine overrides: **`vaults.json`** (gitignored). Copy from `vaults.example.json`.
-- Default venubase path: `../venubase/venubase-web/docs/roadmap` (see `electron/server.js`).
+| Key | Purpose |
+|-----|---------|
+| `vaults` | Vault id → filesystem path to markdown root |
+| `routing` | Vault id → `workspaceRoots`, convention filenames, optional `canonicalRepo` |
+| `default` | Default vault in the UI |
+| `git` | Per-vault auto-commit / push settings |
+| `colors` | UI accent per vault |
 
-### Cross-project routing (`routing`)
-
-Map app repos to roadmap vaults so agents (and tools) know which `release-*.md` tree to use:
+### Routing example (two projects)
 
 ```json
-"routing": {
-  "venubase": {
-    "workspaceRoots": ["/path/to/venubase-web", "/path/to/venubase/worktrees/*"],
-    "conventionsFile": "roadmap-conventions.md",
-    "indexFile": "roadmap-index.md",
-    "canonicalRepo": "your-org/venubase-roadmap"
+{
+  "vaults": {
+    "venubase": "/path/to/venubase-web/docs/roadmap",
+    "playerpath": "/path/to/playerpath-web/PlayerPath - Tolaria"
+  },
+  "routing": {
+    "venubase": {
+      "workspaceRoots": ["/path/to/venubase-web", "/path/to/venubase/worktrees/*"],
+      "conventionsFile": "roadmap-conventions.md",
+      "indexFile": "roadmap-index.md",
+      "canonicalRepo": "your-org/venubase-roadmap"
+    },
+    "playerpath": {
+      "workspaceRoots": ["/path/to/playerpath-web"],
+      "conventionsFile": "roadmap-conventions.md",
+      "indexFile": "roadmap-index.md",
+      "canonicalRepo": "your-org/playerpath-web"
+    }
   }
 }
 ```
 
-- **`workspaceRoots`**: exact paths or glob patterns (`*`). First matching vault wins.
-- **`conventionsFile` / `indexFile`**: filenames inside the vault directory.
+- **`workspaceRoots`**: exact paths or globs (`*`). First match wins.
+- **Adding a project**: new `vaults` + `routing` entries only — no code changes.
 
-**API**
+Override the default Venubase path without editing `vaults.json`:
+
+```bash
+export VENUBASE_ROADMAP_DIR=/path/to/roadmap-vault
+```
+
+## HTTP API
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /api/vaults` | Lists vaults; each entry includes `routing`; top-level `routing` object |
-| `GET /api/routing/resolve?workspaceRoot=<path>` | Resolve vault + conventions paths for a workspace |
-
-Example:
+| `GET /api/health` | Server status and vault keys |
+| `GET /api/vaults` | Vault list with `routing` metadata |
+| `GET /api/routing/resolve?workspaceRoot=<path>` | Map an app repo → vault + convention paths |
+| `GET /api/cards?vault=<key>` | List `release: true` cards |
+| `GET/PUT /api/cards/:id` | Read/update card metadata and body |
+| `GET /api/vaults/:name/git/status` | Git status for vault directory |
+| `POST /api/vaults/:name/git/sync` | Commit and optional push |
 
 ```bash
 curl -s "http://127.0.0.1:3001/api/routing/resolve?workspaceRoot=$PWD"
 ```
 
-Adding a new project: set `vaults.<key>`, `routing.<key>.workspaceRoots`, and optional `canonicalRepo` — no skill edits required.
+Full agent workflow: **[docs/agent-routing.md](docs/agent-routing.md)**. Entry point for tools that read **`AGENTS.md`** / **`CLAUDE.md`** in this repo.
 
-### Git sync
+## Coding agents
 
-Kando **Commit & Push** updates **venubase-roadmap** only (not venubase-web).
+Install skills and memory snippets once (paths use `KANDO_HOME` if set):
+
+```bash
+export KANDO_HOME=/path/to/kando   # optional
+npm run install:agents
+# same as: ./scripts/install-agent-integrations.sh --all
+```
+
+| Flag | Tool |
+|------|------|
+| `--cursor` | Cursor → `~/.cursor/skills/` |
+| `--codex` | OpenAI Codex → `~/.codex/skills/` |
+| `--claude` | Claude Code skills + `~/.claude/CLAUDE.md` |
+| `--copilot` | GitHub Copilot → `~/.copilot/copilot-instructions.md` |
+| `--gemini` | Gemini → `~/.gemini/GEMINI.md` |
+| `--app-repo PATH` | Append pointer block to that repo’s `AGENTS.md` |
+
+| Skill | Purpose |
+|-------|---------|
+| `kando-roadmap-router` | Resolve workspace → vault; follow per-project conventions |
+| `kando-dev-server` | Start/stop Kando on port 3001 |
+| `venubase-roadmap` | Venubase-specific card workflow (optional) |
+| `venubase-roadmap-submodule` | Venubase `docs/roadmap` submodule bump (optional) |
+
+Details: [templates/agents/README.md](templates/agents/README.md).
+
+## Git sync
+
+Kando’s **Commit & Push** operates on the **vault directory’s** git repo (not necessarily the app repo).
 
 ```json
 "git": {
-  "venubase": {
-    "autoCommit": true,
-    "autoPush": false
-  }
+  "venubase": { "autoCommit": true, "autoPush": false, "remote": "origin", "branch": "main" }
 }
 ```
 
-Or `KANDO_AUTO_GIT_COMMIT=1`. Submodule bump in venubase-web: `./scripts/bump-roadmap-submodule.sh` (see venubase-web **venubase-roadmap-submodule** skill). Bump lazily — PR roadmap links use `github.com/mattcrest/venubase-roadmap/...`.
+Or `KANDO_AUTO_GIT_COMMIT=1` globally.
 
-API: `GET /api/vaults/:name/git/status`, `POST /api/vaults/:name/git/sync`
+## Example: Venubase layout
 
-## Scripts
+One common setup (not required for Kando):
 
-| Script | Purpose |
-|--------|---------|
-| `./scripts/kando-dev.sh` | Start / stop / restart / status |
-| `./scripts/install-agent-integrations.sh` | Install skills/snippets for Cursor, Codex, Claude, Copilot, Gemini |
-| `./scripts/install-cursor-skills.sh` | Cursor only (`~/.cursor/skills/`) |
-| `npm run dev` | Start API + static UI, open browser |
+```text
+dev/
+  kando/
+  venubase/venubase-web/docs/roadmap/   ← submodule → venubase-roadmap
+```
+
+- Point the `venubase` vault at `docs/roadmap/`.
+- After cloning venubase-web: `git submodule update --init docs/roadmap`
+- Prefer **one** edit path; avoid a stale second clone of `venubase-roadmap`.
+- PR roadmap links can use `github.com/<org>/venubase-roadmap/...` on `main` without bumping the app submodule every time. Submodule bumps: see **venubase-roadmap-submodule** skill in venubase-web.
+
+## Scripts & npm commands
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | API + static UI (opens browser) |
 | `npm run server` | API only |
 | `npm start` | Electron shell |
+| `npm run install:agents` | Install agent integrations (`--all`) |
+| `npm run install:cursor-skills` | Cursor skills only |
+| `./scripts/kando-dev.sh` | Start / stop / restart / status |
+| `./scripts/install-agent-integrations.sh` | Per-tool agent install |
+| `./scripts/install-app-repo-snippet.sh <repo>` | Add Kando block to app `AGENTS.md` |
