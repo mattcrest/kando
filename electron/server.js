@@ -22,11 +22,11 @@ const __dirname = dirname(__filename);
 const VAULTS_CONFIG_FILE = './vaults.json';
 
 // Default vaults: sibling checkout layout —
-//   /dev/kando/electron/server.js  →  /dev/venubase/venubase-web/docs/roadmap
+//   /dev/kando  →  /dev/venubase-roadmap  (canonical roadmap repo)
 // Override with VENUBASE_ROADMAP_DIR (absolute path) for nonstandard layouts.
 const DEFAULT_VENUBASE_ROADMAP = process.env.VENUBASE_ROADMAP_DIR
   ? path.resolve(process.env.VENUBASE_ROADMAP_DIR)
-  : path.resolve(__dirname, '../../venubase/venubase-web/docs/roadmap');
+  : path.resolve(__dirname, '../../venubase-roadmap');
 
 const DEFAULT_VAULTS = {
   venubase: DEFAULT_VENUBASE_ROADMAP,

@@ -3,7 +3,7 @@ name: venubase-roadmap
 description: >-
   Search and update Venubase roadmap release cards (release-*.md). Use when planning,
   starting, progressing, or shipping a feature slice, or when the user asks about
-  roadmap cards. Git/submodule steps: venubase-roadmap-submodule skill.
+  Venubase roadmap cards. Git/submodule steps: venubase-roadmap-submodule skill.
 ---
 
 # Venubase roadmap cards
@@ -12,17 +12,17 @@ description: >-
 
 ## Where files live
 
-**Edit here (canonical path):** `venubase-web/docs/roadmap/` — git submodule → **`mattcrest/venubase-roadmap`**.
+**Canonical edit path (Kando vault):** standalone **`venubase-roadmap`** repo — e.g. `~/dev/venubase-roadmap/`.
 
-Point Kando’s venubase vault at that directory. Do not maintain a second stale clone elsewhere.
+Point Kando’s `venubase` vault there. Card commits and Kando **Commit & Push** go to **`mattcrest/venubase-roadmap`** on `main`.
 
-After card edits: commit **inside** `docs/roadmap` and push **venubase-roadmap**. Bump **venubase-web** only when PRs/docs need the pin — see **venubase-roadmap-submodule** skill (full copy in venubase-web).
+**App repo pin:** `venubase-web/docs/roadmap/` is a git submodule of the same repo. Do not use it as the Kando vault path unless you have no standalone clone. Bump the submodule in venubase-web only when needed — see **venubase-roadmap-submodule**.
 
 ## Find a card
 
 ```bash
-grep -r "search term" /path/to/venubase-web/docs/roadmap/
-grep -l "status: Active" /path/to/venubase-web/docs/roadmap/release-*.md
+grep -r "search term" /path/to/venubase-roadmap/
+grep -l "status: Active" /path/to/venubase-roadmap/release-*.md
 ```
 
 Hub: `roadmap-index.md`. Conventions: `roadmap-conventions.md`.
@@ -40,12 +40,12 @@ Kanban columns: Backlog → Prioritized → Active → Shipped (`Done` in frontm
 
 ## Workflow
 
-1. **Find** matching `release-<slug>.md`
+1. **Find** matching `release-<slug>.md` in **venubase-roadmap**
 2. **Update** status, acceptance criteria, PR links, blockers
-3. **Commit** inside submodule:
+3. **Commit** in venubase-roadmap:
 
 ```bash
-cd /path/to/venubase-web/docs/roadmap
+cd /path/to/venubase-roadmap
 git checkout main && git pull
 git add -A && git commit -m "roadmap: <what changed>"
 git push origin main

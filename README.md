@@ -64,7 +64,7 @@ Copy [`vaults.example.json`](vaults.example.json) → `vaults.json` (gitignored)
 ```json
 {
   "vaults": {
-    "venubase": "/path/to/venubase-web/docs/roadmap",
+    "venubase": "/path/to/venubase-roadmap",
     "playerpath": "/path/to/playerpath-web/PlayerPath - Tolaria"
   },
   "routing": {
@@ -153,18 +153,19 @@ Or `KANDO_AUTO_GIT_COMMIT=1` globally.
 
 ## Example: Venubase layout
 
-One common setup (not required for Kando):
-
 ```text
 dev/
   kando/
-  venubase/venubase-web/docs/roadmap/   ← submodule → venubase-roadmap
+  venubase-roadmap/              ← Kando vault (canonical — edit cards here)
+  venubase/venubase-web/
+    docs/roadmap/                 ← git submodule pin (same repo, not the Kando path)
 ```
 
-- Point the `venubase` vault at `docs/roadmap/`.
-- After cloning venubase-web: `git submodule update --init docs/roadmap`
-- Prefer **one** edit path; avoid a stale second clone of `venubase-roadmap`.
-- PR roadmap links can use `github.com/<org>/venubase-roadmap/...` on `main` without bumping the app submodule every time. Submodule bumps: see **venubase-roadmap-submodule** skill in venubase-web.
+- Point the `venubase` vault at the **`venubase-roadmap`** checkout (sibling of `kando` under `dev/`).
+- Kando **Commit & Push** updates **`venubase-roadmap`** on GitHub.
+- `venubase-web/docs/roadmap/` is a submodule for the app repo; bump it when collaborators need a fresh pin on `main` — not for every card edit. See **venubase-roadmap-submodule** (venubase-web or Kando skills).
+- PR roadmap links: `https://github.com/<org>/venubase-roadmap/blob/main/release-<slug>.md`
+- Do **not** point Kando at `docs/roadmap/` unless you intentionally have no standalone `venubase-roadmap` clone (easy to drift from the repo you push).
 
 ## Scripts & npm commands
 

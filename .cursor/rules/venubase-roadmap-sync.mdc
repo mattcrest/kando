@@ -1,17 +1,15 @@
 ---
 description: >-
-  Venubase roadmap cards — edit venubase-roadmap via Kando vault; PR links use
-  venubase-roadmap repo; bump venubase-web submodule only when docs/collaborators need it.
+  Venubase roadmap cards — edit venubase-roadmap repo; Kando vault points there.
+  Bump venubase-web docs/roadmap submodule only when the app pin must move.
 alwaysApply: false
 ---
 
-# Venubase roadmap (Kando)
+# Venubase roadmap sync
 
-Skills: **venubase-roadmap** (cards) · **venubase-roadmap-submodule** (pointer to venubase-web for bumps).
+Skills: **venubase-roadmap** (cards) · **venubase-roadmap-submodule** (submodule bump in venubase-web).
 
-1. Edit `release-*.md` in vault (`venubase-web/docs/roadmap/`)
+1. Edit `release-*.md` in **venubase-roadmap** (Kando `venubase` vault path)
 2. Commit & Push → **venubase-roadmap** only
 3. PR links → `github.com/mattcrest/venubase-roadmap/blob/main/release-*.md`
-4. Bump venubase-web submodule only when relative doc links or collaborators need it
-
-Notify user after card updates (status, blockers, next step).
+4. Submodule bump in venubase-web only when required (not per card edit)

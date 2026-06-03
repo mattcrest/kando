@@ -49,7 +49,7 @@ Prefer the helper script (run from repo root):
 | Port | 3001 |
 | Start command | `npm run dev` → `node kando-start.js` → `electron/server.js` |
 | Config | `vaults.json` (gitignored); copy from `vaults.example.json` |
-| Vault path | Sibling `../venubase/venubase-web/docs/roadmap` or `VENUBASE_ROADMAP_DIR` |
+| Vault path | Sibling `../venubase-roadmap` or `VENUBASE_ROADMAP_DIR` |
 
 ## Troubleshooting
 

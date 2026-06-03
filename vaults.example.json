@@ -1,6 +1,6 @@
 {
   "vaults": {
-    "venubase": "/absolute/path/to/venubase-web/docs/roadmap",
+    "venubase": "/absolute/path/to/venubase-roadmap",
     "playerpath": "/absolute/path/to/playerpath-web/PlayerPath - Tolaria"
   },
   "colors": {

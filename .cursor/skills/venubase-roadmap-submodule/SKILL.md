@@ -1,14 +1,16 @@
 ---
 name: venubase-roadmap-submodule
 description: >-
-  Submodule sync between venubase-roadmap and venubase-web. Use when bumping
-  docs/roadmap, cloning venubase-web, or submodule best practices. Full workflow
-  lives in venubase-web; this skill is a pointer for Kando-only sessions.
+  Sync venubase-roadmap (canonical cards) with venubase-web docs/roadmap submodule.
+  Use when bumping the submodule pin, cloning venubase-web, or after editing cards in
+  venubase-roadmap. Full workflow also lives in venubase-web.
 ---
 
-# Roadmap submodule (Kando)
+# Roadmap submodule (Venubase)
 
-Kando edits **`venubase-roadmap`** via the vault at `venubase-web/docs/roadmap/`. Kando git sync does **not** update the parent repo.
+**Canonical cards:** **`venubase-roadmap`** repo — Kando’s `venubase` vault should point here.
+
+**App pin:** `venubase-web/docs/roadmap/` submodule — same content at a pinned SHA; Kando git sync does **not** update venubase-web.
 
 **Full checklist, bump script, and PR rules:** read
 
@@ -18,9 +20,9 @@ Kando edits **`venubase-roadmap`** via the vault at `venubase-web/docs/roadmap/`
 
 **Quick rules:**
 
-1. Commit card changes inside `docs/roadmap` → push **venubase-roadmap**
+1. Edit and commit cards in **venubase-roadmap** → push **venubase-roadmap** `main`
 2. PR roadmap links → `github.com/mattcrest/venubase-roadmap/blob/main/release-*.md`
-3. Bump **venubase-web** only when `src/docs/` relative links or collaborators need fresh cards on `main`:
+3. Bump **venubase-web** submodule only when `src/docs/` relative links or collaborators need fresh cards on `main`:
 
 ```bash
 cd venubase-web && ./scripts/bump-roadmap-submodule.sh && git push origin main
