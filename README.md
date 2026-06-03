@@ -151,6 +151,8 @@ Kando’s **Commit & Push** operates on the **vault directory’s** git repo (no
 
 Or `KANDO_AUTO_GIT_COMMIT=1` globally.
 
+**Push fails with “could not read Username for https://github.com”?** Kando retries via SSH when HTTPS has no credentials (common when the server runs non-interactively). Ensure your GitHub SSH key is loaded (`ssh -T git@github.com`). Prefer SSH remotes: `git remote set-url origin git@github.com:ORG/venubase-roadmap.git`.
+
 ## Example: Venubase layout
 
 ```text

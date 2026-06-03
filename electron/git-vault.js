@@ -3,12 +3,63 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
+function gitError(err) {
+  const message = [err.stderr, err.stdout, err.message].filter(Boolean).join('\n').trim();
+  const e = new Error(message || 'git command failed');
+  e.stderr = err.stderr;
+  e.stdout = err.stdout;
+  e.code = err.code;
+  return e;
+}
+
 async function git(cwd, ...args) {
-  const { stdout, stderr } = await execFileAsync('git', args, {
-    cwd,
-    maxBuffer: 10 * 1024 * 1024,
-  });
-  return (stdout || stderr || '').trim();
+  try {
+    const { stdout, stderr } = await execFileAsync('git', args, {
+      cwd,
+      maxBuffer: 10 * 1024 * 1024,
+      env: process.env,
+    });
+    return (stdout || stderr || '').trim();
+  } catch (err) {
+    throw gitError(err);
+  }
+}
+
+/** HTTPS GitHub remotes often fail in non-interactive servers (no credential prompt). */
+function isAuthError(err) {
+  const text = `${err.stderr || ''}\n${err.message || ''}`.toLowerCase();
+  return (
+    text.includes('could not read username') ||
+    text.includes('device not configured') ||
+    text.includes('authentication failed') ||
+    text.includes('invalid username or password') ||
+    text.includes('terminal prompts disabled')
+  );
+}
+
+/** https://github.com/org/repo.git → git@github.com:org/repo.git */
+export function httpsRemoteToSsh(url) {
+  const trimmed = (url || '').trim().replace(/\/$/, '');
+  const m = trimmed.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+?)(\.git)?$/i);
+  if (!m) return null;
+  const repo = m[2].endsWith('.git') ? m[2] : `${m[2]}.git`;
+  return `git@github.com:${m[1]}/${repo}`;
+}
+
+async function getOriginUrl(dir) {
+  return git(dir, 'remote', 'get-url', 'origin');
+}
+
+async function runWithSshFallback(dir, run) {
+  try {
+    return await run('origin');
+  } catch (err) {
+    if (!isAuthError(err)) throw err;
+    const originUrl = await getOriginUrl(dir).catch(() => null);
+    const sshUrl = originUrl ? httpsRemoteToSsh(originUrl) : null;
+    if (!sshUrl) throw err;
+    return await run(sshUrl, { usedSsh: true });
+  }
 }
 
 export async function isGitRepo(dir) {
@@ -47,7 +98,10 @@ export async function getGitStatus(dir, { fetchRemote = true } = {}) {
 
   if (fetchRemote) {
     try {
-      await git(dir, 'fetch', 'origin', branch, '--quiet');
+      await runWithSshFallback(dir, async (remote) => {
+        await git(dir, 'fetch', remote, branch, '--quiet');
+        return {};
+      });
     } catch {
       // offline or no remote — fall back to local upstream tracking
     }
@@ -85,8 +139,13 @@ export async function pullRebase(dir, remote = 'origin', branch) {
     throw new Error('Vault directory is not a git repository');
   }
   const ref = branch || (await git(dir, 'rev-parse', '--abbrev-ref', 'HEAD'));
-  await git(dir, 'pull', '--rebase', remote, ref);
-  return { pulled: true, remote, branch: ref };
+
+  const result = await runWithSshFallback(dir, async (remoteTarget, meta = {}) => {
+    await git(dir, 'pull', '--rebase', remoteTarget, ref);
+    return { pulled: true, remote: remoteTarget, branch: ref, ...meta };
+  });
+
+  return result;
 }
 
 export async function syncVault(dir, message, { remote = 'origin', branch, pullIfBehind = true } = {}) {
@@ -103,7 +162,7 @@ export async function commitAll(dir, message) {
   if (!(await isGitRepo(dir))) {
     throw new Error('Vault directory is not a git repository');
   }
-  const status = await getGitStatus(dir);
+  const status = await getGitStatus(dir, { fetchRemote: false });
   if (status.clean) {
     return { committed: false, message: 'Nothing to commit' };
   }
@@ -117,14 +176,17 @@ export async function push(dir, remote = 'origin', branch) {
     throw new Error('Vault directory is not a git repository');
   }
   const ref = branch || (await git(dir, 'rev-parse', '--abbrev-ref', 'HEAD'));
-  await git(dir, 'push', remote, ref);
-  return { pushed: true, remote, branch: ref };
+
+  return runWithSshFallback(dir, async (remoteTarget, meta = {}) => {
+    await git(dir, 'push', remoteTarget, ref);
+    return { pushed: true, remote: remoteTarget, branch: ref, ...meta };
+  });
 }
 
 export async function commitAndPush(dir, message, { remote = 'origin', branch } = {}) {
   const commitResult = await commitAll(dir, message);
   if (!commitResult.committed) {
-    const status = await getGitStatus(dir);
+    const status = await getGitStatus(dir, { fetchRemote: false });
     if (status.ahead === 0) {
       return { ...commitResult, pushed: false };
     }
