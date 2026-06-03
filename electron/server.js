@@ -6,6 +6,10 @@ import matter from 'gray-matter';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { commitAll, getGitStatus, syncVault } from './git-vault.js';
+import {
+  getRoutingForVault,
+  resolveVaultForWorkspace,
+} from './vault-routing.js';
 
 const app = express();
 const PORT = 3001;
@@ -35,6 +39,7 @@ let VAULT_COLORS = {
   playerpath: '#8b5cf6',
 };
 let VAULT_GIT = {};
+let VAULT_ROUTING = {};
 
 // Load vaults from config file if it exists
 async function loadVaultsConfig() {
@@ -51,8 +56,14 @@ async function loadVaultsConfig() {
     if (config.git) {
       VAULT_GIT = config.git;
     }
+    if (config.routing && typeof config.routing === 'object') {
+      VAULT_ROUTING = config.routing;
+    }
     console.log('Loaded vaults from config:', Object.keys(VAULTS));
     console.log('Default vault:', DEFAULT_VAULT);
+    if (Object.keys(VAULT_ROUTING).length > 0) {
+      console.log('Routing configured for:', Object.keys(VAULT_ROUTING).join(', '));
+    }
   } catch {
     // Config file doesn't exist yet, use defaults
     console.log('Using default vaults configuration');
@@ -86,6 +97,8 @@ async function saveVaultsConfig() {
       colors: Object.keys(customColors).length > 0 ? customColors : undefined,
       default: DEFAULT_VAULT,
       git: Object.keys(VAULT_GIT).length > 0 ? VAULT_GIT : undefined,
+      routing:
+        Object.keys(VAULT_ROUTING).length > 0 ? VAULT_ROUTING : undefined,
     };
     await fs.writeFile(VAULTS_CONFIG_FILE, JSON.stringify(config, null, 2));
   } catch (err) {
@@ -340,10 +353,56 @@ app.get('/api/vaults', async (req, res) => {
         path: dir,
         color,
         isDefault: vaultKey === DEFAULT_VAULT,
-        kanban: kanbanConfig
+        kanban: kanbanConfig,
+        routing: getRoutingForVault(vaultKey, VAULT_ROUTING),
       });
     }
-    res.json({ vaults: vaultList, default: DEFAULT_VAULT });
+    res.json({
+      vaults: vaultList,
+      default: DEFAULT_VAULT,
+      routing: VAULT_ROUTING,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/routing/resolve - Map a workspace root to a vault + conventions paths
+app.get('/api/routing/resolve', (req, res) => {
+  try {
+    const workspaceRoot = req.query.workspaceRoot || req.query.cwd;
+    if (!workspaceRoot) {
+      return res.status(400).json({
+        error: 'workspaceRoot or cwd query parameter is required',
+      });
+    }
+
+    const resolved = resolveVaultForWorkspace(
+      workspaceRoot,
+      VAULT_ROUTING,
+      VAULTS
+    );
+
+    if (!resolved) {
+      return res.json({
+        matched: false,
+        workspaceRoot: path.resolve(workspaceRoot),
+        vaults: Object.keys(VAULTS),
+        hint: 'Add routing.<vaultKey>.workspaceRoots in vaults.json',
+      });
+    }
+
+    const { conventionsFile, indexFile, canonicalRepo } = resolved.routing;
+    res.json({
+      matched: true,
+      workspaceRoot: path.resolve(workspaceRoot),
+      vaultKey: resolved.vaultKey,
+      vaultPath: resolved.vaultPath,
+      conventionsPath: path.join(resolved.vaultPath, conventionsFile),
+      indexPath: path.join(resolved.vaultPath, indexFile),
+      routing: resolved.routing,
+      canonicalRepo,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -611,7 +670,8 @@ async function start() {
     console.log(`GET /api/cards/:cardId?vault=<name> - Get card details`);
     console.log(`PUT /api/cards/:cardId?vault=<name> - Update card metadata`);
     console.log(`PUT /api/cards/:cardId/content?vault=<name> - Update card content`);
-    console.log(`GET /api/vaults - List available vaults`);
+    console.log(`GET /api/vaults - List available vaults (includes routing metadata)`);
+    console.log(`GET /api/routing/resolve?workspaceRoot=<path> - Resolve vault for workspace`);
     console.log(`POST /api/vaults/add - Add new vault`);
     console.log(`DELETE /api/vaults/:name - Remove vault`);
   });

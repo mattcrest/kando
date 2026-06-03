@@ -1,11 +1,11 @@
 {
   "vaults": {
     "venubase": "/absolute/path/to/venubase-web/docs/roadmap",
-    "other": "/optional/second-vault-root"
+    "playerpath": "/absolute/path/to/playerpath-web/PlayerPath - Tolaria"
   },
   "colors": {
     "venubase": "#d27a32",
-    "other": "#8b5cf6"
+    "playerpath": "#ddbb40"
   },
   "default": "venubase",
   "git": {
@@ -14,6 +14,34 @@
       "autoPush": false,
       "remote": "origin",
       "branch": "main"
+    },
+    "playerpath": {
+      "autoCommit": false,
+      "autoPush": false,
+      "remote": "origin",
+      "branch": "main"
+    }
+  },
+  "routing": {
+    "venubase": {
+      "workspaceRoots": [
+        "/absolute/path/to/venubase-web",
+        "/absolute/path/to/venubase-web-pr*",
+        "/absolute/path/to/venubase/worktrees/*"
+      ],
+      "conventionsFile": "roadmap-conventions.md",
+      "indexFile": "roadmap-index.md",
+      "canonicalRepo": "your-org/venubase-roadmap"
+    },
+    "playerpath": {
+      "workspaceRoots": [
+        "/absolute/path/to/playerpath-web",
+        "/absolute/path/to/playerpath-web-pr*",
+        "/absolute/path/to/playerpath/worktrees/*"
+      ],
+      "conventionsFile": "roadmap-conventions.md",
+      "indexFile": "roadmap-index.md",
+      "canonicalRepo": "your-org/playerpath-web"
     }
   }
 }

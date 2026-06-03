@@ -1,0 +1,16 @@
+---
+description: >-
+  Resolve roadmap cards via Kando routing when the user mentions Kando, roadmap cards,
+  or release-*.md. Use the kando-roadmap-router skill.
+alwaysApply: false
+---
+
+# Kando roadmap routing
+
+When the user mentions a Kando card, roadmap card, or `release-*.md`:
+
+1. Use the **kando-roadmap-router** skill.
+2. Ensure Kando is running (**kando-dev-server**) or read `vaults.json` for routing fallback.
+3. Follow conventions from the resolved vault's `roadmap-conventions.md`.
+
+Do not hardcode project paths in this rule — routing lives in Kando config.

@@ -8,7 +8,9 @@
     "start": "electron .",
     "dev": "node kando-start.js",
     "server": "node electron/server.js",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "install:agents": "./scripts/install-agent-integrations.sh --all",
+    "install:cursor-skills": "./scripts/install-cursor-skills.sh"
   },
   "dependencies": {
     "cors": "^2.8.5",

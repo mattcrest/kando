@@ -8,7 +8,7 @@ description: >-
 
 # Kando dev server
 
-Run the local Kando UI from **this repo** (`/Users/mattcrest/dev/kando` or workspace root). Do not assume another copy (e.g. Venubase worktrees) is correct.
+Run the local Kando UI from the **Kando repository** (where `scripts/kando-dev.sh` lives). Do not assume another copy (e.g. app worktrees) is the Kando server.
 
 ## Quick commands
 
@@ -61,4 +61,4 @@ Prefer the helper script (run from repo root):
 
 ## After starting
 
-For roadmap card work, also use the `venubase-roadmap` skill. Kando only serves the UI/API; card files live in the Venubase vault.
+For roadmap card work, use **kando-roadmap-router** (any project). Use **venubase-roadmap** only for Venubase-specific submodule details after routing resolves the vault.

@@ -8,6 +8,8 @@ description: >-
 
 # Venubase roadmap cards
 
+**Start with kando-roadmap-router** to resolve the vault from the active workspace. Use this skill for Venubase-specific paths and submodule workflow.
+
 ## Where files live
 
 **Edit here (canonical path):** `venubase-web/docs/roadmap/` — git submodule → **`mattcrest/venubase-roadmap`**.
