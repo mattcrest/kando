@@ -10,6 +10,8 @@ description: >-
 
 **Start with kando-roadmap-router** to resolve the vault from the active workspace. Use this skill for Venubase-specific paths and submodule workflow.
 
+**When creating or rewriting card body copy**, also follow **release-card-writing** so cards scan well in the Kando modal for a product builder.
+
 ## Where files live
 
 **Canonical edit path (Kando vault):** standalone **`venubase-roadmap`** repo — e.g. `~/dev/venubase-roadmap/`.
@@ -66,7 +68,21 @@ https://github.com/mattcrest/venubase-roadmap/blob/main/release-<slug>.md
 
 No venubase-web submodule bump required for PR links alone.
 
+## Writing readable cards
+
+Agents: follow **release-card-writing** (Kando skill) when drafting or rewriting card bodies.
+
+Quick rules for human readers in Kando:
+
+- **Summary** — outcome in plain language first; no code or table names.
+- **Problem / context** — two sentences max (pain + risk).
+- **Product outcome** — bullets, observable behavior, not implementation.
+- **Acceptance criteria** — testable outcomes; keep in one `## Acceptance criteria` section with `- [ ]` items (Kando renders these as a checklist in the modal).
+- Put repo paths and migrations in **Technical references**, not Summary.
+
 ## Card template (minimal)
+
+See **release-card-writing** for the full PRD-style template. Minimal stub:
 
 ```markdown
 ---
@@ -88,5 +104,5 @@ One paragraph.
 - [ ] Testable item
 
 ## PRs
-- (pending)
+- TBD
 ```

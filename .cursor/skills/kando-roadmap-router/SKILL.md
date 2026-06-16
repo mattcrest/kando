@@ -39,7 +39,8 @@ Follow **that project's** status lifecycle and body sections exactly (each vault
 
 1. Find `release-<slug>.md` under `vaultPath` (grep or read `roadmap-index.md`).
 2. Edit card frontmatter and body per conventions.
-3. Commit in the vault git repo when appropriate (path is the vault directory, not always the app repo).
+3. When **creating or rewriting** card body copy, follow **release-card-writing** for product-builder readability in Kando.
+4. Commit in the vault git repo when appropriate (path is the vault directory, not always the app repo).
 
 ```bash
 cd "<vaultPath>"

@@ -29,6 +29,7 @@ Installs Cursor, Codex, and Claude Code **skills**, plus memory snippets for Cla
 |-------|----------|
 | **kando-roadmap-router** | Kando / roadmap / `release-*.md` in any mapped app repo |
 | **kando-dev-server** | Start or stop Kando locally |
+| **release-card-writing** | Draft or rewrite cards for product-builder readability |
 | **venubase-roadmap** | Venubase-specific card workflow |
 | **venubase-roadmap-submodule** | Venubase `docs/roadmap` submodule bump |
 
