@@ -71,6 +71,42 @@ export async function isGitRepo(dir) {
   }
 }
 
+/** Best-effort sync of refs/remotes/origin/<branch> after resolving remote tip. */
+async function syncRemoteTrackingRef(dir, branch, remoteSha) {
+  try {
+    await git(dir, 'update-ref', `refs/remotes/origin/${branch}`, remoteSha);
+  } catch {
+    // lock or permission errors — ahead/behind counts are still accurate
+  }
+}
+
+/** Resolve origin/<branch> tip; ls-remote is authoritative when local tracking is stale. */
+async function getRemoteBranchSha(dir, branch, { fetchRemote = true } = {}) {
+  if (fetchRemote) {
+    try {
+      await runWithSshFallback(dir, async (remote) => {
+        await git(dir, 'fetch', remote, branch, '--quiet');
+        return {};
+      });
+      const sha = await git(dir, 'rev-parse', `origin/${branch}`);
+      await syncRemoteTrackingRef(dir, branch, sha);
+      return sha;
+    } catch {
+      // fetch failed — fall back to ls-remote
+    }
+  }
+
+  const sha = await runWithSshFallback(dir, async (remote) => {
+    const out = await git(dir, 'ls-remote', '--heads', remote, branch);
+    const tip = out.split(/\s+/)[0];
+    if (!tip) throw new Error(`Remote branch ${branch} not found`);
+    return tip;
+  });
+
+  await syncRemoteTrackingRef(dir, branch, sha);
+  return sha;
+}
+
 export async function getGitStatus(dir, { fetchRemote = true } = {}) {
   if (!(await isGitRepo(dir))) {
     return {
@@ -96,25 +132,15 @@ export async function getGitStatus(dir, { fetchRemote = true } = {}) {
   let behind = 0;
   let hasUpstream = false;
 
-  if (fetchRemote) {
-    try {
-      await runWithSshFallback(dir, async (remote) => {
-        await git(dir, 'fetch', remote, branch, '--quiet');
-        return {};
-      });
-    } catch {
-      // offline or no remote — fall back to local upstream tracking
-    }
-  }
-
   try {
-    const counts = await git(dir, 'rev-list', '--left-right', '--count', `origin/${branch}...HEAD`);
+    const remoteSha = await getRemoteBranchSha(dir, branch, { fetchRemote });
+    const counts = await git(dir, 'rev-list', '--left-right', '--count', `${remoteSha}...HEAD`);
     const [beh, ah] = counts.split(/\s+/).map(Number);
     ahead = ah || 0;
     behind = beh || 0;
     hasUpstream = true;
   } catch {
-    // no upstream yet
+    // offline or no remote
   }
 
   const syncedWithRemote = clean && ahead === 0 && behind === 0;
@@ -149,13 +175,16 @@ export async function pullRebase(dir, remote = 'origin', branch) {
 }
 
 export async function syncVault(dir, message, { remote = 'origin', branch, pullIfBehind = true } = {}) {
+  let pulled = false;
   if (pullIfBehind) {
     const status = await getGitStatus(dir, { fetchRemote: true });
     if (status.behind > 0) {
       await pullRebase(dir, remote, branch || status.branch);
+      pulled = true;
     }
   }
-  return commitAndPush(dir, message, { remote, branch });
+  const result = await commitAndPush(dir, message, { remote, branch });
+  return { ...result, pulled };
 }
 
 export async function commitAll(dir, message) {
@@ -178,15 +207,29 @@ export async function push(dir, remote = 'origin', branch) {
   const ref = branch || (await git(dir, 'rev-parse', '--abbrev-ref', 'HEAD'));
 
   return runWithSshFallback(dir, async (remoteTarget, meta = {}) => {
-    await git(dir, 'push', remoteTarget, ref);
-    return { pushed: true, remote: remoteTarget, branch: ref, ...meta };
+    const output = await git(dir, 'push', remoteTarget, ref);
+    const alreadyUpToDate = /everything up-to-date/i.test(output);
+    try {
+      const remoteSha = await git(dir, 'ls-remote', '--heads', remoteTarget, ref);
+      const sha = remoteSha.split(/\s+/)[0];
+      if (sha) await syncRemoteTrackingRef(dir, ref, sha);
+    } catch {
+      // counts will refresh on next getGitStatus
+    }
+    return {
+      pushed: !alreadyUpToDate,
+      alreadyUpToDate,
+      remote: remoteTarget,
+      branch: ref,
+      ...meta,
+    };
   });
 }
 
 export async function commitAndPush(dir, message, { remote = 'origin', branch } = {}) {
   const commitResult = await commitAll(dir, message);
   if (!commitResult.committed) {
-    const status = await getGitStatus(dir, { fetchRemote: false });
+    const status = await getGitStatus(dir, { fetchRemote: true });
     if (status.ahead === 0) {
       return { ...commitResult, pushed: false };
     }

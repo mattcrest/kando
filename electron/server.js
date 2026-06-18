@@ -628,7 +628,7 @@ app.post('/api/vaults/:name/git/sync', async (req, res) => {
 app.post('/api/cursor/open', async (req, res) => {
   try {
     const { spawn } = await import('child_process');
-    const { cardId, cardPath, vault } = req.body;
+    const { cardPath, vault } = req.body;
     const vaultDir = getVaultDir({ query: { vault } });
     const fullPath = path.join(vaultDir, cardPath);
 
@@ -646,6 +646,43 @@ app.post('/api/cursor/open', async (req, res) => {
 
     cursorProcess.unref();
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/tolaria/open - Open a card in Tolaria (or Obsidian)
+app.post('/api/tolaria/open', async (req, res) => {
+  try {
+    const { spawn } = await import('child_process');
+    const { cardPath, vault } = req.body;
+    if (!cardPath) {
+      return res.status(400).json({ error: 'cardPath is required' });
+    }
+
+    const vaultDir = getVaultDir({ query: { vault } });
+    const fullPath = path.resolve(vaultDir, cardPath);
+    await fs.access(fullPath);
+
+    const openWith = (args) =>
+      new Promise((resolve, reject) => {
+        const proc = spawn('open', args, { detached: true, stdio: 'ignore' });
+        proc.on('error', reject);
+        proc.unref();
+        resolve();
+      });
+
+    for (const app of ['Tolaria', 'Obsidian']) {
+      try {
+        await openWith(['-a', app, fullPath]);
+        return res.json({ success: true, app });
+      } catch {
+        // try next app
+      }
+    }
+
+    await openWith([fullPath]);
+    res.json({ success: true, app: 'default' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

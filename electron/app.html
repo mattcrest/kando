@@ -1155,31 +1155,30 @@ html[data-theme="dark"] {
 .prop-link:hover { text-decoration: underline; }
 .prop-empty { font-size: 12.5px; color: var(--text-3); }
 
-/* acceptance criteria — Linear sub-issue block */
-.modal-ac-panel {
-  flex-shrink: 0;
-  padding: 20px 28px 0;
-}
-.modal-ac-panel.hidden { display: none; }
-.modal-ac-header {
+/* acceptance criteria — sidebar */
+.prop-group-ac { margin-top: 4px; }
+.prop-ac-header {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: 12px; margin-bottom: 10px;
+  gap: 8px; margin-bottom: 6px;
 }
-.modal-ac-title {
-  font-size: 13px; font-weight: 500; color: var(--text-2);
-}
-.modal-ac-count {
-  font-size: 12px; font-weight: 500; color: var(--text-3); white-space: nowrap;
-}
+.prop-ac-header .prop-group-label { margin-bottom: 0; }
+.prop-ac-count { font-size: 11.5px; font-weight: 500; color: var(--text-3); white-space: nowrap; }
 .modal-ac-list { display: flex; flex-direction: column; gap: 1px; }
+.modal-pane-props .ac-item {
+  padding: 5px 6px; margin: 0 -6px; gap: 8px;
+}
+.modal-pane-props .ac-text {
+  font-size: 12.5px; line-height: 1.45; color: var(--text-2);
+}
+.modal-pane-props .ac-item.checked .ac-text { color: var(--text-3); }
+.modal-pane-props .ac-box { width: 15px; height: 15px; margin-top: 1px; }
 
 /* scrollable description */
 .modal-content-scroll {
   flex: 1; overflow-y: auto; min-height: 0;
   position: relative;
-  padding: 20px 28px 32px;
+  padding: 16px 28px 32px;
 }
-.modal-content-scroll.has-ac { padding-top: 16px; }
 .modal-edit-link {
   position: sticky; top: 0; float: right;
   z-index: 2; margin-bottom: -24px;
@@ -1428,7 +1427,6 @@ html[data-theme="dark"] {
     <div class="modal-body">
       <div class="modal-pane modal-pane-main">
         <textarea class="modal-title-input" id="modal-title" rows="1" aria-label="Card title"></textarea>
-        <section class="modal-ac-panel hidden" id="modal-ac-panel" aria-label="Acceptance criteria"></section>
         <div class="modal-content-scroll" id="modal-content-scroll">
           <button class="modal-edit-link" id="modal-content-toggle" type="button">Edit</button>
           <div class="modal-content-area md" id="modal-content"></div>
@@ -1505,6 +1503,96 @@ let vaultColors = {}; // Cache vault colors from API
 function apiUrl(endpoint) {
   return `${API_URL}${endpoint}?vault=${currentVault}`;
 }
+
+/* ── Card URL routing (History API) ───────────── */
+let cardUrlPushed = false;
+
+function boardUrl(){
+  return `/?vault=${encodeURIComponent(currentVault)}`;
+}
+
+function cardUrl(cardId){
+  return `/card/${encodeURIComponent(cardId)}?vault=${encodeURIComponent(currentVault)}`;
+}
+
+function parseCardRoute(){
+  const m = location.pathname.match(/^\/card\/([^/]+)\/?$/);
+  if(!m) return null;
+  const vault = new URLSearchParams(location.search).get('vault');
+  return { cardId: decodeURIComponent(m[1]), vault: vault || null };
+}
+
+function initVaultFromUrl(){
+  const route = parseCardRoute();
+  const vault = route?.vault || new URLSearchParams(location.search).get('vault');
+  if(vault){
+    currentVault = vault;
+    localStorage.setItem(VAULT_STORAGE_KEY, vault);
+  }
+}
+
+function applyRouteFromHistory(){
+  const route = parseCardRoute();
+  if(route?.cardId){
+    const card = getCard(route.cardId);
+    if(card) showModal(route.cardId);
+    else {
+      history.replaceState({}, '', boardUrl());
+      hideModal();
+    }
+  } else {
+    hideModal();
+  }
+}
+
+function confirmDiscardUnsaved(){
+  if(!modalUnsaved) return true;
+  if(confirm('You have unsaved changes. Discard them?')){
+    modalUnsaved = false;
+    document.getElementById('unsaved-dot').classList.remove('visible');
+    document.getElementById('modal-save').style.display = 'none';
+    return true;
+  }
+  return false;
+}
+
+function navigateToCard(id){
+  if(!id || !getCard(id)) return;
+  if(id === modalCardId) return;
+  if(!confirmDiscardUnsaved()) return;
+  history.pushState({ cardId: id, vault: currentVault }, '', cardUrl(id));
+  cardUrlPushed = true;
+  showModal(id);
+}
+
+function dismissModalFromUrl(){
+  hideModal();
+  modalUnsaved = false;
+  history.replaceState({}, '', boardUrl());
+  cardUrlPushed = false;
+}
+
+window.addEventListener('popstate', () => {
+  const route = parseCardRoute();
+  if(modalUnsaved && modalCardId && route?.cardId !== modalCardId){
+    if(!confirm('You have unsaved changes. Discard them?')){
+      history.pushState({ cardId: modalCardId, vault: currentVault }, '', cardUrl(modalCardId));
+      return;
+    }
+    modalUnsaved = false;
+    document.getElementById('unsaved-dot').classList.remove('visible');
+    document.getElementById('modal-save').style.display = 'none';
+  } else if(modalUnsaved && !route?.cardId){
+    if(!confirm('You have unsaved changes. Discard them?')){
+      history.pushState({ cardId: modalCardId, vault: currentVault }, '', cardUrl(modalCardId));
+      return;
+    }
+    modalUnsaved = false;
+    document.getElementById('unsaved-dot').classList.remove('visible');
+    document.getElementById('modal-save').style.display = 'none';
+  }
+  applyRouteFromHistory();
+});
 
 /* ── Data Cache (Tolaria content) ──────────── */
 const cardContents = {}; // { cardId: markdown content }
@@ -1916,7 +2004,7 @@ async function moveCard(cardId, newStatus, siblingIds, insertIdx){
     showToast(newStatus === 'Done' ? 'Marked as shipped ✓' : `Moved to ${newStatus}`);
   }
 
-  if(modalCardId === cardId) openModal(cardId);
+  if(modalCardId === cardId) showModal(cardId);
 }
 
 /* ── Card click → open modal ─────────────────── */
@@ -1926,7 +2014,7 @@ let contentEdited = false;
 
 function bindCardEvents(){
   document.querySelectorAll('.card').forEach(el=>{
-    el.addEventListener('click', ()=>openModal(el.dataset.card));
+    el.addEventListener('click', ()=>navigateToCard(el.dataset.card));
   });
 }
 
@@ -1948,7 +2036,7 @@ function visibleCards(){
   return state.cards;
 }
 
-function openModal(id){
+function showModal(id){
   modalCardId = id;
   modalUnsaved = false;
   const card = getCard(id);
@@ -1957,10 +2045,6 @@ function openModal(id){
   const content = getContent(id);
   const deps = parseDeps(content);
   const prs = parsePRs(content);
-  const acItems = parseAC(content);
-  const acState = state.ac[id] || {};
-  const acTotal = acItems.length;
-  const acDone = acItems.filter((item,i)=> item.done || acState[i]).length;
 
   // Title
   const titleEl = document.getElementById('modal-title');
@@ -1968,11 +2052,9 @@ function openModal(id){
   titleEl.style.height = 'auto';
   titleEl.style.height = titleEl.scrollHeight + 'px';
 
-  // Properties + AC + body
+  // Properties + body
   renderSidebar(card, deps, prs);
-  renderAcPanel(card, acDone, acTotal);
 
-  document.getElementById('modal-content-scroll').classList.toggle('has-ac', acItems.length > 0);
   document.getElementById('modal-nav-id').textContent = card.path.replace(/^.*\//, '').replace(/\.md$/i, '');
 
   const contentForMd = content.replace(/^## Acceptance criteria[\s\S]*?(?=^## |\Z)/m, '');
@@ -2003,25 +2085,17 @@ function openModal(id){
   document.getElementById('modal-title').focus();
 }
 
-function renderAcPanel(card, acDone, acTotal){
-  const panel = document.getElementById('modal-ac-panel');
+function renderAcGroupHtml(card){
   const content = getContent(card.id);
   const acItems = parseAC(content);
   const acState = state.ac[card.id] || {};
-
-  if(acItems.length === 0){
-    panel.classList.add('hidden');
-    panel.innerHTML = '';
-    return;
-  }
+  if(!acItems.length) return '';
 
   const doneCount = acItems.filter((item,i)=> item.done || acState[i]).length;
-
-  panel.classList.remove('hidden');
-  panel.innerHTML = `
-    <div class="modal-ac-header">
-      <span class="modal-ac-title">Acceptance criteria</span>
-      <span class="modal-ac-count">${doneCount} of ${acItems.length}</span>
+  return `<div class="prop-group prop-group-ac" aria-label="Acceptance criteria">
+    <div class="prop-ac-header">
+      <span class="prop-group-label">Acceptance criteria</span>
+      <span class="prop-ac-count">${doneCount} of ${acItems.length}</span>
     </div>
     <div class="modal-ac-list">
       ${acItems.map((item,i)=>{
@@ -2033,9 +2107,8 @@ function renderAcPanel(card, acDone, acTotal){
           <span class="ac-text">${renderInline(item.text)}</span>
         </div>`;
       }).join('')}
-    </div>`;
-
-  bindAcItems();
+    </div>
+  </div>`;
 }
 
 function propRow(label, valueHtml){
@@ -2055,6 +2128,7 @@ function renderSidebar(card, deps, prs){
     html += propRow('Shipped', `<span class="prop-value">${formatDate(card.shipped_at)}</span>`);
   }
   html += `</div>`;
+  html += renderAcGroupHtml(card);
 
   if(deps.length > 0){
     html += `<div class="prop-group"><div class="prop-group-label">Dependencies</div><div class="prop-tags">${deps.map(depId=>{
@@ -2082,6 +2156,7 @@ function renderSidebar(card, deps, prs){
 
   bindSidebarInputs();
   bindDepChips();
+  bindAcItems();
 }
 
 function bindSidebarInputs(){
@@ -2105,10 +2180,7 @@ function bindSidebarInputs(){
 
 function bindDepChips(){
   document.querySelectorAll('.dep-chip[data-dep]').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      closeModal();
-      setTimeout(()=>openModal(el.dataset.dep), 60);
-    });
+    el.addEventListener('click', ()=> navigateToCard(el.dataset.dep));
   });
 }
 
@@ -2125,19 +2197,28 @@ function bindAcItems(){
       const c = getCard(cid);
       const d2 = parseDeps(getContent(cid));
       const p2 = parsePRs(getContent(cid));
-      const ac2 = parseAC(getContent(cid));
-      const acDone2 = ac2.filter((item,i)=>item.done||!!(state.ac[cid]||{})[i]).length;
       renderSidebar(c, d2, p2);
-      renderAcPanel(c, acDone2, ac2.length);
       renderBoard();
     });
   });
 }
 
 function closeModal(){
+  if(!confirmDiscardUnsaved()) return;
+  if(/^\/card\//.test(location.pathname)){
+    if(cardUrlPushed) history.back();
+    else {
+      history.replaceState({}, '', boardUrl());
+      hideModal();
+    }
+  } else {
+    hideModal();
+  }
+}
+
+function hideModal(){
   document.getElementById('overlay').classList.remove('open');
   modalCardId = null;
-  modalUnsaved = false;
 }
 
 function markUnsaved(){
@@ -2236,7 +2317,7 @@ document.addEventListener('click', e=>{
   e.preventDefault();
   e.stopPropagation();
   const id = link.dataset.card;
-  if(getCard(id)) openModal(id);
+  if(getCard(id)) navigateToCard(id);
 });
 
 document.getElementById('modal-content-toggle').addEventListener('click', () => {
@@ -2278,22 +2359,17 @@ document.getElementById('modal-title').addEventListener('input', function(){
 document.getElementById('modal-prev').addEventListener('click', ()=>{
   const all = visibleCards();
   const idx = all.findIndex(c=>c.id===modalCardId);
-  if(idx>0) openModal(all[idx-1].id);
+  if(idx>0) navigateToCard(all[idx-1].id);
 });
 document.getElementById('modal-next').addEventListener('click', ()=>{
   const all = visibleCards();
   const idx = all.findIndex(c=>c.id===modalCardId);
-  if(idx<all.length-1) openModal(all[idx+1].id);
+  if(idx<all.length-1) navigateToCard(all[idx+1].id);
 });
 
 document.getElementById('modal-open-tolaria').addEventListener('click', ()=>{
   if(!modalCardId) return;
-  const card = getCard(modalCardId);
-  if(!card) return;
-  const path = card.path;
-  const vaultPath = encodeURIComponent('Venubase - Tolaria');
-  const filePath = encodeURIComponent(path.replace(/\.md$/,''));
-  window.open(`obsidian://open?vault=${vaultPath}&file=${filePath}`, '_blank');
+  openInTolaria(modalCardId);
 });
 
 document.getElementById('modal-open-cursor').addEventListener('click', ()=>{
@@ -2313,6 +2389,33 @@ document.getElementById('modal-copy-path').addEventListener('click', async () =>
     showToast('Copy failed');
   }
 });
+
+async function openInTolaria(cardId){
+  const card = getCard(cardId);
+  if(!card) return;
+
+  try {
+    const resp = await fetch(`${API_URL}/api/tolaria/open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cardPath: card.path,
+        vault: currentVault
+      })
+    });
+
+    if(resp.ok){
+      showToast('Opening in Tolaria…');
+      return;
+    }
+
+    const data = await resp.json().catch(() => ({}));
+    showToast(data.error || 'Could not open in Tolaria');
+  } catch(err){
+    console.error(err);
+    showToast('Could not open in Tolaria');
+  }
+}
 
 async function openInCursor(cardId){
   const card = getCard(cardId);
@@ -2493,19 +2596,15 @@ document.addEventListener('click', e=>{
 
 document.addEventListener('keydown', e=>{
   if(e.key === 'Escape' && document.getElementById('overlay').classList.contains('open')){
-    if(modalUnsaved){
-      if(confirm('You have unsaved changes. Discard them?')) closeModal();
-    } else {
-      closeModal();
-    }
+    closeModal();
   }
   if(document.getElementById('overlay').classList.contains('open')){
     if((e.key==='ArrowLeft'||e.key==='ArrowRight') && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='TEXTAREA'){
       e.preventDefault();
       const all = visibleCards();
       const idx = all.findIndex(c=>c.id===modalCardId);
-      if(e.key==='ArrowLeft' && idx>0) openModal(all[idx-1].id);
-      if(e.key==='ArrowRight' && idx<all.length-1) openModal(all[idx+1].id);
+      if(e.key==='ArrowLeft' && idx>0) navigateToCard(all[idx-1].id);
+      if(e.key==='ArrowRight' && idx<all.length-1) navigateToCard(all[idx+1].id);
     }
   }
 });
@@ -2647,6 +2746,12 @@ async function loadCards(){
 
     initState();
     renderBoard();
+
+    const route = parseCardRoute();
+    if(route?.cardId){
+      if(getCard(route.cardId)) showModal(route.cardId);
+      else history.replaceState({}, '', boardUrl());
+    }
   } catch(err){
     console.error('Failed to load cards from API:', err);
     alert('Failed to load kanban data. Is the API server running on localhost:3001?');
@@ -2727,7 +2832,7 @@ function switchVault(vaultKey, vaultName){
     localStorage.removeItem(STORAGE_KEY);
     Object.keys(cardContents).forEach(key => delete cardContents[key]);
     state = {};
-    closeModal();
+    dismissModalFromUrl();
     closeVaultMenu();
     // Update switcher button text and menu
     const nameSpan = document.getElementById('vault-switcher-name');
@@ -3306,6 +3411,10 @@ async function refreshGitStatus(){
 async function syncVaultGit(){
   if(gitSyncInFlight) return;
   const btn = document.getElementById('git-sync-btn');
+  const wrap = document.getElementById('git-sync-wrap');
+  const pill = document.getElementById('git-sync-pill');
+  const label = document.getElementById('git-status-label');
+  const dot = document.getElementById('git-status-dot');
   gitSyncInFlight = true;
   if(btn){
     btn.disabled = true;
@@ -3322,12 +3431,27 @@ async function syncVaultGit(){
     const data = await resp.json();
     if(!resp.ok) throw new Error(data.error || 'Sync failed');
 
-    if(data.committed){
+    if (data.status && wrap && pill && label && dot && btn) {
+      const ui = describeGitStatus(data.status);
+      applyGitUiState({ label, dot, btn, wrap, pill, ...ui });
+    }
+
+    if (data.pulled) {
+      await loadCards();
+    }
+
+    if (data.committed && data.pushed) {
       showToast('Committed & pushed ✓');
-    } else if(data.pushed){
-      showToast('Pushed ✓');
+    } else if (data.committed) {
+      showToast('Committed ✓');
+    } else if (data.pushed) {
+      showToast('Pushed to main ✓');
+    } else if (data.pulled) {
+      showToast('Pulled from main ✓');
+    } else if (data.status?.syncedWithRemote) {
+      showToast('Up to date with main');
     } else {
-      showToast('Already up to date');
+      showToast('Sync complete');
     }
   } catch(err){
     console.error('Git sync failed:', err);
@@ -3343,6 +3467,7 @@ async function syncVaultGit(){
 
 document.getElementById('git-sync-btn')?.addEventListener('click', syncVaultGit);
 
+initVaultFromUrl();
 initializeVaultSelector();
 loadCards();
 refreshGitStatus();
