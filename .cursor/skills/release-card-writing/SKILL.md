@@ -102,13 +102,14 @@ These map to how Kando renders the card:
 type: Note
 release: true
 status: Backlog          # Backlog | Prioritized | Active | Blocked | Done
-roadmap_order: null      # number when Prioritized/Active only
 related_to: "[[venubase]]"
 plan_anchor: Short human title (matches H1)
 category: POS            # kanban tag — Admin, Checkout, Account, etc.
 shipped_at: null
 ---
 ```
+
+Add the card to the appropriate section in **`roadmap-index.md`** when it enters Prioritized, Active, or Backlog. Kando sorts those columns from index order — not from per-file `roadmap_order`.
 
 ## Full body template
 

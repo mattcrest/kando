@@ -1681,6 +1681,39 @@ function saveState(){
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
 }
 
+const INDEX_ORDERED_STATUSES = ['Active', 'Prioritized', 'Backlog'];
+
+function compareCardOrder(a, b) {
+  const ao = a.index_order ?? a.roadmap_order ?? Infinity;
+  const bo = b.index_order ?? b.roadmap_order ?? Infinity;
+  if (ao !== bo) return ao - bo;
+  return a.id.localeCompare(b.id);
+}
+
+async function persistIndexOrder(affectedStatuses) {
+  const sections = {};
+  for (const st of affectedStatuses) {
+    sections[st] = state.cards
+      .filter(c => c.status === st)
+      .sort(compareCardOrder)
+      .map(c => c.id);
+  }
+  const resp = await fetch(apiUrl('/api/roadmap-index'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sections })
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+  const data = await resp.json();
+  if (data.orders) {
+    for (const card of state.cards) {
+      const ids = data.orders[card.status];
+      card.index_order = ids ? ids.indexOf(card.id) : null;
+      if (card.index_order === -1) card.index_order = null;
+    }
+  }
+}
+
 function initState(){
   const saved = loadState();
   state = saved || buildInitialState();
@@ -1695,6 +1728,7 @@ function initState(){
       const meta = metaById[card.id];
       if(!meta) continue;
       card.status = meta.status;
+      card.index_order = meta.index_order;
       card.roadmap_order = meta.roadmap_order;
       card.shipped_at = meta.shipped_at;
       card.category = meta.category;
@@ -1744,7 +1778,7 @@ function cardPosition(card) {
   const cols = getColumns();
   const orderedCol = cols.find(c => c.key === card.status);
   if(!orderedCol) return null;
-  const ordered = state.cards.filter(c => c.status === card.status).sort((a,b) => (a.roadmap_order||0) - (b.roadmap_order||0));
+  const ordered = state.cards.filter(c => c.status === card.status).sort(compareCardOrder);
   return ordered.findIndex(c => c.id === card.id) + 1;
 }
 
@@ -1813,7 +1847,7 @@ function renderBoard(){
   for(const col of cols){
     let cards = state.cards.filter(c=>c.status===col.key);
     if(col.key==='Done') cards.sort((a,b)=>new Date(b.shipped_at||0)-new Date(a.shipped_at||0));
-    else cards.sort((a,b)=>(a.roadmap_order||0)-(b.roadmap_order||0));
+    else cards.sort(compareCardOrder);
 
     const showPosition = col.key === 'Active' || col.key === 'Prioritized';
     const cardsHtml = cards.length
@@ -1961,39 +1995,40 @@ async function moveCard(cardId, newStatus, siblingIds, insertIdx){
   const oldStatus = card.status;
   card.status = newStatus;
 
-  const orderedCols = ['Active', 'Prioritized'];
-  if(orderedCols.includes(newStatus)){
-    const newOrder = [...siblingIds];
-    newOrder.splice(insertIdx, 0, cardId);
-    const statusCards = state.cards.filter(c=>c.status===newStatus);
-    const orderMap = {};
-    newOrder.forEach((id,i)=>{ orderMap[id]=i; });
-    statusCards.forEach(c=>{
-      c.roadmap_order = ((orderMap[c.id]??100) + 1) * 10;
-    });
-  } else if(newStatus === 'Done'){
+  const newOrder = [...siblingIds];
+  newOrder.splice(insertIdx, 0, cardId);
+  newOrder.forEach((id, i) => {
+    const c = getCard(id);
+    if (c) c.index_order = i;
+  });
+
+  if(newStatus === 'Done'){
     if(!card.shipped_at) card.shipped_at = new Date().toISOString().split('T')[0];
-    delete card.roadmap_order;
-  } else {
-    delete card.roadmap_order;
   }
 
   saveState();
 
-  // Persist to API
   try {
     const updates = {
       status: card.status,
-      roadmap_order: card.roadmap_order || null,
-      shipped_at: card.shipped_at || null
+      shipped_at: card.shipped_at || null,
     };
+    if (oldStatus === 'Active' && newStatus !== 'Active') {
+      updates.roadmap_order = null;
+      card.roadmap_order = null;
+    }
     await fetch(apiUrl(`/api/cards/${cardId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
+
+    const affected = new Set();
+    if (INDEX_ORDERED_STATUSES.includes(newStatus)) affected.add(newStatus);
+    if (INDEX_ORDERED_STATUSES.includes(oldStatus)) affected.add(oldStatus);
+    if (affected.size) await persistIndexOrder([...affected]);
   } catch(err){
-    console.error('Failed to save card to API:', err);
+    console.error('Failed to save card move:', err);
   }
 
   refreshGitStatus();
@@ -2120,7 +2155,12 @@ function renderSidebar(card, deps, prs){
   let html = `<div class="prop-group">`;
   html += propRow('Status', `<select class="prop-select" id="modal-status" data-dynamic>${cols.map(col => `<option value="${col.key}">${col.label}</option>`).join('')}</select>`);
   html += propRow('Category', `<input class="prop-input" id="modal-category" value="${esc(card.category||'')}" placeholder="Add category">`);
-  html += propRow('Order', `<input class="prop-input" type="number" id="modal-order" value="${card.roadmap_order||''}" min="1" step="10" placeholder="—">`);
+  if (INDEX_ORDERED_STATUSES.includes(card.status)) {
+    const pos = card.index_order != null ? card.index_order + 1 : null;
+    html += propRow('Queue', pos
+      ? `<span class="prop-value-muted">#${pos} in roadmap-index.md</span>`
+      : `<span class="prop-value-muted">Not in roadmap-index — drag to reorder or add to index</span>`);
+  }
   if(card.plan_anchor){
     html += propRow('Plan', `<span class="prop-value-muted">${esc(card.plan_anchor)}</span>`);
   }
@@ -2162,12 +2202,6 @@ function renderSidebar(card, deps, prs){
 function bindSidebarInputs(){
   const catInput = document.getElementById('modal-category');
   if(catInput) catInput.oninput = () => markUnsaved();
-
-  const orderInput = document.getElementById('modal-order');
-  if(orderInput){
-    orderInput.oninput = markUnsaved;
-    orderInput.onchange = markUnsaved;
-  }
 
   const statusSel = document.getElementById('modal-status');
   if(statusSel){
@@ -2238,21 +2272,17 @@ async function saveModalChanges(){
 
   // Status
   const newStatus = document.getElementById('modal-status').value;
-  if(newStatus !== card.status){
+  const oldStatus = card.status;
+  if(newStatus !== oldStatus){
     if(newStatus === 'Done' && !card.shipped_at) card.shipped_at = new Date().toISOString().split('T')[0];
-    if(newStatus === 'Active' && !card.roadmap_order){
-      const maxOrder = Math.max(0,...state.cards.filter(c=>c.status==='Active').map(c=>c.roadmap_order||0));
-      card.roadmap_order = maxOrder + 10;
-    }
     card.status = newStatus;
-  }
-
-  // Order
-  const orderInput = document.getElementById('modal-order');
-  if(orderInput){
-    const val = parseInt(orderInput.value,10);
-    if(!isNaN(val) && val > 0) card.roadmap_order = val;
-    else if(orderInput.value === '') card.roadmap_order = null;
+    if (INDEX_ORDERED_STATUSES.includes(newStatus)) {
+      const inColumn = state.cards.filter(c => c.status === newStatus && c.id !== modalCardId);
+      card.index_order = inColumn.length;
+    }
+    if (oldStatus === 'Active' && newStatus !== 'Active') {
+      card.roadmap_order = null;
+    }
   }
 
   // Category
@@ -2265,16 +2295,23 @@ async function saveModalChanges(){
   try {
     const updates = {
       status: card.status,
-      roadmap_order: card.roadmap_order || null,
       shipped_at: card.shipped_at || null,
       plan_anchor: card.title,
       category: card.category || null,
     };
+    if (oldStatus === 'Active' && card.status !== 'Active') {
+      updates.roadmap_order = null;
+    }
     await fetch(apiUrl(`/api/cards/${modalCardId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
+
+    const affected = new Set();
+    if (INDEX_ORDERED_STATUSES.includes(card.status)) affected.add(card.status);
+    if (INDEX_ORDERED_STATUSES.includes(oldStatus)) affected.add(oldStatus);
+    if (affected.size) await persistIndexOrder([...affected]);
   } catch(err){
     console.error('Failed to save card to API:', err);
   }

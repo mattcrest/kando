@@ -102,6 +102,7 @@ export VENUBASE_ROADMAP_DIR=/path/to/roadmap-vault
 | `GET /api/routing/resolve?workspaceRoot=<path>` | Map an app repo → vault + convention paths |
 | `GET /api/cards?vault=<key>` | List `release: true` cards |
 | `GET/PUT /api/cards/:id` | Read/update card metadata and body |
+| `GET/PUT /api/roadmap-index?vault=<key>` | Read/update queue order in `roadmap-index.md` |
 | `GET /api/vaults/:name/git/status` | Git status for vault directory |
 | `POST /api/vaults/:name/git/sync` | Commit and optional push |
 

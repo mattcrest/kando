@@ -29,12 +29,24 @@ grep -l "status: Active" /path/to/venubase-roadmap/release-*.md
 
 Hub: `roadmap-index.md`. Conventions: `roadmap-conventions.md`.
 
+## Queue order (Kando kanban)
+
+**`roadmap-index.md` is the source of truth** for order within Active, Prioritized, and Backlog. Kando reads wiki-link order under each section header; drag-reorder in the UI updates the index file.
+
+| Field | Role |
+|-------|------|
+| `status` | Column membership (`Backlog`, `Prioritized`, `Active`, `Blocked`, `Done`) |
+| `roadmap_order` | Optional — auto-synced from index for **Active** cards (Tolaria view); omit on new cards |
+| `shipped_at` | ISO date when Done |
+
+When reprioritizing: edit the numbered/bullet list under the right `##` section in `roadmap-index.md`, or drag in Kando. Do not hand-edit `roadmap_order` across many files.
+
 ## Frontmatter (Kando kanban)
 
 | Field | Values |
 |-------|--------|
 | `status` | `Backlog`, `Prioritized`, `Active`, `Blocked`, `Done` (Shipped column) |
-| `roadmap_order` | Number while Active/Prioritized; omit when Done |
+| `roadmap_order` | Omit for new cards; Kando derives for Active from index when needed |
 | `shipped_at` | ISO date when Done |
 | `release` | `true` for release pipeline cards |
 
@@ -89,13 +101,14 @@ See **release-card-writing** for the full PRD-style template. Minimal stub:
 type: Note
 release: true
 status: Active
-roadmap_order: 40
 related_to: "[[venubase]]"
 plan_anchor: Short title
 shipped_at: null
 ---
 
 # Short title
+
+List under the matching section in `roadmap-index.md`.
 
 ## Summary
 One paragraph.

@@ -10,6 +10,13 @@ import {
   getRoutingForVault,
   resolveVaultForWorkspace,
 } from './vault-routing.js';
+import {
+  defaultIndexPath,
+  INDEX_ORDERED_STATUSES,
+  loadIndexOrders,
+  ordersToPositionMaps,
+  updateIndexSections,
+} from './roadmap-index.js';
 
 const app = express();
 const PORT = 3001;
@@ -196,6 +203,58 @@ async function saveKanbanConfig(vaultDir, config) {
   }
 }
 
+function getIndexPath(vaultKey, vaultDir) {
+  const routing = getRoutingForVault(vaultKey, VAULT_ROUTING);
+  const indexFile = routing?.indexFile || 'roadmap-index.md';
+  return defaultIndexPath(vaultDir, indexFile);
+}
+
+function compareCardsByIndex(a, b) {
+  const ao = a.index_order ?? a.roadmap_order ?? Infinity;
+  const bo = b.index_order ?? b.roadmap_order ?? Infinity;
+  if (ao !== bo) return ao - bo;
+  return a.id.localeCompare(b.id);
+}
+
+function attachIndexOrder(cards, positionMaps) {
+  if (!positionMaps) return cards;
+  for (const card of cards) {
+    const pos = positionMaps[card.status]?.[card.id];
+    card.index_order = pos !== undefined ? pos : null;
+  }
+  return cards;
+}
+
+async function patchCardFrontmatter(vaultDir, cardId, patch) {
+  const cardPath = getCardPath(cardId, vaultDir);
+  const content = await fs.readFile(cardPath, 'utf-8');
+  const { data, content: markdownContent } = matter(content);
+  const newData = { ...data, ...patch };
+  const orderedData = {
+    type: newData.type,
+    release: newData.release,
+    status: newData.status,
+    roadmap_order: newData.roadmap_order,
+    related_to: newData.related_to,
+    plan_anchor: newData.plan_anchor,
+    ...Object.fromEntries(
+      Object.entries(newData).filter(
+        ([k]) => !['type', 'release', 'status', 'roadmap_order', 'related_to', 'plan_anchor'].includes(k)
+      )
+    ),
+  };
+  await fs.writeFile(cardPath, matter.stringify(markdownContent, orderedData), 'utf-8');
+}
+
+/** Keep Tolaria Active view in sync — derived from index position. */
+async function syncActiveRoadmapOrder(vaultDir, activeCardIds) {
+  for (let i = 0; i < activeCardIds.length; i++) {
+    await patchCardFrontmatter(vaultDir, activeCardIds[i], {
+      roadmap_order: (i + 1) * 10,
+    });
+  }
+}
+
 // GET /api/cards - List all release cards with metadata
 app.get('/api/cards', async (req, res) => {
   try {
@@ -228,13 +287,13 @@ app.get('/api/cards', async (req, res) => {
       }
     }
 
-    // Sort by roadmap_order (nulls last), then by id
-    cards.sort((a, b) => {
-      if (a.roadmap_order === null && b.roadmap_order === null) return a.id.localeCompare(b.id);
-      if (a.roadmap_order === null) return 1;
-      if (b.roadmap_order === null) return -1;
-      return a.roadmap_order - b.roadmap_order;
-    });
+    const vaultKey = getVaultKey(req);
+    const indexPath = getIndexPath(vaultKey, vaultDir);
+    const indexOrders = await loadIndexOrders(indexPath);
+    const positionMaps = ordersToPositionMaps(indexOrders);
+    attachIndexOrder(cards, positionMaps);
+
+    cards.sort(compareCardsByIndex);
 
     res.json(cards);
   } catch (err) {
@@ -306,6 +365,60 @@ app.put('/api/cards/:cardId', async (req, res) => {
     await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} metadata`);
 
     res.json({ id: cardId, success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/roadmap-index - Parsed section order from roadmap-index.md
+app.get('/api/roadmap-index', async (req, res) => {
+  try {
+    const vaultKey = getVaultKey(req);
+    const vaultDir = getVaultDir(req);
+    const indexPath = getIndexPath(vaultKey, vaultDir);
+    const orders = await loadIndexOrders(indexPath);
+    if (!orders) {
+      return res.status(404).json({ error: 'roadmap index not found', indexPath });
+    }
+    res.json({ indexPath, orders, orderedStatuses: INDEX_ORDERED_STATUSES });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/roadmap-index - Update section order in roadmap-index.md
+app.put('/api/roadmap-index', async (req, res) => {
+  try {
+    const vaultKey = getVaultKey(req);
+    const vaultDir = getVaultDir(req);
+    const indexPath = getIndexPath(vaultKey, vaultDir);
+    const { sections } = req.body;
+
+    if (!sections || typeof sections !== 'object') {
+      return res.status(400).json({ error: 'sections object is required' });
+    }
+
+    const filtered = {};
+    for (const status of INDEX_ORDERED_STATUSES) {
+      if (Array.isArray(sections[status])) {
+        filtered[status] = sections[status];
+      }
+    }
+
+    if (Object.keys(filtered).length === 0) {
+      return res.status(400).json({ error: 'sections must include at least one ordered status' });
+    }
+
+    await updateIndexSections(indexPath, filtered);
+
+    if (filtered.Active) {
+      await syncActiveRoadmapOrder(vaultDir, filtered.Active);
+    }
+
+    await maybeAutoCommitVault(vaultKey, vaultDir, 'roadmap: update index order');
+
+    const orders = await loadIndexOrders(indexPath);
+    res.json({ success: true, indexPath, orders });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -707,6 +820,8 @@ async function start() {
     console.log(`GET /api/cards/:cardId?vault=<name> - Get card details`);
     console.log(`PUT /api/cards/:cardId?vault=<name> - Update card metadata`);
     console.log(`PUT /api/cards/:cardId/content?vault=<name> - Update card content`);
+    console.log(`GET /api/roadmap-index?vault=<name> - Read index section order`);
+    console.log(`PUT /api/roadmap-index?vault=<name> - Update index section order`);
     console.log(`GET /api/vaults - List available vaults (includes routing metadata)`);
     console.log(`GET /api/routing/resolve?workspaceRoot=<path> - Resolve vault for workspace`);
     console.log(`POST /api/vaults/add - Add new vault`);
