@@ -406,6 +406,48 @@ html[data-theme="dark"] {
   outline: none;
 }
 
+.card-type-filter-btn {
+  display: flex; align-items: center; gap: 7px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.75);
+  font-size: 12px; font-weight: 500; font-family: var(--font);
+  padding: 6px 10px; border-radius: 7px;
+  cursor: pointer; min-width: 118px;
+  justify-content: space-between;
+  transition: border-color .12s, color .12s;
+}
+.card-type-filter-btn:hover,
+.card-type-filter-btn[aria-expanded="true"] {
+  border-color: rgba(255,255,255,.25);
+  color: rgba(255,255,255,.92);
+}
+.card-type-filter-menu {
+  position: absolute; top: 100%; right: 0;
+  background: #2d2d44;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  padding: 4px; margin-top: 4px; min-width: 150px;
+  opacity: 0; pointer-events: none; transform: translateY(-4px);
+  transition: opacity .15s, transform .15s;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+.card-type-filter-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.card-type-filter-option {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 12px; border-radius: 4px;
+  color: rgba(255,255,255,.78); font-size: 12px; font-weight: 500;
+  cursor: pointer; user-select: none;
+  transition: background .1s, color .1s;
+}
+.card-type-filter-option:hover { background: rgba(255,255,255,.08); color: #fff; }
+.card-type-filter-option input {
+  accent-color: var(--accent);
+  width: 13px; height: 13px; margin: 0;
+  cursor: pointer;
+}
+
 .header-search-wrapper {
   position: relative;
   display: flex; align-items: center; gap: 8px;
@@ -1682,13 +1724,16 @@ html[data-theme="dark"] {
       <button type="button" class="view-mode-btn" data-view="strategy">Strategy</button>
     </div>
   </div>
-  <div class="header-card-filter">
-    <select id="card-type-filter" title="Filter board by card type" aria-label="Filter board by card type">
-      <option value="all">All cards</option>
-      <option value="initiative">Initiatives only</option>
-      <option value="epic">Epics only</option>
-      <option value="slice">Slices only</option>
-    </select>
+  <div class="header-card-filter" id="card-type-filter-wrap" style="position:relative">
+    <button type="button" class="card-type-filter-btn" id="card-type-filter-btn" title="Filter board by card type" aria-label="Filter board by card type" aria-haspopup="true" aria-expanded="false">
+      <span id="card-type-filter-label">All cards</span>
+      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="card-type-filter-menu" id="card-type-filter-menu" role="group" aria-label="Card types">
+      <label class="card-type-filter-option"><input type="checkbox" value="initiative" checked> Initiatives</label>
+      <label class="card-type-filter-option"><input type="checkbox" value="epic" checked> Epics</label>
+      <label class="card-type-filter-option"><input type="checkbox" value="slice" checked> Slices</label>
+    </div>
   </div>
   <div class="header-search-wrapper" id="search-wrapper">
     <button class="header-search-btn" id="search-btn" title="Search">
@@ -1923,18 +1968,48 @@ const cardContents = {}; // { cardId: markdown content }
 const STORAGE_KEY = 'venubase-kanban-v2';
 const CARD_TYPE_FILTER_KEY = 'kando-card-type-filter';
 const VIEW_MODE_KEY = 'kando-view-mode';
+const CARD_TYPES = ['initiative', 'epic', 'slice'];
 let SOURCE_META = []; // Will be fetched from API
-let cardTypeFilter = localStorage.getItem(CARD_TYPE_FILTER_KEY) || 'all';
+
+function loadCardTypeFilter(){
+  const raw = localStorage.getItem(CARD_TYPE_FILTER_KEY);
+  if(!raw || raw === 'all') return new Set(CARD_TYPES);
+  try {
+    const arr = JSON.parse(raw);
+    if(Array.isArray(arr)){
+      const set = new Set(arr.filter(t=>CARD_TYPES.includes(t)));
+      return set.size ? set : new Set(CARD_TYPES);
+    }
+  } catch {}
+  // migrate legacy single-value strings ('epic', 'slice', 'initiative')
+  return CARD_TYPES.includes(raw) ? new Set([raw]) : new Set(CARD_TYPES);
+}
+let cardTypeFilter = loadCardTypeFilter();
+
+function saveCardTypeFilter(){
+  localStorage.setItem(CARD_TYPE_FILTER_KEY, JSON.stringify([...cardTypeFilter]));
+}
+
+function cardType(card){
+  if(card.is_initiative) return 'initiative';
+  if(card.is_epic) return 'epic';
+  return 'slice';
+}
+
+function cardTypeFilterLabel(){
+  if(cardTypeFilter.size === CARD_TYPES.length) return 'All cards';
+  if(cardTypeFilter.size === 0) return 'All cards';
+  const names = { initiative:'Initiatives', epic:'Epics', slice:'Slices' };
+  return CARD_TYPES.filter(t=>cardTypeFilter.has(t)).map(t=>names[t]).join(' + ');
+}
 let viewMode = localStorage.getItem(VIEW_MODE_KEY) || 'board';
 let initiativeEpicsRows = [];
 let initiativeEpicsSaving = false;
 let initiativeEpicsDragId = null;
 
 function cardMatchesTypeFilter(card){
-  if(cardTypeFilter === 'initiative') return !!card.is_initiative;
-  if(cardTypeFilter === 'epic') return !!card.is_epic && !card.is_initiative;
-  if(cardTypeFilter === 'slice') return !card.is_epic && !card.is_initiative;
-  return true;
+  if(cardTypeFilter.size === 0 || cardTypeFilter.size === CARD_TYPES.length) return true;
+  return cardTypeFilter.has(cardType(card));
 }
 
 function cardTypeBadgeHtml(card){
@@ -3403,15 +3478,42 @@ function filterCards(query){
   });
 }
 
-const cardTypeFilterEl = document.getElementById('card-type-filter');
-if(cardTypeFilterEl){
-  cardTypeFilterEl.value = cardTypeFilter;
-  cardTypeFilterEl.addEventListener('change', e=>{
-    cardTypeFilter = e.target.value;
-    localStorage.setItem(CARD_TYPE_FILTER_KEY, cardTypeFilter);
-    if(viewMode === 'strategy') renderStrategyView();
-    else renderBoard();
-    filterCards(searchInput.value);
+const cardTypeFilterBtn = document.getElementById('card-type-filter-btn');
+const cardTypeFilterMenu = document.getElementById('card-type-filter-menu');
+if(cardTypeFilterBtn && cardTypeFilterMenu){
+  const syncCardTypeFilterUi = ()=>{
+    document.getElementById('card-type-filter-label').textContent = cardTypeFilterLabel();
+    cardTypeFilterMenu.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.checked = cardTypeFilter.has(cb.value);
+    });
+  };
+  syncCardTypeFilterUi();
+
+  cardTypeFilterBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    const open = cardTypeFilterMenu.classList.toggle('open');
+    cardTypeFilterBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  cardTypeFilterMenu.addEventListener('click', e=> e.stopPropagation());
+  document.addEventListener('click', ()=>{
+    cardTypeFilterMenu.classList.remove('open');
+    cardTypeFilterBtn.setAttribute('aria-expanded', 'false');
+  });
+
+  cardTypeFilterMenu.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      if(cb.checked) cardTypeFilter.add(cb.value);
+      else cardTypeFilter.delete(cb.value);
+      // never allow an empty board — an empty selection means "all"
+      if(cardTypeFilter.size === 0){
+        cardTypeFilter = new Set(CARD_TYPES);
+      }
+      saveCardTypeFilter();
+      syncCardTypeFilterUi();
+      if(viewMode === 'strategy') renderStrategyView();
+      else renderBoard();
+      filterCards(searchInput.value);
+    });
   });
 }
 
