@@ -280,6 +280,7 @@ app.get('/api/cards', async (req, res) => {
             plan_anchor: data.plan_anchor || null,
             path: file,
             shipped_at: data.shipped_at || null,
+            is_epic: data.epic === true,
           });
         }
       } catch (err) {
@@ -320,6 +321,7 @@ app.get('/api/cards/:cardId', async (req, res) => {
       plan_anchor: data.plan_anchor || null,
       path: `${cardId}.md`,
       shipped_at: data.shipped_at || null,
+      is_epic: data.epic === true,
       frontmatter: data,
       content: markdownContent,
     });
