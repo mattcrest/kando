@@ -17,6 +17,10 @@ import {
   ordersToPositionMaps,
   updateIndexSections,
 } from './roadmap-index.js';
+import {
+  parseInitiativeEpics,
+  replaceInitiativeEpics,
+} from './initiative-epics.js';
 
 const app = express();
 const PORT = 3001;
@@ -255,6 +259,53 @@ async function syncActiveRoadmapOrder(vaultDir, activeCardIds) {
   }
 }
 
+async function readCard(vaultDir, cardId) {
+  const cardPath = getCardPath(cardId, vaultDir);
+  const content = await fs.readFile(cardPath, 'utf-8');
+  const { data, content: markdownContent } = matter(content);
+  return { cardPath, data, markdownContent };
+}
+
+async function clearEpicInitiativeLink(vaultDir, epicId, initiativeId) {
+  const { data, markdownContent } = await readCard(vaultDir, epicId);
+  const expected = `[[${initiativeId}]]`;
+  const current = String(data.initiative || '').replace(/^'|'$/g, '');
+  if (current !== expected && current !== initiativeId) return;
+  const cardPath = getCardPath(epicId, vaultDir);
+  const nextData = { ...data };
+  delete nextData.initiative;
+  const orderedData = {
+    type: nextData.type,
+    release: nextData.release,
+    status: nextData.status,
+    roadmap_order: nextData.roadmap_order,
+    related_to: nextData.related_to,
+    plan_anchor: nextData.plan_anchor,
+    ...Object.fromEntries(
+      Object.entries(nextData).filter(
+        ([k]) => !['type', 'release', 'status', 'roadmap_order', 'related_to', 'plan_anchor'].includes(k)
+      )
+    ),
+  };
+  await fs.writeFile(cardPath, matter.stringify(markdownContent, orderedData), 'utf-8');
+}
+
+async function setEpicInitiativeLink(vaultDir, epicId, initiativeId) {
+  await patchCardFrontmatter(vaultDir, epicId, {
+    initiative: `[[${initiativeId}]]`,
+  });
+}
+
+/** Parent card id: slices link up via `epic:` wikilink, epics via `initiative:` wikilink. */
+function extractParentId(data) {
+  const wiki = typeof data.epic === 'string' ? data.epic
+    : typeof data.initiative === 'string' ? data.initiative
+    : null;
+  if (!wiki) return null;
+  const m = String(wiki).match(/\[\[([^\]|]+)/);
+  return m ? m[1].trim() : null;
+}
+
 // GET /api/cards - List all release cards with metadata
 app.get('/api/cards', async (req, res) => {
   try {
@@ -281,6 +332,10 @@ app.get('/api/cards', async (req, res) => {
             path: file,
             shipped_at: data.shipped_at || null,
             is_epic: data.epic === true,
+            is_initiative: data.initiative === true,
+            horizon: data.horizon || null,
+            milestone: data.milestone || null,
+            parent: extractParentId(data),
           });
         }
       } catch (err) {
@@ -322,6 +377,10 @@ app.get('/api/cards/:cardId', async (req, res) => {
       path: `${cardId}.md`,
       shipped_at: data.shipped_at || null,
       is_epic: data.epic === true,
+      is_initiative: data.initiative === true,
+      horizon: data.horizon || null,
+      milestone: data.milestone || null,
+      parent: extractParentId(data),
       frontmatter: data,
       content: markdownContent,
     });
@@ -445,6 +504,72 @@ app.put('/api/cards/:cardId/content', async (req, res) => {
     await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} content`);
 
     res.json({ id: cardId, success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/initiatives/:initiativeId/epics — parsed epic rows for an initiative card
+app.get('/api/initiatives/:initiativeId/epics', async (req, res) => {
+  try {
+    const { initiativeId } = req.params;
+    const vaultDir = getVaultDir(req);
+    const { data, markdownContent } = await readCard(vaultDir, initiativeId);
+    if (data.initiative !== true) {
+      return res.status(400).json({ error: 'Not an initiative card' });
+    }
+    const rows = parseInitiativeEpics(markdownContent);
+    res.json({ initiativeId, rows });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+// PUT /api/initiatives/:initiativeId/epics — reorder / add / remove linked epics
+app.put('/api/initiatives/:initiativeId/epics', async (req, res) => {
+  try {
+    const { initiativeId } = req.params;
+    const { rows } = req.body;
+    if (!Array.isArray(rows)) {
+      return res.status(400).json({ error: 'rows array is required' });
+    }
+
+    const vaultDir = getVaultDir(req);
+    const vaultKey = getVaultKey(req);
+    const { data, markdownContent } = await readCard(vaultDir, initiativeId);
+    if (data.initiative !== true) {
+      return res.status(400).json({ error: 'Not an initiative card' });
+    }
+
+    const previous = parseInitiativeEpics(markdownContent);
+    const previousIds = new Set(previous.map((r) => r.id));
+    const nextIds = new Set(rows.map((r) => r.id));
+
+    const normalized = rows.map((row) => {
+      const epicMeta = previous.find((p) => p.id === row.id);
+      return {
+        id: row.id,
+        status: row.status || epicMeta?.status || 'Backlog',
+        notes: row.notes ?? epicMeta?.notes ?? '',
+      };
+    });
+
+    const newBody = replaceInitiativeEpics(markdownContent, normalized);
+    const cardPath = getCardPath(initiativeId, vaultDir);
+    await fs.writeFile(cardPath, matter.stringify(newBody, data), 'utf-8');
+
+    for (const row of normalized) {
+      await setEpicInitiativeLink(vaultDir, row.id, initiativeId);
+    }
+    for (const id of previousIds) {
+      if (!nextIds.has(id)) {
+        await clearEpicInitiativeLink(vaultDir, id, initiativeId);
+      }
+    }
+
+    await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${initiativeId} epics`);
+
+    res.json({ initiativeId, rows: normalized, success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
