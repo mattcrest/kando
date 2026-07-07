@@ -1,6 +1,6 @@
 # Kando — agent guidance
 
-Kando is a local kanban UI + API over Markdown `release-*.md` roadmap cards in Tolaria-style vaults.
+Kando is a local kanban UI + API over Markdown roadmap cards in Tolaria-style vaults. Cards form a three-layer hierarchy: **initiatives** (`initiative-*.md`, `initiative: true`) → **epics** (`release-epic-*.md`, `epic: true`, `initiative:` wikilink) → **story slices** (`release-*.md`, `epic:` wikilink). The UI has a kanban **Board** and a Now/Next/Later **Strategy** view; the API exposes `is_epic` / `is_initiative` / `horizon` / `milestone` / `parent` per card plus `GET/PUT /api/initiatives/:id/epics` for managing an initiative's epic list.
 
 ## Agent-agnostic routing (canonical)
 
