@@ -44,9 +44,11 @@ curl -s "http://127.0.0.1:3001/api/routing/resolve?workspaceRoot=/absolute/path/
 
 Read `conventionsPath` and `indexPath` from the resolve response. Status values, required card sections, and lifecycle rules **vary by project** — always follow that vault’s `roadmap-conventions.md`, not assumptions from another project.
 
+**Queue order:** Kando sorts Active, Prioritized, and Backlog by wiki-link order in `indexPath` (`roadmap-index.md`). When reprioritizing, update that file (or drag in Kando) — not `roadmap_order` on every card. Active cards may still carry auto-synced `roadmap_order` for Tolaria saved views.
+
 ### 3. Find and edit cards
 
-- Search under `vaultPath` for `release-<slug>.md`, or use `roadmap-index.md`.
+- Search under `vaultPath` for `release-<slug>.md`, or use `roadmap-index.md` for discovery **and queue order**.
 - Edit YAML frontmatter and Markdown body per conventions.
 - Commit inside the **vault** git repository (`vaultPath`), which may differ from the app repo root.
 
@@ -89,8 +91,10 @@ https://github.com/<canonicalRepo>/blob/main/release-<slug>.md
 |--------|------|---------|
 | GET | `/api/health` | Server up; vault keys |
 | GET | `/api/vaults` | All vaults + `routing` metadata |
-| GET | `/api/cards?vault=<key>` | List release cards |
+| GET | `/api/cards?vault=<key>` | List release cards (includes `index_order` from index) |
 | GET | `/api/cards/:id?vault=<key>` | Card detail |
+| GET | `/api/roadmap-index?vault=<key>` | Parsed section order from index file |
+| PUT | `/api/roadmap-index?vault=<key>` | Update Active / Prioritized / Backlog order in index |
 
 ## Install for common agents
 

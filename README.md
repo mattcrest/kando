@@ -7,6 +7,10 @@ Use it to plan releasable slices, drag cards across columns, and let coding agen
 ## Features
 
 - **Multi-vault** — Venubase, PlayerPath, or any project; switch vaults in the UI
+- **Three-layer hierarchy** — initiatives (`initiative: true`) → epics (`epic: true`) → story slices, linked by frontmatter wikilinks (`initiative:` on epics, `epic:` on slices)
+- **Board + Strategy views** — kanban board for execution; a Now/Next/Later roadmap of initiative rows with per-epic slice progress (header toggle)
+- **Card-type filter** — All / Initiatives / Epics / Slices dropdown in the header
+- **Initiative epic manager** — drag-to-reorder, add/remove, and annotate an initiative's epics from the card modal; writes the card's `## Epics` table and each epic's `initiative:` link
 - **Cross-project routing** — `vaults.json` maps app repo paths → roadmap vault + convention files
 - **Agent-agnostic API** — `GET /api/routing/resolve` for Cursor, Claude Code, Codex, Copilot, Gemini, or custom tools
 - **Bundled agent integrations** — optional install scripts for common assistants ([templates/agents/README.md](templates/agents/README.md))
@@ -46,6 +50,16 @@ Opens **http://127.0.0.1:3001** (or run `./scripts/kando-dev.sh start`).
 ```
 
 **This repo** = UI + API only. **Roadmap markdown** lives wherever you configure each vault path (submodule, sibling repo, or folder inside an app repo).
+
+### Card hierarchy (frontmatter contract)
+
+| Layer | Marker | Parent link | Shown in |
+|-------|--------|-------------|----------|
+| **Initiative** | `initiative: true` (+ optional `horizon: Now\|Next\|Later`, `milestone:`) | — | Strategy view lanes |
+| **Epic** | `epic: true` | `initiative: '[[initiative-<slug>]]'` | Board; initiative epic manager |
+| **Story slice** | neither flag | `epic: '[[release-epic-<slug>]]'` | Board; epic sidebar slice list |
+
+All layers still require `release: true` to appear in Kando. The card modal derives its breadcrumb (Initiative › Epic › Slice) and progress roll-ups from these links. Per-vault details live in each vault's `roadmap-conventions.md`.
 
 ## Configuration (`vaults.json`)
 
@@ -100,8 +114,10 @@ export VENUBASE_ROADMAP_DIR=/path/to/roadmap-vault
 | `GET /api/health` | Server status and vault keys |
 | `GET /api/vaults` | Vault list with `routing` metadata |
 | `GET /api/routing/resolve?workspaceRoot=<path>` | Map an app repo → vault + convention paths |
-| `GET /api/cards?vault=<key>` | List `release: true` cards |
+| `GET /api/cards?vault=<key>` | List `release: true` cards (includes `is_epic`, `is_initiative`, `horizon`, `milestone`, `parent`) |
 | `GET/PUT /api/cards/:id` | Read/update card metadata and body |
+| `GET/PUT /api/initiatives/:id/epics` | Read/reorder/add/remove an initiative's epics (syncs `## Epics` table + epic `initiative:` frontmatter) |
+| `GET/PUT /api/roadmap-index?vault=<key>` | Read/update queue order in `roadmap-index.md` |
 | `GET /api/vaults/:name/git/status` | Git status for vault directory |
 | `POST /api/vaults/:name/git/sync` | Commit and optional push |
 

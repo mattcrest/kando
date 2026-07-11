@@ -31,9 +31,17 @@ Fallback if Kando is down: read `vaults.json` in the Kando install directory and
 Read the resolved vault's:
 
 - `conventionsPath` (usually `roadmap-conventions.md`)
-- `indexPath` (usually `roadmap-index.md`)
+- `indexPath` (usually `roadmap-index.md`) — **source of truth for queue order** in Kando (Active, Prioritized, Backlog sections)
 
 Follow **that project's** status lifecycle and body sections exactly (each vault may differ).
+
+### Queue order
+
+Kando sorts **Active**, **Prioritized**, and **Backlog** columns by card order in `roadmap-index.md` (wiki links under each `##` section). Drag-reorder in the UI rewrites the index file.
+
+- **Do not** manually maintain `roadmap_order` on every card for Kando display.
+- **`roadmap_order`** on Active cards is auto-synced from index position for Tolaria's Active saved view (optional legacy field).
+- When adding or reprioritizing cards, update **`roadmap-index.md`** (or drag in Kando).
 
 ## Step 3 — Card work
 

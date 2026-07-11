@@ -20,6 +20,16 @@ Point Kando’s `venubase` vault there. Card commits and Kando **Commit & Push**
 
 **App repo pin:** `venubase-web/docs/roadmap/` is a git submodule of the same repo. Do not use it as the Kando vault path unless you have no standalone clone. Bump the submodule in venubase-web only when needed — see **venubase-roadmap-submodule**.
 
+## Three layers
+
+| Layer | Files | Marker | Parent link | Hub |
+|-------|-------|--------|-------------|-----|
+| **Initiative** (strategy bet) | `initiative-*.md` | `initiative: true` + `horizon: Now\|Next\|Later`, optional `milestone:` | — | `strategy-index.md` |
+| **Epic** (execution theme) | `release-epic-*.md` | `epic: true` | `initiative: '[[initiative-<slug>]]'` | `roadmap-index.md` |
+| **Story slice** (one PR) | `release-*.md` | neither flag | `epic: '[[release-epic-<slug>]]'` | epic's Story slices table |
+
+Prioritize **initiatives** in `strategy-index.md`, **epics** in `roadmap-index.md`. Never queue-sort individual slices. New slices must set `epic:`; new epics must set `initiative:`. Kando's Strategy view, breadcrumbs, and progress roll-ups all derive from these links.
+
 ## Find a card
 
 ```bash
@@ -27,16 +37,31 @@ grep -r "search term" /path/to/venubase-roadmap/
 grep -l "status: Active" /path/to/venubase-roadmap/release-*.md
 ```
 
-Hub: `roadmap-index.md`. Conventions: `roadmap-conventions.md`.
+Hubs: `strategy-index.md` (initiatives) · `roadmap-index.md` (epics + slice appendix). Conventions: `roadmap-conventions.md`.
+
+## Queue order (Kando kanban)
+
+**`roadmap-index.md` is the source of truth** for order within Active, Prioritized, and Backlog. Kando reads wiki-link order under each section header; drag-reorder in the UI updates the index file.
+
+| Field | Role |
+|-------|------|
+| `status` | Column membership (`Backlog`, `Prioritized`, `Active`, `Blocked`, `Done`) |
+| `roadmap_order` | Optional — auto-synced from index for **Active** cards (Tolaria view); omit on new cards |
+| `shipped_at` | ISO date when Done |
+
+When reprioritizing: edit the numbered/bullet list under the right `##` section in `roadmap-index.md`, or drag in Kando. Do not hand-edit `roadmap_order` across many files.
 
 ## Frontmatter (Kando kanban)
 
 | Field | Values |
 |-------|--------|
-| `status` | `Backlog`, `Prioritized`, `Active`, `Blocked`, `Done` (Shipped column) |
-| `roadmap_order` | Number while Active/Prioritized; omit when Done |
+| `status` | `Backlog`, `Prioritized`, `Active`, `Blocked`, `Done` (Shipped column), `Deferred` |
+| `roadmap_order` | Omit for new cards; Kando derives for Active from index when needed |
 | `shipped_at` | ISO date when Done |
-| `release` | `true` for release pipeline cards |
+| `release` | `true` for all Kando cards (initiatives, epics, slices) |
+| `initiative` | `true` on initiative cards; `'[[initiative-<slug>]]'` wikilink on epics |
+| `epic` | `true` on epic cards; `'[[release-epic-<slug>]]'` wikilink on slices |
+| `horizon` / `milestone` | Initiatives only: `Now\|Next\|Later`; `venue-2\|cohort-2-4\|scale-10` |
 
 Kanban columns: Backlog → Prioritized → Active → Shipped (`Done` in frontmatter).
 
@@ -89,13 +114,14 @@ See **release-card-writing** for the full PRD-style template. Minimal stub:
 type: Note
 release: true
 status: Active
-roadmap_order: 40
 related_to: "[[venubase]]"
 plan_anchor: Short title
 shipped_at: null
 ---
 
 # Short title
+
+List under the matching section in `roadmap-index.md`.
 
 ## Summary
 One paragraph.

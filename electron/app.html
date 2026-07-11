@@ -378,8 +378,78 @@ html[data-theme="dark"] {
   color: rgba(255,255,255,.8);
 }
 
-/* ── Search ──────────────────────────────────── */
+/* ── Search & card filter ───────────────────── */
+.header-card-filter {
+  display: flex;
+  align-items: center;
+}
+
+.header-card-filter select {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.75);
+  padding: 5px 28px 5px 10px;
+  border-radius: var(--r-xs);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,.45)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  min-width: 118px;
+}
+.header-card-filter select:hover,
+.header-card-filter select:focus {
+  border-color: rgba(255,255,255,.25);
+  color: rgba(255,255,255,.92);
+  outline: none;
+}
+
+.card-type-filter-btn {
+  display: flex; align-items: center; gap: 7px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.75);
+  font-size: 12px; font-weight: 500; font-family: var(--font);
+  padding: 6px 10px; border-radius: 7px;
+  cursor: pointer; min-width: 118px;
+  justify-content: space-between;
+  transition: border-color .12s, color .12s;
+}
+.card-type-filter-btn:hover,
+.card-type-filter-btn[aria-expanded="true"] {
+  border-color: rgba(255,255,255,.25);
+  color: rgba(255,255,255,.92);
+}
+.card-type-filter-menu {
+  position: absolute; top: 100%; right: 0;
+  background: #2d2d44;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  padding: 4px; margin-top: 4px; min-width: 150px;
+  opacity: 0; pointer-events: none; transform: translateY(-4px);
+  transition: opacity .15s, transform .15s;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+.card-type-filter-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.card-type-filter-option {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 12px; border-radius: 4px;
+  color: rgba(255,255,255,.78); font-size: 12px; font-weight: 500;
+  cursor: pointer; user-select: none;
+  transition: background .1s, color .1s;
+}
+.card-type-filter-option:hover { background: rgba(255,255,255,.08); color: #fff; }
+.card-type-filter-option input {
+  accent-color: var(--accent);
+  width: 13px; height: 13px; margin: 0;
+  cursor: pointer;
+}
+
 .header-search-wrapper {
+  position: relative;
   display: flex; align-items: center; gap: 8px;
   margin-left: 12px;
 }
@@ -942,6 +1012,34 @@ html[data-theme="dark"] {
   font-size: 13px; font-weight: 600; line-height: 1.42;
   color: var(--text-1); letter-spacing: -.15px; flex: 1;
 }
+.card-type-badge {
+  display: inline-flex; align-items: center;
+  font-size: 9.5px; font-weight: 700;
+  padding: 2px 7px; border-radius: 999px;
+  letter-spacing: .04em; text-transform: uppercase;
+  flex-shrink: 0; margin-top: 2px;
+}
+.card-type-epic {
+  background: rgba(99, 102, 241, .14);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, .22);
+}
+.card-type-initiative {
+  background: rgba(16, 185, 129, .14);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, .25);
+}
+.card-type-slice {
+  background: rgba(148, 163, 184, .12);
+  color: var(--text-3);
+  border: 1px solid rgba(148, 163, 184, .18);
+}
+.card.card-epic {
+  box-shadow: inset 3px 0 0 rgba(99, 102, 241, .55);
+}
+.card.card-initiative {
+  box-shadow: inset 3px 0 0 rgba(16, 185, 129, .65);
+}
 .card-summary {
   font-size: 12px; line-height: 1.4; color: var(--text-2);
   margin: 7px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -985,6 +1083,180 @@ html[data-theme="dark"] {
 }
 .overlay.open { opacity: 1; pointer-events: all; }
 
+/* lock page scroll while a card modal is open — only the modal panes scroll */
+body:has(.overlay.open) { overflow: hidden; }
+
+.modal.modal-initiative { max-width: 1120px; }
+
+/* Initiative epics panel */
+.initiative-epics-panel { margin: 0 0 20px; }
+.initiative-epics-panel.hidden { display: none; }
+.initiative-epics-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.initiative-epics-header h2 {
+  font-size: 13px; font-weight: 600; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: .04em; margin: 0;
+}
+.initiative-epics-hint { font-size: 12px; color: var(--text-3); }
+.initiative-epics-list {
+  list-style: none; margin: 0; padding: 0;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  overflow: hidden; background: var(--surface);
+}
+.initiative-epic-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto 28px;
+  gap: 10px; align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.initiative-epic-row:last-child { border-bottom: none; }
+.initiative-epic-row.dragging { opacity: .45; }
+.initiative-epic-row.drag-over { background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.initiative-epic-grip {
+  cursor: grab; color: var(--text-3); font-size: 14px; text-align: center;
+  user-select: none;
+}
+.initiative-epic-main { min-width: 0; }
+.initiative-epic-title { font-size: 14px; font-weight: 500; color: var(--text-1); margin: 0 0 2px; }
+.initiative-epic-notes {
+  width: 100%; font-size: 12px; color: var(--text-2);
+  border: none; background: transparent; padding: 0; resize: none;
+  font-family: inherit; line-height: 1.35;
+}
+.initiative-epic-notes:focus { outline: none; color: var(--text-1); }
+.initiative-epic-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.initiative-epic-status {
+  font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
+.initiative-epic-remove {
+  border: none; background: transparent; color: var(--text-3);
+  cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 4px;
+}
+.initiative-epic-remove:hover { color: #dc2626; background: rgba(220,38,38,.08); }
+.initiative-epics-add {
+  display: flex; gap: 8px; margin-top: 12px; align-items: center;
+}
+.initiative-epics-add select {
+  flex: 1; min-width: 0; font-size: 13px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text-1);
+}
+.initiative-epics-add .btn { flex-shrink: 0; font-size: 13px; padding: 8px 12px; }
+.initiative-epics-status {
+  font-size: 12px; color: var(--text-3); margin-top: 8px; min-height: 16px;
+}
+.initiative-epics-status.error { color: #dc2626; }
+
+/* Strategy view */
+.view-mode-toggle {
+  display: flex; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden;
+}
+.view-mode-btn {
+  border: none; background: transparent; color: var(--text-2);
+  font-size: 12px; font-weight: 500; padding: 6px 12px; cursor: pointer;
+}
+.view-mode-btn.active {
+  background: var(--surface); color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.view-mode-btn:not(.active):hover { color: var(--text-1); background: color-mix(in srgb, var(--bg) 50%, transparent); }
+.strategy-view {
+  display: none;
+  padding: 8px 0 48px;
+  min-height: calc(100vh - var(--header-h));
+}
+.strategy-view.visible { display: block; }
+.strategy-lanes {
+  max-width: 880px; margin: 0 auto; padding: 0 28px;
+  display: flex; flex-direction: column; gap: 36px;
+}
+
+/* horizon lane header — Now / Next / Later */
+.strategy-lane { display: flex; flex-direction: column; gap: 12px; }
+.strategy-lane-head {
+  display: flex; align-items: baseline; gap: 10px;
+  position: sticky; top: 0; z-index: 2;
+  background: var(--bg); padding: 12px 0 8px;
+}
+.strategy-lane-name {
+  font-size: 14px; font-weight: 700; color: var(--text-1);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.strategy-lane-hint { font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
+.strategy-lane-rule { flex: 1; height: 1px; background: var(--border); align-self: center; }
+
+/* initiative row — wide, two-column: narrative left, epics right */
+.strategy-row {
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  gap: 24px;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface);
+  padding: 18px 22px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.strategy-row:hover { border-color: var(--border-md); box-shadow: var(--shadow-sm); }
+.strategy-row.deferred { opacity: .62; }
+.strategy-row.deferred:hover { opacity: 1; }
+.strategy-row-main { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.strategy-row-titleline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.strategy-row-title {
+  font-size: 16px; font-weight: 600; letter-spacing: -.2px;
+  color: var(--text-1); margin: 0; line-height: 1.3;
+}
+.strategy-row-summary {
+  font-size: 13.5px; line-height: 1.55; color: var(--text-2); margin: 0;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.strategy-row-roll { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.strategy-roll-bar { width: 140px; }
+.strategy-roll-label { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
+
+/* epic mini-rows inside an initiative */
+.strategy-row-epics {
+  display: flex; flex-direction: column; gap: 2px;
+  justify-content: center; min-width: 0;
+  border-left: 1px solid var(--border); padding-left: 20px;
+}
+.strategy-epic-row {
+  display: grid; grid-template-columns: 10px minmax(0,1fr) auto;
+  gap: 9px; align-items: center;
+  border: none; background: transparent; font: inherit; text-align: left;
+  padding: 5px 8px; margin: 0 -8px; border-radius: 6px;
+  cursor: pointer; min-width: 0;
+  transition: background .1s;
+}
+.strategy-epic-row:hover { background: var(--bg); }
+.strategy-epic-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.strategy-epic-name {
+  font-size: 12.5px; font-weight: 500; color: var(--text-2); line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.strategy-epic-row:hover .strategy-epic-name { color: var(--text-1); }
+.strategy-epic-progress { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.strategy-epic-bar {
+  display: inline-block; width: 52px; height: 4px; border-radius: 2px;
+  background: var(--bg); overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.strategy-epic-fill { display: block; height: 100%; border-radius: 2px; background: #0d9f78; }
+.strategy-epic-fill.done { background: #0d9f78; }
+.strategy-epic-count {
+  font-size: 10.5px; font-weight: 500; color: var(--text-3);
+  min-width: 30px; text-align: right; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 820px){
+  .strategy-row { grid-template-columns: 1fr; gap: 14px; }
+  .strategy-row-epics { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 12px; }
+}
+.board-wrap.hidden { display: none; }
+
 .modal {
   background: var(--surface);
   border-radius: var(--r-lg);
@@ -1011,12 +1283,25 @@ html[data-theme="dark"] {
 .modal-nav {
   display: flex; align-items: center; gap: 6px; min-width: 0;
 }
-.modal-nav-id {
-  font-size: 12px; font-weight: 500; color: var(--text-3);
-  font-family: 'SFMono-Regular', 'Consolas', monospace;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: 280px; margin-left: 4px;
+.modal-breadcrumb {
+  display: flex; align-items: center; gap: 2px;
+  min-width: 0; margin-left: 6px;
+  white-space: nowrap; overflow: hidden;
 }
+.modal-breadcrumb-item {
+  border: none; background: transparent; font: inherit;
+  font-size: 12.5px; font-weight: 500; color: var(--text-3);
+  padding: 3px 7px; border-radius: 5px; cursor: pointer;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: background .1s, color .1s;
+}
+.modal-breadcrumb-item:hover { background: var(--bg); color: var(--text-1); }
+.modal-breadcrumb-current {
+  font-size: 12.5px; font-weight: 500; color: var(--text-2);
+  padding: 3px 7px;
+  max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.modal-breadcrumb-sep { color: var(--text-3); opacity: .5; font-size: 11px; flex-shrink: 0; }
 .modal-toolbar-actions {
   display: flex; align-items: center; gap: 4px; flex-shrink: 0;
 }
@@ -1051,8 +1336,10 @@ html[data-theme="dark"] {
   overflow-y: auto;
   padding: 16px 18px 20px;
   background: color-mix(in srgb, var(--bg) 35%, var(--surface));
+  overscroll-behavior: contain;
 }
 
+.modal-title-row { flex-shrink: 0; }
 .modal-title-input {
   width: 100%;
   font-size: 22px; font-weight: 600; letter-spacing: -.4px; line-height: 1.35;
@@ -1067,6 +1354,26 @@ html[data-theme="dark"] {
   flex-shrink: 0;
 }
 .modal-title-input:focus { background: color-mix(in srgb, var(--bg) 50%, transparent); }
+
+/* header meta strip — badges under title */
+.modal-header-meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 10px 28px 14px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header-meta:empty { display: none; }
+.meta-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 500;
+  padding: 3px 9px; border-radius: 20px;
+  white-space: nowrap;
+}
+.meta-pill-plain {
+  background: var(--bg); color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.meta-pill button { all: unset; cursor: pointer; }
 
 /* properties panel */
 .prop-group { display: flex; flex-direction: column; gap: 2px; }
@@ -1148,6 +1455,26 @@ html[data-theme="dark"] {
 .card-link-missing { color: var(--text-3); background: var(--bg); cursor: default; }
 .card-link-missing:hover { text-decoration: none; }
 
+/* sidebar child (slice) list */
+.sidebar-children { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-child {
+  display: flex; align-items: center; gap: 8px;
+  border: none; background: transparent; font: inherit;
+  padding: 4px 6px; margin: 0 -6px; border-radius: 6px;
+  cursor: pointer; text-align: left; min-width: 0;
+  transition: background .1s;
+}
+.sidebar-child:hover { background: var(--bg); }
+.sidebar-child-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  border: none;
+}
+.sidebar-child-label {
+  font-size: 12.5px; color: var(--text-2); line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sidebar-child:hover .sidebar-child-label { color: var(--text-1); }
+
 .prop-link {
   font-size: 13px; font-weight: 500; color: var(--accent);
   text-decoration: none;
@@ -1163,6 +1490,15 @@ html[data-theme="dark"] {
 }
 .prop-ac-header .prop-group-label { margin-bottom: 0; }
 .prop-ac-count { font-size: 11.5px; font-weight: 500; color: var(--text-3); white-space: nowrap; }
+.prop-ac-bar {
+  height: 4px; border-radius: 2px; background: var(--bg);
+  margin-bottom: 8px; overflow: hidden;
+}
+.prop-ac-fill {
+  height: 100%; border-radius: 2px;
+  background: #0d9f78;
+  transition: width .25s ease;
+}
 .modal-ac-list { display: flex; flex-direction: column; gap: 1px; }
 .modal-pane-props .ac-item {
   padding: 5px 6px; margin: 0 -6px; gap: 8px;
@@ -1178,15 +1514,14 @@ html[data-theme="dark"] {
   flex: 1; overflow-y: auto; min-height: 0;
   position: relative;
   padding: 16px 28px 32px;
+  overscroll-behavior: contain;
 }
 .modal-edit-link {
-  position: sticky; top: 0; float: right;
-  z-index: 2; margin-bottom: -24px;
-  padding: 2px 8px; font-size: 12px; font-weight: 500; font-family: var(--font);
-  background: var(--surface); border: 1px solid var(--border);
+  padding: 4px 10px; font-size: 12px; font-weight: 500; font-family: var(--font);
+  background: transparent; border: 1px solid var(--border);
   border-radius: 6px; cursor: pointer; color: var(--text-3);
   transition: background .1s, color .1s, border-color .1s;
-  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  margin-right: 2px;
 }
 .modal-edit-link:hover { color: var(--text-1); border-color: var(--border-md); }
 .modal-edit-link.editing {
@@ -1210,10 +1545,12 @@ html[data-theme="dark"] {
 /* markdown — Linear prose */
 .md h1 { display: none; }
 .md h2 {
-  font-size: 13px; font-weight: 500;
+  font-size: 11.5px; font-weight: 600;
   color: var(--text-3);
-  margin: 28px 0 8px;
-  letter-spacing: .01em;
+  text-transform: uppercase; letter-spacing: .06em;
+  margin: 30px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 .md h2:first-child { margin-top: 0; }
 .md h3 { font-size: 15px; font-weight: 600; color: var(--text-1); margin: 20px 0 6px; }
@@ -1386,6 +1723,23 @@ html[data-theme="dark"] {
       </div>
     </div>
   </div>
+  <div class="header-card-filter">
+    <div class="view-mode-toggle" id="view-mode-toggle" title="Board vs strategy view">
+      <button type="button" class="view-mode-btn active" data-view="board">Board</button>
+      <button type="button" class="view-mode-btn" data-view="strategy">Strategy</button>
+    </div>
+  </div>
+  <div class="header-card-filter" id="card-type-filter-wrap" style="position:relative">
+    <button type="button" class="card-type-filter-btn" id="card-type-filter-btn" title="Filter board by card type" aria-label="Filter board by card type" aria-haspopup="true" aria-expanded="false">
+      <span id="card-type-filter-label">All cards</span>
+      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="card-type-filter-menu" id="card-type-filter-menu" role="group" aria-label="Card types">
+      <label class="card-type-filter-option"><input type="checkbox" value="initiative" checked> Initiatives</label>
+      <label class="card-type-filter-option"><input type="checkbox" value="epic" checked> Epics</label>
+      <label class="card-type-filter-option"><input type="checkbox" value="slice" checked> Slices</label>
+    </div>
+  </div>
   <div class="header-search-wrapper" id="search-wrapper">
     <button class="header-search-btn" id="search-btn" title="Search">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1405,9 +1759,10 @@ html[data-theme="dark"] {
   <button class="header-reset-btn" id="reset-btn" title="Reset to source data">Reset</button>
 </header>
 
-<div class="board-wrap">
+<div class="board-wrap" id="board-wrap">
   <div class="board" id="board"></div>
 </div>
+<div class="strategy-view" id="strategy-view" aria-label="Strategy initiatives"></div>
 
 <!-- Modal -->
 <div class="overlay" id="overlay">
@@ -1416,19 +1771,36 @@ html[data-theme="dark"] {
       <div class="modal-nav">
         <button class="modal-icon-btn" id="modal-prev" title="Previous card (←)" aria-label="Previous card">←</button>
         <button class="modal-icon-btn" id="modal-next" title="Next card (→)" aria-label="Next card">→</button>
-        <span class="modal-nav-id" id="modal-nav-id"></span>
+        <nav class="modal-breadcrumb" id="modal-breadcrumb" aria-label="Card hierarchy"></nav>
       </div>
       <div class="modal-toolbar-actions">
         <span class="unsaved-dot" id="unsaved-dot"></span>
         <button class="btn btn-primary" id="modal-save" style="display:none">Save</button>
+        <button class="modal-edit-link" id="modal-content-toggle" type="button">Edit</button>
         <button class="modal-icon-btn" id="modal-close" title="Close (Esc)" aria-label="Close">✕</button>
       </div>
     </div>
     <div class="modal-body">
       <div class="modal-pane modal-pane-main">
-        <textarea class="modal-title-input" id="modal-title" rows="1" aria-label="Card title"></textarea>
+        <div class="modal-title-row">
+          <textarea class="modal-title-input" id="modal-title" rows="1" aria-label="Card title"></textarea>
+        </div>
+        <div class="modal-header-meta" id="modal-header-meta"></div>
         <div class="modal-content-scroll" id="modal-content-scroll">
-          <button class="modal-edit-link" id="modal-content-toggle" type="button">Edit</button>
+          <div id="initiative-epics-panel" class="initiative-epics-panel hidden" aria-label="Initiative epics">
+            <div class="initiative-epics-header">
+              <h2>Epics</h2>
+              <span class="initiative-epics-hint">Drag to reorder · changes save automatically</span>
+            </div>
+            <ul id="initiative-epics-list" class="initiative-epics-list"></ul>
+            <div class="initiative-epics-add">
+              <select id="initiative-epic-add-select" aria-label="Epic to add">
+                <option value="">Add an epic…</option>
+              </select>
+              <button type="button" class="btn btn-primary" id="initiative-epic-add-btn">Add</button>
+            </div>
+            <div id="initiative-epics-status" class="initiative-epics-status"></div>
+          </div>
           <div class="modal-content-area md" id="modal-content"></div>
           <textarea class="modal-content-textarea" id="modal-content-edit" placeholder="Markdown content..." aria-label="Markdown source"></textarea>
         </div>
@@ -1599,7 +1971,399 @@ const cardContents = {}; // { cardId: markdown content }
 
 /* ── Data helpers ─────────────────────────────── */
 const STORAGE_KEY = 'venubase-kanban-v2';
+const CARD_TYPE_FILTER_KEY = 'kando-card-type-filter';
+const VIEW_MODE_KEY = 'kando-view-mode';
+const CARD_TYPES = ['initiative', 'epic', 'slice'];
 let SOURCE_META = []; // Will be fetched from API
+
+function loadCardTypeFilter(){
+  const raw = localStorage.getItem(CARD_TYPE_FILTER_KEY);
+  if(!raw || raw === 'all') return new Set(CARD_TYPES);
+  try {
+    const arr = JSON.parse(raw);
+    if(Array.isArray(arr)){
+      const set = new Set(arr.filter(t=>CARD_TYPES.includes(t)));
+      return set.size ? set : new Set(CARD_TYPES);
+    }
+  } catch {}
+  // migrate legacy single-value strings ('epic', 'slice', 'initiative')
+  return CARD_TYPES.includes(raw) ? new Set([raw]) : new Set(CARD_TYPES);
+}
+let cardTypeFilter = loadCardTypeFilter();
+
+function saveCardTypeFilter(){
+  localStorage.setItem(CARD_TYPE_FILTER_KEY, JSON.stringify([...cardTypeFilter]));
+}
+
+function cardType(card){
+  if(card.is_initiative) return 'initiative';
+  if(card.is_epic) return 'epic';
+  return 'slice';
+}
+
+function cardTypeFilterLabel(){
+  if(cardTypeFilter.size === CARD_TYPES.length) return 'All cards';
+  if(cardTypeFilter.size === 0) return 'All cards';
+  const names = { initiative:'Initiatives', epic:'Epics', slice:'Slices' };
+  return CARD_TYPES.filter(t=>cardTypeFilter.has(t)).map(t=>names[t]).join(' + ');
+}
+let viewMode = localStorage.getItem(VIEW_MODE_KEY) || 'board';
+let initiativeEpicsRows = [];
+let initiativeEpicsSaving = false;
+let initiativeEpicsDragId = null;
+
+function cardMatchesTypeFilter(card){
+  if(cardTypeFilter.size === 0 || cardTypeFilter.size === CARD_TYPES.length) return true;
+  return cardTypeFilter.has(cardType(card));
+}
+
+function cardTypeBadgeHtml(card){
+  if(card.is_initiative){
+    const horizon = card.horizon ? ` · ${esc(card.horizon)}` : '';
+    return `<span class="card-type-badge card-type-initiative">Initiative${horizon}</span>`;
+  }
+  if(card.is_epic) return `<span class="card-type-badge card-type-epic">Epic</span>`;
+  return `<span class="card-type-badge card-type-slice">Slice</span>`;
+}
+
+function cardShellClass(card){
+  if(card.is_initiative) return ' card-initiative';
+  if(card.is_epic) return ' card-epic';
+  return '';
+}
+
+const EPICS_SECTION_RE = /^## Epics\r?\n([\s\S]*?)(?=\r?\n## |\r?\n$)/m;
+
+function parseInitiativeEpicsFromContent(content){
+  const match = content.match(EPICS_SECTION_RE);
+  if(!match) return [];
+  const rows = [];
+  for(const line of match[1].split(/\r?\n/)){
+    if(!/^\|/.test(line) || /^\|[\s\-:|]+\|/.test(line.replace(/\s/g,''))) continue;
+    const cells = line.split('|').map(s=>s.trim()).filter((_,i,arr)=>i>0 && i<arr.length-1);
+    if(!cells.length) continue;
+    const wiki = (cells[0]||'').match(/\[\[([^\]|]+)/);
+    if(!wiki) continue;
+    rows.push({ id: wiki[1], status: cells[1]||'', notes: cells[2]||'' });
+  }
+  return rows;
+}
+
+function stripEpicsSectionFromMd(md){
+  return md.replace(EPICS_SECTION_RE, '').replace(/\n{3,}/g, '\n\n').trimEnd();
+}
+
+function setViewMode(mode){
+  viewMode = mode === 'strategy' ? 'strategy' : 'board';
+  localStorage.setItem(VIEW_MODE_KEY, viewMode);
+  document.querySelectorAll('.view-mode-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.view === viewMode);
+  });
+  document.getElementById('board-wrap')?.classList.toggle('hidden', viewMode === 'strategy');
+  document.getElementById('strategy-view')?.classList.toggle('visible', viewMode === 'strategy');
+  if(viewMode === 'strategy') renderStrategyView();
+  else renderBoard();
+}
+
+const HORIZON_ORDER = { 'Now': 0, 'Next': 1, 'Later': 2 };
+const HORIZON_META = {
+  'Now':   { label: 'Now',   hint: 'Milestone A — Venue #2 ready' },
+  'Next':  { label: 'Next',  hint: 'Cohort 2–4 venues' },
+  'Later': { label: 'Later', hint: 'Milestone B — scale to 10' },
+};
+
+function normalizeHorizon(h){
+  if(!h) return 'Later';
+  const s = String(h).trim();
+  if(/^now/i.test(s)) return 'Now';
+  if(/^next/i.test(s)) return 'Next';
+  return 'Later';
+}
+
+/** Progress across an epic's slices: shipped / total. */
+function epicSliceProgress(epicId){
+  const slices = state.cards.filter(c=>c.parent === epicId && !c.is_epic && !c.is_initiative);
+  const done = slices.filter(c=>c.status === 'Done').length;
+  return { done, total: slices.length };
+}
+
+function stripInlineMd(text){
+  return (text||'')
+    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2')
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1');
+}
+
+function renderStrategyEpicRow(row){
+  const epic = getCard(row.id);
+  const label = epic?.plan_anchor || epic?.title || row.id.replace(/^release-epic-/,'');
+  const status = epic?.status || row.status || 'Backlog';
+  const { done, total } = epicSliceProgress(row.id);
+  const pct = total > 0 ? Math.round(done/total*100) : (status === 'Done' ? 100 : 0);
+  return `<button type="button" class="strategy-epic-row" data-card="${esc(row.id)}" title="${esc(epic?.title||row.id)} — ${esc(status)}">
+    <span class="strategy-epic-dot" style="${statusDotStyle(status)}"></span>
+    <span class="strategy-epic-name">${esc(label)}</span>
+    <span class="strategy-epic-progress">
+      <span class="strategy-epic-bar"><span class="strategy-epic-fill${status==='Done'?' done':''}" style="width:${pct}%"></span></span>
+      <span class="strategy-epic-count">${total > 0 ? `${done}/${total}` : esc(STATUS_LABELS[status]||status)}</span>
+    </span>
+  </button>`;
+}
+
+function renderStrategyView(){
+  const root = document.getElementById('strategy-view');
+  if(!root) return;
+  const initiatives = state.cards.filter(c=>c.is_initiative);
+
+  const lanes = { 'Now': [], 'Next': [], 'Later': [] };
+  for(const card of initiatives){
+    lanes[normalizeHorizon(card.horizon)].push(card);
+  }
+  const statusOrder = { Active:0, Prioritized:1, Backlog:2, Blocked:3, Done:4, Deferred:5 };
+  for(const key of Object.keys(lanes)){
+    lanes[key].sort((a,b)=>(statusOrder[a.status]??9)-(statusOrder[b.status]??9) || (a.title||'').localeCompare(b.title||''));
+  }
+
+  let html = '<div class="strategy-lanes">';
+  for(const [horizon, cards] of Object.entries(lanes)){
+    if(!cards.length) continue;
+    const meta = HORIZON_META[horizon];
+    html += `<section class="strategy-lane" aria-label="${esc(meta.label)}">
+      <header class="strategy-lane-head">
+        <span class="strategy-lane-name">${esc(meta.label)}</span>
+        <span class="strategy-lane-hint">${esc(meta.hint)}</span>
+        <span class="strategy-lane-rule"></span>
+      </header>
+      ${cards.map(card=>{
+        const content = getContent(card.id);
+        const summary = stripInlineMd(getSummary(content));
+        const epics = parseInitiativeEpicsFromContent(content);
+        // roll-up: shipped slices across all child epics
+        let rollDone = 0, rollTotal = 0;
+        for(const row of epics){
+          const p = epicSliceProgress(row.id);
+          rollDone += p.done; rollTotal += p.total;
+        }
+        const rollPct = rollTotal > 0 ? Math.round(rollDone/rollTotal*100) : 0;
+        const title = stripInlineMd(card.title||card.id).split('—')[0].trim();
+        return `<article class="strategy-row${card.status==='Deferred'?' deferred':''}" data-card="${esc(card.id)}" tabindex="0" role="button">
+          <div class="strategy-row-main">
+            <div class="strategy-row-titleline">
+              <h3 class="strategy-row-title">${esc(title)}</h3>
+              <span class="meta-pill" style="${statusStyle(card.status)}">${esc(STATUS_LABELS[card.status]||card.status)}</span>
+              ${card.milestone ? `<span class="meta-pill meta-pill-plain">${esc(card.milestone)}</span>` : ''}
+            </div>
+            <p class="strategy-row-summary">${esc(summary||'No summary yet.')}</p>
+            ${rollTotal > 0 ? `<div class="strategy-row-roll">
+              <span class="strategy-epic-bar strategy-roll-bar"><span class="strategy-epic-fill" style="width:${rollPct}%"></span></span>
+              <span class="strategy-roll-label">${rollDone} of ${rollTotal} slices shipped</span>
+            </div>` : ''}
+          </div>
+          <div class="strategy-row-epics">
+            ${epics.length ? epics.map(renderStrategyEpicRow).join('') : '<span class="initiative-epics-hint">No epics linked</span>'}
+          </div>
+        </article>`;
+      }).join('')}
+    </section>`;
+  }
+  html += '</div>';
+  root.innerHTML = html;
+
+  root.querySelectorAll('.strategy-row').forEach(el=>{
+    el.addEventListener('click', e=>{
+      if(e.target.closest('.strategy-epic-row')) return;
+      navigateToCard(el.dataset.card);
+    });
+    el.addEventListener('keydown', e=>{
+      if((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.strategy-epic-row')){
+        e.preventDefault(); navigateToCard(el.dataset.card);
+      }
+    });
+  });
+  root.querySelectorAll('.strategy-epic-row').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      navigateToCard(el.dataset.card);
+    });
+  });
+}
+
+function setInitiativeEpicsStatus(msg, isError){
+  const el = document.getElementById('initiative-epics-status');
+  if(!el) return;
+  el.textContent = msg || '';
+  el.classList.toggle('error', !!isError);
+}
+
+async function saveInitiativeEpics(initiativeId, rows){
+  if(initiativeEpicsSaving) return;
+  initiativeEpicsSaving = true;
+  setInitiativeEpicsStatus('Saving…');
+  try {
+    const payload = rows.map(row=>{
+      const epic = getCard(row.id);
+      return {
+        id: row.id,
+        status: epic?.status || row.status || 'Backlog',
+        notes: row.notes || '',
+      };
+    });
+    const resp = await fetch(apiUrl(`/api/initiatives/${encodeURIComponent(initiativeId)}/epics`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: payload }),
+    });
+    if(!resp.ok){
+      const err = await resp.json().catch(()=>({}));
+      throw new Error(err.error || `Save failed (${resp.status})`);
+    }
+    const data = await resp.json();
+    initiativeEpicsRows = data.rows || payload;
+    const content = getContent(initiativeId);
+    const without = stripEpicsSectionFromMd(content);
+    const tableLines = [
+      '## Epics','',
+      '| Epic | Status | Notes |',
+      '|------|--------|-------|',
+      ...initiativeEpicsRows.map(r=>`| [[${r.id}]] | ${r.status} | ${r.notes} |`),
+      '',
+    ].join('\n');
+    const acIdx = without.search(/\r?\n## Initiative acceptance criteria/);
+    const merged = acIdx >= 0
+      ? `${without.slice(0, acIdx).trimEnd()}\n\n${tableLines}\n${without.slice(acIdx)}`
+      : `${without.trimEnd()}\n\n${tableLines}\n`;
+    cardContents[initiativeId] = merged;
+    setInitiativeEpicsStatus('Saved');
+    if(viewMode === 'strategy') renderStrategyView();
+    window.setTimeout(()=> setInitiativeEpicsStatus(''), 1500);
+  } catch(err){
+    console.error(err);
+    setInitiativeEpicsStatus(err.message || 'Save failed', true);
+  } finally {
+    initiativeEpicsSaving = false;
+  }
+}
+
+function populateInitiativeEpicAddSelect(initiativeId){
+  const select = document.getElementById('initiative-epic-add-select');
+  if(!select) return;
+  const linked = new Set(initiativeEpicsRows.map(r=>r.id));
+  const options = state.cards
+    .filter(c=>c.is_epic && !c.is_initiative && !linked.has(c.id))
+    .sort((a,b)=>(a.title||a.id).localeCompare(b.title||b.id));
+  select.innerHTML = `<option value="">Add an epic…</option>${options.map(c=>
+    `<option value="${esc(c.id)}">${esc(c.plan_anchor || c.title || c.id)}</option>`
+  ).join('')}`;
+}
+
+function renderInitiativeEpicsPanel(initiativeId){
+  const panel = document.getElementById('initiative-epics-panel');
+  const list = document.getElementById('initiative-epics-list');
+  if(!panel || !list) return;
+
+  panel.classList.remove('hidden');
+  list.innerHTML = initiativeEpicsRows.map((row, idx)=>{
+    const epic = getCard(row.id);
+    const title = epic?.plan_anchor || epic?.title || row.id;
+    const status = epic?.status || row.status || 'Backlog';
+    return `<li class="initiative-epic-row" data-epic-id="${esc(row.id)}" data-index="${idx}" draggable="true">
+      <span class="initiative-epic-grip" aria-hidden="true">⋮⋮</span>
+      <div class="initiative-epic-main">
+        <div class="initiative-epic-title">${wikiToCardLink(`[[${row.id}]]`, row.id)}</div>
+        <textarea class="initiative-epic-notes" rows="1" data-epic-id="${esc(row.id)}" placeholder="Notes…">${esc(row.notes||'')}</textarea>
+      </div>
+      <div class="initiative-epic-meta">
+        <span class="initiative-epic-status" style="${statusStyle(status)}">${esc(STATUS_LABELS[status]||status)}</span>
+      </div>
+      <button type="button" class="initiative-epic-remove" data-epic-id="${esc(row.id)}" title="Remove from initiative" aria-label="Remove epic">×</button>
+    </li>`;
+  }).join('') || `<li class="initiative-epic-row" style="grid-template-columns:1fr"><div class="initiative-epic-main"><div class="initiative-epic-title" style="color:var(--text-3)">No epics yet — add one below.</div></div></li>`;
+
+  populateInitiativeEpicAddSelect(initiativeId);
+  bindInitiativeEpicsPanelEvents(initiativeId);
+}
+
+function bindInitiativeEpicsPanelEvents(initiativeId){
+  const list = document.getElementById('initiative-epics-list');
+  if(!list) return;
+
+  list.querySelectorAll('.initiative-epic-row[draggable]').forEach(row=>{
+    row.addEventListener('dragstart', e=>{
+      initiativeEpicsDragId = row.dataset.epicId;
+      e.dataTransfer.effectAllowed = 'move';
+      requestAnimationFrame(()=> row.classList.add('dragging'));
+    });
+    row.addEventListener('dragend', ()=>{
+      row.classList.remove('dragging');
+      list.querySelectorAll('.initiative-epic-row').forEach(r=>r.classList.remove('drag-over'));
+      initiativeEpicsDragId = null;
+    });
+    row.addEventListener('dragover', e=>{
+      e.preventDefault();
+      if(!initiativeEpicsDragId || row.dataset.epicId === initiativeEpicsDragId) return;
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', ()=> row.classList.remove('drag-over'));
+    row.addEventListener('drop', e=>{
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      if(!initiativeEpicsDragId || row.dataset.epicId === initiativeEpicsDragId) return;
+      const from = initiativeEpicsRows.findIndex(r=>r.id === initiativeEpicsDragId);
+      const to = initiativeEpicsRows.findIndex(r=>r.id === row.dataset.epicId);
+      if(from < 0 || to < 0) return;
+      const next = [...initiativeEpicsRows];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      initiativeEpicsRows = next;
+      renderInitiativeEpicsPanel(initiativeId);
+      saveInitiativeEpics(initiativeId, initiativeEpicsRows);
+    });
+  });
+
+  list.querySelectorAll('.initiative-epic-notes').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      input.style.height = 'auto';
+      input.style.height = `${input.scrollHeight}px`;
+    });
+    input.style.height = 'auto';
+    input.style.height = `${input.scrollHeight}px`;
+    input.addEventListener('blur', ()=>{
+      const id = input.dataset.epicId;
+      const row = initiativeEpicsRows.find(r=>r.id === id);
+      if(!row) return;
+      row.notes = input.value.trim();
+      saveInitiativeEpics(initiativeId, initiativeEpicsRows);
+    });
+  });
+
+  list.querySelectorAll('.initiative-epic-remove').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const id = btn.dataset.epicId;
+      if(!confirm('Remove this epic from the initiative? (Epic card is kept; only the link is cleared.)')) return;
+      initiativeEpicsRows = initiativeEpicsRows.filter(r=>r.id !== id);
+      renderInitiativeEpicsPanel(initiativeId);
+      saveInitiativeEpics(initiativeId, initiativeEpicsRows);
+    });
+  });
+
+  list.querySelectorAll('.card-link').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      navigateToCard(btn.dataset.card);
+    });
+  });
+}
+
+function hideInitiativeEpicsPanel(){
+  document.getElementById('initiative-epics-panel')?.classList.add('hidden');
+  document.getElementById('initiative-epics-list').innerHTML = '';
+  initiativeEpicsRows = [];
+  setInitiativeEpicsStatus('');
+}
 
 function getContent(id){
   return cardContents[id] || '';
@@ -1610,7 +2374,7 @@ function parseAC(content){
   const items = [];
   let inAC = false;
   for(const line of lines){
-    if(/^## Acceptance criteria/i.test(line)){ inAC=true; continue; }
+    if(/^## (?:Epic |Initiative )?acceptance criteria/i.test(line)){ inAC=true; continue; }
     if(inAC && /^##\s/.test(line)){ inAC=false; continue; }
     if(inAC){
       const done = line.match(/^- \[x\] (.+)/i);
@@ -1681,6 +2445,39 @@ function saveState(){
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
 }
 
+const INDEX_ORDERED_STATUSES = ['Active', 'Prioritized', 'Backlog'];
+
+function compareCardOrder(a, b) {
+  const ao = a.index_order ?? a.roadmap_order ?? Infinity;
+  const bo = b.index_order ?? b.roadmap_order ?? Infinity;
+  if (ao !== bo) return ao - bo;
+  return a.id.localeCompare(b.id);
+}
+
+async function persistIndexOrder(affectedStatuses) {
+  const sections = {};
+  for (const st of affectedStatuses) {
+    sections[st] = state.cards
+      .filter(c => c.status === st)
+      .sort(compareCardOrder)
+      .map(c => c.id);
+  }
+  const resp = await fetch(apiUrl('/api/roadmap-index'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sections })
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+  const data = await resp.json();
+  if (data.orders) {
+    for (const card of state.cards) {
+      const ids = data.orders[card.status];
+      card.index_order = ids ? ids.indexOf(card.id) : null;
+      if (card.index_order === -1) card.index_order = null;
+    }
+  }
+}
+
 function initState(){
   const saved = loadState();
   state = saved || buildInitialState();
@@ -1695,11 +2492,17 @@ function initState(){
       const meta = metaById[card.id];
       if(!meta) continue;
       card.status = meta.status;
+      card.index_order = meta.index_order;
       card.roadmap_order = meta.roadmap_order;
       card.shipped_at = meta.shipped_at;
       card.category = meta.category;
       card.title = meta.title;
       card.plan_anchor = meta.plan_anchor;
+      card.is_epic = meta.is_epic === true;
+      card.is_initiative = meta.is_initiative === true;
+      card.horizon = meta.horizon || null;
+      card.milestone = meta.milestone || null;
+      card.parent = meta.parent || null;
     }
   }
 }
@@ -1744,7 +2547,7 @@ function cardPosition(card) {
   const cols = getColumns();
   const orderedCol = cols.find(c => c.key === card.status);
   if(!orderedCol) return null;
-  const ordered = state.cards.filter(c => c.status === card.status).sort((a,b) => (a.roadmap_order||0) - (b.roadmap_order||0));
+  const ordered = state.cards.filter(c => c.status === card.status).sort(compareCardOrder);
   return ordered.findIndex(c => c.id === card.id) + 1;
 }
 
@@ -1763,7 +2566,10 @@ function renderCard(card, position){
   const summary = getSummary(content);
 
   let bottom = '';
-  const tag = `<span class="card-tag" style="${catStyle(card.category)}">${esc(card.category)}</span>`;
+  const typeBadge = cardTypeBadgeHtml(card);
+  const tag = card.category
+    ? `<span class="card-tag" style="${catStyle(card.category)}">${esc(card.category)}</span>`
+    : '';
 
   if(card.status === 'Done'){
     const pr = prs[0];
@@ -1796,10 +2602,11 @@ function renderCard(card, position){
     bottom = `<div class="card-footer"><div>${tag}</div></div>`;
   }
 
-  return `<div class="card" data-card="${card.id}" draggable="true">
+  return `<div class="card${cardShellClass(card)}" data-card="${card.id}" data-is-epic="${card.is_epic ? '1' : '0'}" data-is-initiative="${card.is_initiative ? '1' : '0'}" draggable="true">
     <div class="card-top">
       ${position ? `<div class="card-order">${position}</div>` : ''}
       <div class="card-title">${esc(card.title)}</div>
+      ${typeBadge}
     </div>
     ${summary ? `<div class="card-summary">${renderInline(summary)}</div>` : ''}
     ${bottom}
@@ -1811,9 +2618,9 @@ function renderBoard(){
   const cols = getColumns();
   let html = '';
   for(const col of cols){
-    let cards = state.cards.filter(c=>c.status===col.key);
+    let cards = state.cards.filter(c=>c.status===col.key && cardMatchesTypeFilter(c));
     if(col.key==='Done') cards.sort((a,b)=>new Date(b.shipped_at||0)-new Date(a.shipped_at||0));
-    else cards.sort((a,b)=>(a.roadmap_order||0)-(b.roadmap_order||0));
+    else cards.sort(compareCardOrder);
 
     const showPosition = col.key === 'Active' || col.key === 'Prioritized';
     const cardsHtml = cards.length
@@ -1961,39 +2768,40 @@ async function moveCard(cardId, newStatus, siblingIds, insertIdx){
   const oldStatus = card.status;
   card.status = newStatus;
 
-  const orderedCols = ['Active', 'Prioritized'];
-  if(orderedCols.includes(newStatus)){
-    const newOrder = [...siblingIds];
-    newOrder.splice(insertIdx, 0, cardId);
-    const statusCards = state.cards.filter(c=>c.status===newStatus);
-    const orderMap = {};
-    newOrder.forEach((id,i)=>{ orderMap[id]=i; });
-    statusCards.forEach(c=>{
-      c.roadmap_order = ((orderMap[c.id]??100) + 1) * 10;
-    });
-  } else if(newStatus === 'Done'){
+  const newOrder = [...siblingIds];
+  newOrder.splice(insertIdx, 0, cardId);
+  newOrder.forEach((id, i) => {
+    const c = getCard(id);
+    if (c) c.index_order = i;
+  });
+
+  if(newStatus === 'Done'){
     if(!card.shipped_at) card.shipped_at = new Date().toISOString().split('T')[0];
-    delete card.roadmap_order;
-  } else {
-    delete card.roadmap_order;
   }
 
   saveState();
 
-  // Persist to API
   try {
     const updates = {
       status: card.status,
-      roadmap_order: card.roadmap_order || null,
-      shipped_at: card.shipped_at || null
+      shipped_at: card.shipped_at || null,
     };
+    if (oldStatus === 'Active' && newStatus !== 'Active') {
+      updates.roadmap_order = null;
+      card.roadmap_order = null;
+    }
     await fetch(apiUrl(`/api/cards/${cardId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
+
+    const affected = new Set();
+    if (INDEX_ORDERED_STATUSES.includes(newStatus)) affected.add(newStatus);
+    if (INDEX_ORDERED_STATUSES.includes(oldStatus)) affected.add(oldStatus);
+    if (affected.size) await persistIndexOrder([...affected]);
   } catch(err){
-    console.error('Failed to save card to API:', err);
+    console.error('Failed to save card move:', err);
   }
 
   refreshGitStatus();
@@ -2033,7 +2841,7 @@ function bindColumnEvents(){
 
 /* ── Modal ───────────────────────────────────── */
 function visibleCards(){
-  return state.cards;
+  return state.cards.filter(cardMatchesTypeFilter);
 }
 
 function showModal(id){
@@ -2045,6 +2853,7 @@ function showModal(id){
   const content = getContent(id);
   const deps = parseDeps(content);
   const prs = parsePRs(content);
+  const modalEl = document.getElementById('modal');
 
   // Title
   const titleEl = document.getElementById('modal-title');
@@ -2054,10 +2863,28 @@ function showModal(id){
 
   // Properties + body
   renderSidebar(card, deps, prs);
+  renderModalBreadcrumb(card);
+  renderModalHeaderMeta(card);
 
-  document.getElementById('modal-nav-id').textContent = card.path.replace(/^.*\//, '').replace(/\.md$/i, '');
+  let contentForMd = content.replace(/^## (?:Epic |Initiative )?acceptance criteria[\s\S]*?(?=^## |\Z)/im, '');
+  if(card.is_initiative){
+    modalEl.classList.add('modal-initiative');
+    initiativeEpicsRows = parseInitiativeEpicsFromContent(content);
+    renderInitiativeEpicsPanel(id);
+    contentForMd = stripEpicsSectionFromMd(contentForMd);
+    document.getElementById('initiative-epic-add-btn').onclick = ()=>{
+      const select = document.getElementById('initiative-epic-add-select');
+      const epicId = select?.value;
+      if(!epicId) return;
+      initiativeEpicsRows = [...initiativeEpicsRows, { id: epicId, status: getCard(epicId)?.status || 'Backlog', notes: '' }];
+      renderInitiativeEpicsPanel(id);
+      saveInitiativeEpics(id, initiativeEpicsRows);
+    };
+  } else {
+    modalEl.classList.remove('modal-initiative');
+    hideInitiativeEpicsPanel();
+  }
 
-  const contentForMd = content.replace(/^## Acceptance criteria[\s\S]*?(?=^## |\Z)/m, '');
   document.getElementById('modal-content').innerHTML = renderMd(contentForMd);
 
   document.getElementById('modal-path').textContent = card.path;
@@ -2082,7 +2909,55 @@ function showModal(id){
 
   // Show
   document.getElementById('overlay').classList.add('open');
-  document.getElementById('modal-title').focus();
+  document.getElementById('modal-content-scroll').scrollTop = 0;
+}
+
+/* Breadcrumb: Initiative → Epic → Slice, parents clickable */
+function cardCrumbLabel(card){
+  const label = card.plan_anchor || card.title || card.id;
+  return label.length > 44 ? label.slice(0, 42).trimEnd() + '…' : label;
+}
+
+function ancestorChain(card){
+  const chain = [];
+  let cur = card;
+  const seen = new Set([card.id]);
+  while(cur?.parent && !seen.has(cur.parent)){
+    const parent = getCard(cur.parent);
+    if(!parent) break;
+    chain.unshift(parent);
+    seen.add(parent.id);
+    cur = parent;
+  }
+  return chain;
+}
+
+function renderModalBreadcrumb(card){
+  const nav = document.getElementById('modal-breadcrumb');
+  if(!nav) return;
+  const parents = ancestorChain(card);
+  const parts = parents.map(p =>
+    `<button type="button" class="modal-breadcrumb-item" data-card="${esc(p.id)}" title="${esc(p.title||p.id)}">${esc(cardCrumbLabel(p))}</button><span class="modal-breadcrumb-sep">›</span>`
+  );
+  parts.push(`<span class="modal-breadcrumb-current" title="${esc(card.title||card.id)}">${esc(cardCrumbLabel(card))}</span>`);
+  nav.innerHTML = parts.join('');
+  nav.querySelectorAll('.modal-breadcrumb-item').forEach(btn=>{
+    btn.addEventListener('click', ()=> navigateToCard(btn.dataset.card));
+  });
+}
+
+/* Header meta strip: type, status, horizon/category at a glance */
+function renderModalHeaderMeta(card){
+  const el = document.getElementById('modal-header-meta');
+  if(!el) return;
+  const pills = [cardTypeBadgeHtml(card)];
+  pills.push(`<span class="meta-pill" style="${statusStyle(card.status)}">${esc(STATUS_LABELS[card.status]||card.status)}</span>`);
+  if(card.category) pills.push(`<span class="meta-pill" style="${catStyle(card.category)}">${esc(card.category)}</span>`);
+  if(card.is_initiative && card.milestone) pills.push(`<span class="meta-pill meta-pill-plain">${esc(card.milestone)}</span>`);
+  if(card.shipped_at) pills.push(`<span class="meta-pill meta-pill-plain">Shipped ${esc(formatDate(card.shipped_at))}</span>`);
+  const {done:acDone, total:acTotal} = countAC(getContent(card.id));
+  if(acTotal > 0) pills.push(`<span class="meta-pill meta-pill-plain">✓ ${acDone}/${acTotal} criteria</span>`);
+  el.innerHTML = pills.join('');
 }
 
 function renderAcGroupHtml(card){
@@ -2092,11 +2967,13 @@ function renderAcGroupHtml(card){
   if(!acItems.length) return '';
 
   const doneCount = acItems.filter((item,i)=> item.done || acState[i]).length;
+  const pct = Math.round(doneCount / acItems.length * 100);
   return `<div class="prop-group prop-group-ac" aria-label="Acceptance criteria">
     <div class="prop-ac-header">
       <span class="prop-group-label">Acceptance criteria</span>
       <span class="prop-ac-count">${doneCount} of ${acItems.length}</span>
     </div>
+    <div class="prop-ac-bar"><div class="prop-ac-fill" style="width:${pct}%"></div></div>
     <div class="modal-ac-list">
       ${acItems.map((item,i)=>{
         const checked = item.done || !!acState[i];
@@ -2115,20 +2992,61 @@ function propRow(label, valueHtml){
   return `<div class="prop-row"><span class="prop-label">${label}</span><div class="prop-value">${valueHtml}</div></div>`;
 }
 
+function childCards(card){
+  let kids = [];
+  if(card.is_initiative) kids = state.cards.filter(c=>c.parent === card.id && c.is_epic);
+  else if(card.is_epic) kids = state.cards.filter(c=>c.parent === card.id && !c.is_epic && !c.is_initiative);
+  const order = { Active:0, Prioritized:1, Backlog:2, Blocked:3, Deferred:4, Done:5 };
+  return kids.sort((a,b)=>{
+    const d = (order[a.status] ?? 9) - (order[b.status] ?? 9);
+    return d !== 0 ? d : (a.title||a.id).localeCompare(b.title||b.id);
+  });
+}
+
 function renderSidebar(card, deps, prs){
   const cols = getColumns();
   let html = `<div class="prop-group">`;
   html += propRow('Status', `<select class="prop-select" id="modal-status" data-dynamic>${cols.map(col => `<option value="${col.key}">${col.label}</option>`).join('')}</select>`);
   html += propRow('Category', `<input class="prop-input" id="modal-category" value="${esc(card.category||'')}" placeholder="Add category">`);
-  html += propRow('Order', `<input class="prop-input" type="number" id="modal-order" value="${card.roadmap_order||''}" min="1" step="10" placeholder="—">`);
-  if(card.plan_anchor){
-    html += propRow('Plan', `<span class="prop-value-muted">${esc(card.plan_anchor)}</span>`);
+  if(card.is_initiative && card.horizon){
+    html += propRow('Horizon', `<span class="prop-value">${esc(card.horizon)}</span>`);
+  }
+  if(card.is_initiative && card.milestone){
+    html += propRow('Milestone', `<span class="prop-value-muted">${esc(card.milestone)}</span>`);
+  }
+  if(card.parent && getCard(card.parent)){
+    const parent = getCard(card.parent);
+    html += propRow(parent.is_initiative ? 'Initiative' : 'Epic',
+      `<span class="dep-chip" data-dep="${esc(parent.id)}" title="${esc(parent.title)}">${esc(cardCrumbLabel(parent))}</span>`);
+  }
+  if (INDEX_ORDERED_STATUSES.includes(card.status)) {
+    const pos = card.index_order != null ? card.index_order + 1 : null;
+    html += propRow('Queue', pos
+      ? `<span class="prop-value-muted">#${pos} in roadmap-index.md</span>`
+      : `<span class="prop-value-muted">Not in index</span>`);
   }
   if(card.shipped_at){
     html += propRow('Shipped', `<span class="prop-value">${formatDate(card.shipped_at)}</span>`);
   }
   html += `</div>`;
   html += renderAcGroupHtml(card);
+
+  const children = childCards(card);
+  if(children.length > 0 && !card.is_initiative){
+    const doneKids = children.filter(c=>c.status === 'Done').length;
+    html += `<div class="prop-group">
+      <div class="prop-ac-header">
+        <span class="prop-group-label">Story slices</span>
+        <span class="prop-ac-count">${doneKids} of ${children.length} shipped</span>
+      </div>
+      <div class="sidebar-children">${children.map(c=>
+        `<button type="button" class="sidebar-child" data-dep="${esc(c.id)}" title="${esc(c.title)} — ${esc(c.status)}">
+          <span class="sidebar-child-dot" style="${statusDotStyle(c.status)}"></span>
+          <span class="sidebar-child-label">${esc(cardCrumbLabel(c))}</span>
+        </button>`
+      ).join('')}</div>
+    </div>`;
+  }
 
   if(deps.length > 0){
     html += `<div class="prop-group"><div class="prop-group-label">Dependencies</div><div class="prop-tags">${deps.map(depId=>{
@@ -2138,13 +3056,15 @@ function renderSidebar(card, deps, prs){
     }).join('')}</div></div>`;
   }
 
-  html += `<div class="prop-group"><div class="prop-group-label">Pull requests</div><div class="prop-value">${prs.length
-    ? prs.map(url=>{
-        const num = url.match(/\/pull\/(\d+)/)?.[1];
-        return `<a class="prop-link" href="${url}" target="_blank" rel="noopener">PR #${num||'link'}</a>`;
-      }).join('<br>')
-    : '<span class="prop-empty">None yet</span>'
-  }</div></div>`;
+  if(prs.length || !card.is_initiative){
+    html += `<div class="prop-group"><div class="prop-group-label">Pull requests</div><div class="prop-value">${prs.length
+      ? prs.map(url=>{
+          const num = url.match(/\/pull\/(\d+)/)?.[1];
+          return `<a class="prop-link" href="${url}" target="_blank" rel="noopener">PR #${num||'link'}</a>`;
+        }).join('<br>')
+      : '<span class="prop-empty">None yet</span>'
+    }</div></div>`;
+  }
 
   document.getElementById('modal-sidebar').innerHTML = html;
 
@@ -2163,12 +3083,6 @@ function bindSidebarInputs(){
   const catInput = document.getElementById('modal-category');
   if(catInput) catInput.oninput = () => markUnsaved();
 
-  const orderInput = document.getElementById('modal-order');
-  if(orderInput){
-    orderInput.oninput = markUnsaved;
-    orderInput.onchange = markUnsaved;
-  }
-
   const statusSel = document.getElementById('modal-status');
   if(statusSel){
     statusSel.onchange = () => {
@@ -2179,7 +3093,7 @@ function bindSidebarInputs(){
 }
 
 function bindDepChips(){
-  document.querySelectorAll('.dep-chip[data-dep]').forEach(el=>{
+  document.querySelectorAll('.dep-chip[data-dep], .sidebar-child[data-dep]').forEach(el=>{
     el.addEventListener('click', ()=> navigateToCard(el.dataset.dep));
   });
 }
@@ -2218,6 +3132,8 @@ function closeModal(){
 
 function hideModal(){
   document.getElementById('overlay').classList.remove('open');
+  document.getElementById('modal')?.classList.remove('modal-initiative');
+  hideInitiativeEpicsPanel();
   modalCardId = null;
 }
 
@@ -2238,21 +3154,17 @@ async function saveModalChanges(){
 
   // Status
   const newStatus = document.getElementById('modal-status').value;
-  if(newStatus !== card.status){
+  const oldStatus = card.status;
+  if(newStatus !== oldStatus){
     if(newStatus === 'Done' && !card.shipped_at) card.shipped_at = new Date().toISOString().split('T')[0];
-    if(newStatus === 'Active' && !card.roadmap_order){
-      const maxOrder = Math.max(0,...state.cards.filter(c=>c.status==='Active').map(c=>c.roadmap_order||0));
-      card.roadmap_order = maxOrder + 10;
-    }
     card.status = newStatus;
-  }
-
-  // Order
-  const orderInput = document.getElementById('modal-order');
-  if(orderInput){
-    const val = parseInt(orderInput.value,10);
-    if(!isNaN(val) && val > 0) card.roadmap_order = val;
-    else if(orderInput.value === '') card.roadmap_order = null;
+    if (INDEX_ORDERED_STATUSES.includes(newStatus)) {
+      const inColumn = state.cards.filter(c => c.status === newStatus && c.id !== modalCardId);
+      card.index_order = inColumn.length;
+    }
+    if (oldStatus === 'Active' && newStatus !== 'Active') {
+      card.roadmap_order = null;
+    }
   }
 
   // Category
@@ -2265,16 +3177,23 @@ async function saveModalChanges(){
   try {
     const updates = {
       status: card.status,
-      roadmap_order: card.roadmap_order || null,
       shipped_at: card.shipped_at || null,
       plan_anchor: card.title,
       category: card.category || null,
     };
+    if (oldStatus === 'Active' && card.status !== 'Active') {
+      updates.roadmap_order = null;
+    }
     await fetch(apiUrl(`/api/cards/${modalCardId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
+
+    const affected = new Set();
+    if (INDEX_ORDERED_STATUSES.includes(card.status)) affected.add(card.status);
+    if (INDEX_ORDERED_STATUSES.includes(oldStatus)) affected.add(oldStatus);
+    if (affected.size) await persistIndexOrder([...affected]);
   } catch(err){
     console.error('Failed to save card to API:', err);
   }
@@ -2291,7 +3210,7 @@ async function saveModalChanges(){
       cardContents[modalCardId] = rawContent;
       contentEdited = false;
       // Refresh rendered preview
-      const contentForMd = rawContent.replace(/^## Acceptance criteria[\s\S]*?(?=^## |\Z)/m, '');
+      const contentForMd = rawContent.replace(/^## (?:Epic |Initiative )?acceptance criteria[\s\S]*?(?=^## |\Z)/im, '');
       document.getElementById('modal-content').innerHTML = renderMd(contentForMd);
     } catch(err){
       console.error('Failed to save card content to API:', err);
@@ -2328,7 +3247,7 @@ document.getElementById('modal-content-toggle').addEventListener('click', () => 
   if(isEditing){
     // Switch to preview — update rendered view from textarea
     const raw = textarea.value;
-    const forMd = raw.replace(/^## Acceptance criteria[\s\S]*?(?=^## |\Z)/m, '');
+    const forMd = raw.replace(/^## (?:Epic |Initiative )?acceptance criteria[\s\S]*?(?=^## |\Z)/im, '');
     rendered.innerHTML = renderMd(forMd);
     rendered.classList.remove('edit-hidden');
     textarea.classList.remove('edit-active');
@@ -2551,14 +3470,62 @@ function filterCards(query){
     const title = card.querySelector('.card-title')?.textContent || '';
     const summary = card.querySelector('.card-summary')?.textContent || '';
     const tags = card.querySelector('.card-tag')?.textContent || '';
-    const matches = q === '' ||
+    const typeOk = cardMatchesTypeFilter({
+      is_epic: card.dataset.isEpic === '1',
+      is_initiative: card.dataset.isInitiative === '1',
+    });
+    const matches = typeOk && (q === '' ||
       title.toLowerCase().includes(q) ||
       summary.toLowerCase().includes(q) ||
-      tags.toLowerCase().includes(q);
+      tags.toLowerCase().includes(q));
     card.style.display = matches ? '' : 'none';
     if(matches) visible++;
   });
 }
+
+const cardTypeFilterBtn = document.getElementById('card-type-filter-btn');
+const cardTypeFilterMenu = document.getElementById('card-type-filter-menu');
+if(cardTypeFilterBtn && cardTypeFilterMenu){
+  const syncCardTypeFilterUi = ()=>{
+    document.getElementById('card-type-filter-label').textContent = cardTypeFilterLabel();
+    cardTypeFilterMenu.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.checked = cardTypeFilter.has(cb.value);
+    });
+  };
+  syncCardTypeFilterUi();
+
+  cardTypeFilterBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    const open = cardTypeFilterMenu.classList.toggle('open');
+    cardTypeFilterBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  cardTypeFilterMenu.addEventListener('click', e=> e.stopPropagation());
+  document.addEventListener('click', ()=>{
+    cardTypeFilterMenu.classList.remove('open');
+    cardTypeFilterBtn.setAttribute('aria-expanded', 'false');
+  });
+
+  cardTypeFilterMenu.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      if(cb.checked) cardTypeFilter.add(cb.value);
+      else cardTypeFilter.delete(cb.value);
+      // never allow an empty board — an empty selection means "all"
+      if(cardTypeFilter.size === 0){
+        cardTypeFilter = new Set(CARD_TYPES);
+      }
+      saveCardTypeFilter();
+      syncCardTypeFilterUi();
+      if(viewMode === 'strategy') renderStrategyView();
+      else renderBoard();
+      filterCards(searchInput.value);
+    });
+  });
+}
+
+document.querySelectorAll('.view-mode-btn').forEach(btn=>{
+  btn.classList.toggle('active', btn.dataset.view === viewMode);
+  btn.addEventListener('click', ()=> setViewMode(btn.dataset.view));
+});
 
 searchBtn.addEventListener('click', e=>{
   e.stopPropagation();
@@ -2634,15 +3601,23 @@ function catStyle(cat){
   return `background:${c.bg};color:${c.text}`;
 }
 
+const STATUS_COLORS = {
+  'Active': { bg:'#eeeeff', text:'#5b5bd6' },
+  'Prioritized': { bg:'#e0e7ff', text:'#4338ca' },
+  'Backlog': { bg:'#fef9ee', text:'#b45309' },
+  'Blocked': { bg:'#fee2e2', text:'#991b1b' },
+  'Done': { bg:'#eafaf5', text:'#0d7a5f' },
+  'Deferred': { bg:'#f3f4f6', text:'#6b7280' },
+};
+
 function statusStyle(status){
-  const colors = {
-    'Active': { bg:'#eeeeff', text:'#5b5bd6' },
-    'Backlog': { bg:'#fef9ee', text:'#b45309' },
-    'Blocked': { bg:'#fee2e2', text:'#991b1b' },
-    'Done': { bg:'#eafaf5', text:'#0d7a5f' },
-  };
-  const c = colors[status] || { bg:'#f3f4f6', text:'#374151' };
+  const c = STATUS_COLORS[status] || { bg:'#f3f4f6', text:'#374151' };
   return `background:${c.bg};color:${c.text}`;
+}
+
+function statusDotStyle(status){
+  const c = STATUS_COLORS[status] || { text:'#9ca3af' };
+  return `background:${c.text}`;
 }
 
 function renderMd(md){
@@ -2698,6 +3673,33 @@ function renderMd(md){
       continue;
     }
 
+    // Markdown table block
+    if(/^\|.+\|$/.test(line.trim()) && i + 1 < lines.length && /^\|[\s\-:|]+\|$/.test(lines[i + 1].trim())){
+      const tableLines = [];
+      while(i < lines.length && /^\|.+\|$/.test(lines[i].trim())){
+        tableLines.push(lines[i].trim());
+        i++;
+      }
+      if(tableLines.length >= 2){
+        const headerCells = tableLines[0].split('|').map(c=>c.trim()).filter((_,idx,arr)=>idx>0 && idx<arr.length-1);
+        const bodyRows = tableLines.slice(2);
+        let tableHtml = '<table><thead><tr>';
+        for(const cell of headerCells) tableHtml += `<th>${inlineFormat(cell)}</th>`;
+        tableHtml += '</tr></thead><tbody>';
+        for(const rowLine of bodyRows){
+          const cells = rowLine.split('|').map(c=>c.trim()).filter((_,idx,arr)=>idx>0 && idx<arr.length-1);
+          if(!cells.length) continue;
+          tableHtml += '<tr>';
+          for(const cell of cells) tableHtml += `<td>${inlineFormat(cell)}</td>`;
+          tableHtml += '</tr>';
+        }
+        tableHtml += '</tbody></table>';
+        out.push(tableHtml);
+        continue;
+      }
+      i -= tableLines.length;
+    }
+
     // Blank line
     if(line.trim() === ''){ i++; continue; }
 
@@ -2745,7 +3747,7 @@ async function loadCards(){
     }
 
     initState();
-    renderBoard();
+    setViewMode(viewMode);
 
     const route = parseCardRoute();
     if(route?.cardId){
