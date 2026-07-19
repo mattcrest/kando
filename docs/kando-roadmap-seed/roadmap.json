@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "vault": {
+    "name": "Kando",
+    "color": "#5b5bd6"
+  },
+  "kanban": {
+    "columns": [
+      {
+        "key": "Active",
+        "label": "Active Queue",
+        "cards": [
+          "release-roadmap-json-schema-importer"
+        ]
+      },
+      {
+        "key": "Prioritized",
+        "label": "Prioritized",
+        "cards": [
+          "release-roadmap-json-reader-flip",
+          "release-roadmap-json-strip-frontmatter"
+        ]
+      },
+      {
+        "key": "Backlog",
+        "label": "Backlog",
+        "cards": [
+          "release-roadmap-json-new-view-section"
+        ]
+      }
+    ]
+  },
+  "strategy": {
+    "horizons": [
+      {
+        "key": "Now",
+        "initiatives": [
+          "initiative-storage-format"
+        ]
+      }
+    ]
+  }
+}
