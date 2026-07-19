@@ -8,6 +8,8 @@
     "start": "electron .",
     "dev": "node kando-start.js",
     "server": "node electron/server.js",
+    "test": "node --test",
+    "import-roadmap-json": "node scripts/import-roadmap-json.mjs",
     "build": "electron-builder",
     "install:agents": "./scripts/install-agent-integrations.sh --all",
     "install:cursor-skills": "./scripts/install-cursor-skills.sh"

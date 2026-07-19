@@ -21,6 +21,16 @@ import {
   parseInitiativeEpics,
   replaceInitiativeEpics,
 } from './initiative-epics.js';
+import {
+  loadRoadmapConfig,
+  resolveConfigFile,
+  normalizeConfig,
+  toLegacyConfig,
+  applyConfigEdits,
+  serializeConfig,
+  ROADMAP_FILENAME,
+  LEGACY_FILENAME,
+} from './roadmap-config.js';
 
 const app = express();
 const PORT = 3001;
@@ -184,25 +194,37 @@ async function isReleaseCard(filePath) {
   }
 }
 
-// Helper to load kanban config from vault directory
+// Load a vault's board config (roadmap.json, falling back to legacy kanban.json)
+// and flatten to the shape the current UI/server consumers expect.
 async function loadKanbanConfig(vaultDir) {
-  try {
-    const configPath = path.join(vaultDir, 'kanban.json');
-    const content = await fs.readFile(configPath, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
+  const loaded = await loadRoadmapConfig(vaultDir);
+  if (!loaded) return null;
+  return toLegacyConfig(normalizeConfig(loaded.raw));
 }
 
-// Helper to save kanban config to vault directory
-async function saveKanbanConfig(vaultDir, config) {
+// Persist column-definition / settings edits to whichever config file the vault
+// uses. roadmap.json is written in the new shape (preserving card membership);
+// an existing kanban.json keeps its legacy shape until the migration completes.
+async function saveKanbanConfig(vaultDir, edits) {
   try {
-    const configPath = path.join(vaultDir, 'kanban.json');
-    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+    const resolved = await resolveConfigFile(vaultDir);
+    const targetName = resolved?.name || ROADMAP_FILENAME;
+    const targetPath = resolved?.path || path.join(vaultDir, ROADMAP_FILENAME);
+
+    if (targetName === LEGACY_FILENAME) {
+      const raw = JSON.parse(await fs.readFile(targetPath, 'utf-8'));
+      if (edits.columns) raw.columns = edits.columns;
+      if (edits.settings) raw.settings = { ...raw.settings, ...edits.settings };
+      await fs.writeFile(targetPath, JSON.stringify(raw, null, 2));
+      return true;
+    }
+
+    const existingRaw = resolved ? JSON.parse(await fs.readFile(targetPath, 'utf-8')) : null;
+    const next = applyConfigEdits(existingRaw, edits);
+    await fs.writeFile(targetPath, serializeConfig(next));
     return true;
   } catch (err) {
-    console.error('Failed to save kanban config:', err);
+    console.error('Failed to save roadmap config:', err);
     return false;
   }
 }
@@ -794,25 +816,19 @@ app.put('/api/vaults/:name/kanban', async (req, res) => {
     }
 
     const vaultDir = VAULTS[name];
-    const config = await loadKanbanConfig(vaultDir);
-    if (!config) {
-      return res.status(404).json({ error: 'Kanban config not found' });
+    const existing = await loadKanbanConfig(vaultDir);
+    if (!existing) {
+      return res.status(404).json({ error: 'Roadmap config not found' });
     }
 
-    if (columns) {
-      config.columns = columns;
-    }
-    if (settings) {
-      config.settings = { ...config.settings, ...settings };
-    }
-
-    const saved = await saveKanbanConfig(vaultDir, config);
+    const saved = await saveKanbanConfig(vaultDir, { columns, settings });
     if (!saved) {
-      return res.status(500).json({ error: 'Failed to save kanban config' });
+      return res.status(500).json({ error: 'Failed to save roadmap config' });
     }
 
     await maybeAutoCommitVault(name, vaultDir, `roadmap: update ${name} kanban columns`);
 
+    const config = await loadKanbanConfig(vaultDir);
     res.json({ success: true, config });
   } catch (err) {
     res.status(500).json({ error: err.message });
