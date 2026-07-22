@@ -21,6 +21,21 @@ import {
   parseInitiativeEpics,
   replaceInitiativeEpics,
 } from './initiative-epics.js';
+import {
+  loadRoadmapConfig,
+  resolveConfigFile,
+  normalizeConfig,
+  toLegacyConfig,
+  applyConfigEdits,
+  serializeConfig,
+  placementFromConfig,
+  placementParity,
+  ordersFromConfig,
+  setCardColumn,
+  setColumnOrders,
+  ROADMAP_FILENAME,
+  LEGACY_FILENAME,
+} from './roadmap-config.js';
 
 const app = express();
 const PORT = 3001;
@@ -184,25 +199,37 @@ async function isReleaseCard(filePath) {
   }
 }
 
-// Helper to load kanban config from vault directory
+// Load a vault's board config (roadmap.json, falling back to legacy kanban.json)
+// and flatten to the shape the current UI/server consumers expect.
 async function loadKanbanConfig(vaultDir) {
-  try {
-    const configPath = path.join(vaultDir, 'kanban.json');
-    const content = await fs.readFile(configPath, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
+  const loaded = await loadRoadmapConfig(vaultDir);
+  if (!loaded) return null;
+  return toLegacyConfig(normalizeConfig(loaded.raw));
 }
 
-// Helper to save kanban config to vault directory
-async function saveKanbanConfig(vaultDir, config) {
+// Persist column-definition / settings edits to whichever config file the vault
+// uses. roadmap.json is written in the new shape (preserving card membership);
+// an existing kanban.json keeps its legacy shape until the migration completes.
+async function saveKanbanConfig(vaultDir, edits) {
   try {
-    const configPath = path.join(vaultDir, 'kanban.json');
-    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+    const resolved = await resolveConfigFile(vaultDir);
+    const targetName = resolved?.name || ROADMAP_FILENAME;
+    const targetPath = resolved?.path || path.join(vaultDir, ROADMAP_FILENAME);
+
+    if (targetName === LEGACY_FILENAME) {
+      const raw = JSON.parse(await fs.readFile(targetPath, 'utf-8'));
+      if (edits.columns) raw.columns = edits.columns;
+      if (edits.settings) raw.settings = { ...raw.settings, ...edits.settings };
+      await fs.writeFile(targetPath, JSON.stringify(raw, null, 2));
+      return true;
+    }
+
+    const existingRaw = resolved ? JSON.parse(await fs.readFile(targetPath, 'utf-8')) : null;
+    const next = applyConfigEdits(existingRaw, edits);
+    await fs.writeFile(targetPath, serializeConfig(next));
     return true;
   } catch (err) {
-    console.error('Failed to save kanban config:', err);
+    console.error('Failed to save roadmap config:', err);
     return false;
   }
 }
@@ -211,6 +238,16 @@ function getIndexPath(vaultKey, vaultDir) {
   const routing = getRoutingForVault(vaultKey, VAULT_ROUTING);
   const indexFile = routing?.indexFile || 'roadmap-index.md';
   return defaultIndexPath(vaultDir, indexFile);
+}
+
+// Apply a mutation to a vault's roadmap.json, if it is a migrated vault (has a
+// real roadmap.json, not just a legacy kanban.json). Returns true if written.
+async function updateRoadmapConfigFile(vaultDir, mutate) {
+  const loaded = await loadRoadmapConfig(vaultDir);
+  if (!loaded || loaded.file !== ROADMAP_FILENAME) return false;
+  const next = mutate(loaded.raw);
+  await fs.writeFile(loaded.path, serializeConfig(next), 'utf-8');
+  return true;
 }
 
 function compareCardsByIndex(a, b) {
@@ -347,7 +384,45 @@ app.get('/api/cards', async (req, res) => {
     const indexPath = getIndexPath(vaultKey, vaultDir);
     const indexOrders = await loadIndexOrders(indexPath);
     const positionMaps = ordersToPositionMaps(indexOrders);
-    attachIndexOrder(cards, positionMaps);
+
+    // Legacy placement (frontmatter status + roadmap-index.md order) is always
+    // computed: it's the derivation for un-migrated vaults and the parity
+    // baseline for migrated ones.
+    const legacyMap = new Map(
+      cards.map((c) => [c.id, { status: c.status, order: positionMaps[c.status]?.[c.id] ?? null }])
+    );
+
+    const roadmapCfg = await loadRoadmapConfig(vaultDir);
+    const placement = roadmapCfg ? placementFromConfig(roadmapCfg.raw) : null;
+    // Flip only for a real roadmap.json with actual membership — a legacy
+    // kanban.json (column labels, no `cards`) must stay on the legacy path.
+    const useRoadmapJson = roadmapCfg?.file === ROADMAP_FILENAME && placement.size > 0;
+
+    if (useRoadmapJson) {
+      const diffs = placementParity(placement, legacyMap, INDEX_ORDERED_STATUSES);
+      if (diffs.length) {
+        console.warn(
+          `[roadmap.json] placement drift in vault '${vaultKey}' (${diffs.length}):\n  ` +
+            diffs.slice(0, 10).join('\n  ') +
+            (diffs.length > 10 ? `\n  …and ${diffs.length - 10} more` : '')
+        );
+      }
+      for (const card of cards) {
+        const p = placement.get(card.id);
+        if (p) {
+          card.status = p.status;
+          card.index_order = p.order;
+          card.unplaced = false;
+        } else {
+          // On disk but not in roadmap.json: keep its frontmatter status so it
+          // still renders, and flag it (guardrail 6 — surface, don't lose).
+          card.index_order = null;
+          card.unplaced = true;
+        }
+      }
+    } else {
+      attachIndexOrder(cards, positionMaps);
+    }
 
     cards.sort(compareCardsByIndex);
 
@@ -418,9 +493,20 @@ app.put('/api/cards/:cardId', async (req, res) => {
       ),
     };
 
-    // Reconstruct markdown with updated frontmatter
-    const updatedContent = matter.stringify(markdownContent, orderedData);
+    // Reconstruct markdown with updated frontmatter. Drop undefined values —
+    // minimal cards omit type/roadmap_order/related_to, and js-yaml refuses to
+    // dump `undefined`.
+    const cleanedData = Object.fromEntries(
+      Object.entries(orderedData).filter(([, v]) => v !== undefined)
+    );
+    const updatedContent = matter.stringify(markdownContent, cleanedData);
     await fs.writeFile(cardPath, updatedContent, 'utf-8');
+
+    // Mirror a column move into roadmap.json for migrated vaults. Order within
+    // an index-ordered column is finalised by the follow-up reorder request.
+    if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
+      await updateRoadmapConfigFile(vaultDir, (raw) => setCardColumn(raw, cardId, newData.status));
+    }
 
     const vaultKey = getVaultKey(req);
     await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} metadata`);
@@ -470,15 +556,25 @@ app.put('/api/roadmap-index', async (req, res) => {
       return res.status(400).json({ error: 'sections must include at least one ordered status' });
     }
 
-    await updateIndexSections(indexPath, filtered);
+    // Update roadmap.json first when it's authoritative (migrated vault).
+    const roadmapUpdated = await updateRoadmapConfigFile(vaultDir, (raw) =>
+      setColumnOrders(raw, filtered)
+    );
 
-    if (filtered.Active) {
-      await syncActiveRoadmapOrder(vaultDir, filtered.Active);
+    // Keep the legacy index in sync when it exists. For a migrated vault the
+    // index file is optional, so a missing one is not an error.
+    try {
+      await updateIndexSections(indexPath, filtered);
+      if (filtered.Active) await syncActiveRoadmapOrder(vaultDir, filtered.Active);
+    } catch (err) {
+      if (!roadmapUpdated) throw err;
     }
 
     await maybeAutoCommitVault(vaultKey, vaultDir, 'roadmap: update index order');
 
-    const orders = await loadIndexOrders(indexPath);
+    const orders = roadmapUpdated
+      ? ordersFromConfig((await loadRoadmapConfig(vaultDir)).raw)
+      : await loadIndexOrders(indexPath);
     res.json({ success: true, indexPath, orders });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -794,25 +890,19 @@ app.put('/api/vaults/:name/kanban', async (req, res) => {
     }
 
     const vaultDir = VAULTS[name];
-    const config = await loadKanbanConfig(vaultDir);
-    if (!config) {
-      return res.status(404).json({ error: 'Kanban config not found' });
+    const existing = await loadKanbanConfig(vaultDir);
+    if (!existing) {
+      return res.status(404).json({ error: 'Roadmap config not found' });
     }
 
-    if (columns) {
-      config.columns = columns;
-    }
-    if (settings) {
-      config.settings = { ...config.settings, ...settings };
-    }
-
-    const saved = await saveKanbanConfig(vaultDir, config);
+    const saved = await saveKanbanConfig(vaultDir, { columns, settings });
     if (!saved) {
-      return res.status(500).json({ error: 'Failed to save kanban config' });
+      return res.status(500).json({ error: 'Failed to save roadmap config' });
     }
 
     await maybeAutoCommitVault(name, vaultDir, `roadmap: update ${name} kanban columns`);
 
+    const config = await loadKanbanConfig(vaultDir);
     res.json({ success: true, config });
   } catch (err) {
     res.status(500).json({ error: err.message });
