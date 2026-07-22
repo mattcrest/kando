@@ -28,6 +28,11 @@ import {
   toLegacyConfig,
   applyConfigEdits,
   serializeConfig,
+  placementFromConfig,
+  placementParity,
+  ordersFromConfig,
+  setCardColumn,
+  setColumnOrders,
   ROADMAP_FILENAME,
   LEGACY_FILENAME,
 } from './roadmap-config.js';
@@ -235,6 +240,16 @@ function getIndexPath(vaultKey, vaultDir) {
   return defaultIndexPath(vaultDir, indexFile);
 }
 
+// Apply a mutation to a vault's roadmap.json, if it is a migrated vault (has a
+// real roadmap.json, not just a legacy kanban.json). Returns true if written.
+async function updateRoadmapConfigFile(vaultDir, mutate) {
+  const loaded = await loadRoadmapConfig(vaultDir);
+  if (!loaded || loaded.file !== ROADMAP_FILENAME) return false;
+  const next = mutate(loaded.raw);
+  await fs.writeFile(loaded.path, serializeConfig(next), 'utf-8');
+  return true;
+}
+
 function compareCardsByIndex(a, b) {
   const ao = a.index_order ?? a.roadmap_order ?? Infinity;
   const bo = b.index_order ?? b.roadmap_order ?? Infinity;
@@ -369,7 +384,45 @@ app.get('/api/cards', async (req, res) => {
     const indexPath = getIndexPath(vaultKey, vaultDir);
     const indexOrders = await loadIndexOrders(indexPath);
     const positionMaps = ordersToPositionMaps(indexOrders);
-    attachIndexOrder(cards, positionMaps);
+
+    // Legacy placement (frontmatter status + roadmap-index.md order) is always
+    // computed: it's the derivation for un-migrated vaults and the parity
+    // baseline for migrated ones.
+    const legacyMap = new Map(
+      cards.map((c) => [c.id, { status: c.status, order: positionMaps[c.status]?.[c.id] ?? null }])
+    );
+
+    const roadmapCfg = await loadRoadmapConfig(vaultDir);
+    const placement = roadmapCfg ? placementFromConfig(roadmapCfg.raw) : null;
+    // Flip only for a real roadmap.json with actual membership — a legacy
+    // kanban.json (column labels, no `cards`) must stay on the legacy path.
+    const useRoadmapJson = roadmapCfg?.file === ROADMAP_FILENAME && placement.size > 0;
+
+    if (useRoadmapJson) {
+      const diffs = placementParity(placement, legacyMap, INDEX_ORDERED_STATUSES);
+      if (diffs.length) {
+        console.warn(
+          `[roadmap.json] placement drift in vault '${vaultKey}' (${diffs.length}):\n  ` +
+            diffs.slice(0, 10).join('\n  ') +
+            (diffs.length > 10 ? `\n  …and ${diffs.length - 10} more` : '')
+        );
+      }
+      for (const card of cards) {
+        const p = placement.get(card.id);
+        if (p) {
+          card.status = p.status;
+          card.index_order = p.order;
+          card.unplaced = false;
+        } else {
+          // On disk but not in roadmap.json: keep its frontmatter status so it
+          // still renders, and flag it (guardrail 6 — surface, don't lose).
+          card.index_order = null;
+          card.unplaced = true;
+        }
+      }
+    } else {
+      attachIndexOrder(cards, positionMaps);
+    }
 
     cards.sort(compareCardsByIndex);
 
@@ -440,9 +493,20 @@ app.put('/api/cards/:cardId', async (req, res) => {
       ),
     };
 
-    // Reconstruct markdown with updated frontmatter
-    const updatedContent = matter.stringify(markdownContent, orderedData);
+    // Reconstruct markdown with updated frontmatter. Drop undefined values —
+    // minimal cards omit type/roadmap_order/related_to, and js-yaml refuses to
+    // dump `undefined`.
+    const cleanedData = Object.fromEntries(
+      Object.entries(orderedData).filter(([, v]) => v !== undefined)
+    );
+    const updatedContent = matter.stringify(markdownContent, cleanedData);
     await fs.writeFile(cardPath, updatedContent, 'utf-8');
+
+    // Mirror a column move into roadmap.json for migrated vaults. Order within
+    // an index-ordered column is finalised by the follow-up reorder request.
+    if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
+      await updateRoadmapConfigFile(vaultDir, (raw) => setCardColumn(raw, cardId, newData.status));
+    }
 
     const vaultKey = getVaultKey(req);
     await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} metadata`);
@@ -492,15 +556,25 @@ app.put('/api/roadmap-index', async (req, res) => {
       return res.status(400).json({ error: 'sections must include at least one ordered status' });
     }
 
-    await updateIndexSections(indexPath, filtered);
+    // Update roadmap.json first when it's authoritative (migrated vault).
+    const roadmapUpdated = await updateRoadmapConfigFile(vaultDir, (raw) =>
+      setColumnOrders(raw, filtered)
+    );
 
-    if (filtered.Active) {
-      await syncActiveRoadmapOrder(vaultDir, filtered.Active);
+    // Keep the legacy index in sync when it exists. For a migrated vault the
+    // index file is optional, so a missing one is not an error.
+    try {
+      await updateIndexSections(indexPath, filtered);
+      if (filtered.Active) await syncActiveRoadmapOrder(vaultDir, filtered.Active);
+    } catch (err) {
+      if (!roadmapUpdated) throw err;
     }
 
     await maybeAutoCommitVault(vaultKey, vaultDir, 'roadmap: update index order');
 
-    const orders = await loadIndexOrders(indexPath);
+    const orders = roadmapUpdated
+      ? ordersFromConfig((await loadRoadmapConfig(vaultDir)).raw)
+      : await loadIndexOrders(indexPath);
     res.json({ success: true, indexPath, orders });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -12,7 +12,14 @@ import {
   toLegacyConfig,
   applyConfigEdits,
   serializeConfig,
+  placementFromConfig,
+  placementParity,
+  ordersFromConfig,
+  setCardColumn,
+  setColumnOrders,
 } from '../electron/roadmap-config.js';
+
+const INDEX_ORDERED = ['Active', 'Prioritized', 'Backlog'];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const IMPORT_SCRIPT = path.resolve(__dirname, '../scripts/import-roadmap-json.mjs');
@@ -97,6 +104,74 @@ test('applyConfigEdits: column edits preserve card membership', () => {
   const active = next.kanban.columns.find((c) => c.key === 'Active');
   assert.equal(active.label, 'In Progress'); // label updated
   assert.deepEqual(active.cards, ['release-x', 'release-y']); // membership preserved
+});
+
+// --- Reader-flip placement + write helpers ------------------------------------
+
+const flipConfig = {
+  version: 1,
+  kanban: {
+    columns: [
+      { key: 'Active', label: 'Active Queue', cards: ['release-b', 'release-a'] },
+      { key: 'Done', label: 'Shipped', cards: ['release-c'] },
+    ],
+  },
+};
+
+test('placementFromConfig: maps each card to its column + position', () => {
+  const p = placementFromConfig(flipConfig);
+  assert.deepEqual(p.get('release-a'), { status: 'Active', order: 1 });
+  assert.deepEqual(p.get('release-b'), { status: 'Active', order: 0 });
+  assert.deepEqual(p.get('release-c'), { status: 'Done', order: 0 });
+});
+
+test('ordersFromConfig: one ordered list per column', () => {
+  assert.deepEqual(ordersFromConfig(flipConfig), {
+    Active: ['release-b', 'release-a'],
+    Done: ['release-c'],
+  });
+});
+
+test('placementParity: agreement yields no diffs', () => {
+  const legacy = new Map([
+    ['release-b', { status: 'Active', order: 0 }],
+    ['release-a', { status: 'Active', order: 1 }],
+    ['release-c', { status: 'Done', order: null }],
+  ]);
+  assert.deepEqual(placementParity(placementFromConfig(flipConfig), legacy, INDEX_ORDERED), []);
+});
+
+test('placementParity: flags column and order drift, ignores order on non-index columns', () => {
+  const legacy = new Map([
+    ['release-b', { status: 'Active', order: 1 }], // order drift (index column)
+    ['release-a', { status: 'Backlog', order: 0 }], // column drift
+    ['release-c', { status: 'Done', order: 5 }], // order ignored on Done
+  ]);
+  const diffs = placementParity(placementFromConfig(flipConfig), legacy, INDEX_ORDERED);
+  assert.equal(diffs.length, 2);
+  assert.ok(diffs.some((d) => d.includes('release-a') && d.includes('column')));
+  assert.ok(diffs.some((d) => d.includes('release-b') && d.includes('order')));
+  assert.ok(!diffs.some((d) => d.includes('release-c')));
+});
+
+test('setCardColumn: moves a card across columns, removing it from the old one', () => {
+  const next = setCardColumn(flipConfig, 'release-a', 'Done');
+  const p = placementFromConfig(next);
+  assert.equal(p.get('release-a').status, 'Done');
+  assert.deepEqual(next.kanban.columns.find((c) => c.key === 'Active').cards, ['release-b']);
+});
+
+test('setCardColumn: creates the target column when missing', () => {
+  const next = setCardColumn(flipConfig, 'release-a', 'Blocked');
+  const col = next.kanban.columns.find((c) => c.key === 'Blocked');
+  assert.deepEqual(col.cards, ['release-a']);
+  assert.equal(col.label, 'Blocked');
+});
+
+test('setColumnOrders: replaces named columns and drops moved-away cards', () => {
+  const next = setColumnOrders(flipConfig, { Active: ['release-a'] }); // b moved away
+  assert.deepEqual(next.kanban.columns.find((c) => c.key === 'Active').cards, ['release-a']);
+  assert.deepEqual(next.kanban.columns.find((c) => c.key === 'Done').cards, ['release-c']); // untouched
 });
 
 // --- End-to-end importer against a fixture vault -------------------------------

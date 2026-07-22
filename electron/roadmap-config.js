@@ -245,6 +245,100 @@ export function applyConfigEdits(existingRaw, edits = {}) {
   return out;
 }
 
+function emptyConfig() {
+  return { version: ROADMAP_SCHEMA_VERSION, vault: {}, kanban: { columns: [] }, strategy: { horizons: [] } };
+}
+
+/**
+ * Placement map derived from a config: cardId -> { status, order }, where status
+ * is the column key holding the card and order is its index within that column.
+ * First occurrence wins if a card is (wrongly) listed twice.
+ */
+export function placementFromConfig(raw) {
+  const cfg = normalizeConfig(raw);
+  const map = new Map();
+  for (const col of cfg?.kanban?.columns || []) {
+    (col.cards || []).forEach((id, i) => {
+      if (!map.has(id)) map.set(id, { status: col.key, order: i });
+    });
+  }
+  return map;
+}
+
+/** { status: [orderedCardIds] } derived from a config's columns. */
+export function ordersFromConfig(raw) {
+  const cfg = normalizeConfig(raw);
+  const orders = {};
+  for (const col of cfg?.kanban?.columns || []) orders[col.key] = [...(col.cards || [])];
+  return orders;
+}
+
+/**
+ * Compare a roadmap.json placement against the legacy placement (frontmatter
+ * status + roadmap-index.md order). Returns sorted human-readable mismatch
+ * strings; empty means the two agree. Order is only compared for the given
+ * `orderStatuses` (the index-ordered columns) since other columns have no
+ * meaningful legacy order.
+ */
+export function placementParity(newMap, legacyMap, orderStatuses = []) {
+  const orderSet = new Set(orderStatuses);
+  const diffs = [];
+  const ids = new Set([...newMap.keys(), ...legacyMap.keys()]);
+  for (const id of ids) {
+    const n = newMap.get(id);
+    const l = legacyMap.get(id);
+    if (!n) {
+      diffs.push(`${id}: ${l.status} in frontmatter but unplaced in roadmap.json`);
+    } else if (!l) {
+      diffs.push(`${id}: in roadmap.json (${n.status}) but not a current card`);
+    } else if (n.status !== l.status) {
+      diffs.push(`${id}: column ${l.status} (frontmatter) vs ${n.status} (roadmap.json)`);
+    } else if (orderSet.has(n.status) && l.order != null && n.order !== l.order) {
+      diffs.push(`${id}: ${n.status} order ${l.order} (index) vs ${n.order} (roadmap.json)`);
+    }
+  }
+  return diffs.sort();
+}
+
+/**
+ * Move a card into `statusKey` (creating the column if needed), removing it from
+ * every other column. Appends unless a valid `index` is given. Returns a new config.
+ */
+export function setCardColumn(raw, cardId, statusKey, { index = null } = {}) {
+  const cfg = normalizeConfig(raw) || emptyConfig();
+  const columns = (cfg.kanban?.columns || []).map((c) => ({
+    ...c,
+    cards: (c.cards || []).filter((id) => id !== cardId),
+  }));
+  let col = columns.find((c) => c.key === statusKey);
+  if (!col) {
+    col = { key: statusKey, label: STATUS_LABELS[statusKey] || statusKey, cards: [] };
+    columns.push(col);
+  }
+  if (index == null || index < 0 || index >= col.cards.length) col.cards.push(cardId);
+  else col.cards.splice(index, 0, cardId);
+  return { ...cfg, kanban: { ...cfg.kanban, columns } };
+}
+
+/**
+ * Replace the ordered membership of the given columns. The caller supplies the
+ * complete membership per column (Kando's UI derives it from full state, not the
+ * filtered DOM), so replace is safe and correctly drops cards that moved away.
+ * Columns not named are left untouched. Returns a new config.
+ */
+export function setColumnOrders(raw, sectionOrders) {
+  const cfg = normalizeConfig(raw) || emptyConfig();
+  const columns = (cfg.kanban?.columns || []).map((col) =>
+    sectionOrders[col.key] ? { ...col, cards: [...sectionOrders[col.key]] } : col
+  );
+  for (const [key, ids] of Object.entries(sectionOrders)) {
+    if (!columns.some((c) => c.key === key)) {
+      columns.push({ key, label: STATUS_LABELS[key] || key, cards: [...ids] });
+    }
+  }
+  return { ...cfg, kanban: { ...cfg.kanban, columns } };
+}
+
 /** Serialize a config for disk: 2-space JSON, one array item per line, trailing newline. */
 export function serializeConfig(config) {
   return JSON.stringify(config, null, 2) + '\n';
