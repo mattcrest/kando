@@ -2515,14 +2515,16 @@ const STATUS_LABELS = {
   'Active': 'Active Queue',
   'Prioritized': 'Prioritized',
   'Backlog': 'Backlog',
-  'Blocked': 'Blocked'
+  'Blocked': 'Blocked',
+  'Deferred': 'Deferred'
 };
 const STATUS_DOTS = {
   'Done': 'done',
   'Active': 'active',
   'Prioritized': 'active',
   'Backlog': 'backlog',
-  'Blocked': 'deferred'
+  'Blocked': 'deferred',
+  'Deferred': 'deferred'
 };
 
 function getColumns() {
@@ -2534,7 +2536,7 @@ function getColumns() {
     }));
   }
   const statuses = new Set(state.cards.map(c => c.status));
-  const statusOrder = ['Done', 'Active', 'Prioritized', 'Backlog', 'Blocked'];
+  const statusOrder = ['Done', 'Active', 'Prioritized', 'Backlog', 'Blocked', 'Deferred'];
   const ordered = statusOrder.filter(s => statuses.has(s));
   return ordered.map(key => ({
     key,

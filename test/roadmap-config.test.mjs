@@ -17,6 +17,7 @@ import {
   ordersFromConfig,
   setCardColumn,
   setColumnOrders,
+  normalizeStatus,
 } from '../electron/roadmap-config.js';
 
 const INDEX_ORDERED = ['Active', 'Prioritized', 'Backlog'];
@@ -50,10 +51,43 @@ test('buildRoadmapConfig: strategy groups initiatives by horizon', () => {
   assert.deepEqual(cfg.strategy.horizons, [{ key: 'Now', initiatives: ['initiative-one'] }]);
 });
 
-test('buildRoadmapConfig: column labels come from STATUS_LABELS', () => {
-  const cfg = buildRoadmapConfig({ cards: sampleCards, indexOrders: sampleIndex });
-  const done = cfg.kanban.columns.find((c) => c.key === 'Done');
-  assert.equal(done.label, 'Shipped');
+test('buildRoadmapConfig: Deferred column appended; Shipped alias folds into Done', () => {
+  const cards = [
+    { id: 'release-a', status: 'Backlog', title: 'A' },
+    { id: 'release-d', status: 'Deferred', title: 'D' },
+    { id: 'release-s', status: 'Shipped', shipped_at: '2026-01-01', title: 'S' },
+  ];
+  const cfg = buildRoadmapConfig({ cards, indexOrders: { Backlog: ['release-a'] } });
+  assert.deepEqual(cfg.kanban.columns.map((c) => c.key), ['Done', 'Backlog', 'Deferred']);
+  const byKey = Object.fromEntries(cfg.kanban.columns.map((c) => [c.key, c.cards]));
+  assert.deepEqual(byKey.Done, ['release-s']);
+  assert.deepEqual(byKey.Deferred, ['release-d']);
+  assert.deepEqual(byKey.Backlog, ['release-a']);
+});
+
+test('buildRoadmapConfig: appends Deferred when existing kanban.json omitted it', () => {
+  const existing = {
+    name: 'Demo',
+    color: '#abc',
+    columns: [
+      { key: 'Backlog', label: 'Backlog' },
+      { key: 'Done', label: 'Shipped' },
+    ],
+  };
+  const cards = [
+    { id: 'release-a', status: 'Backlog' },
+    { id: 'release-d', status: 'Deferred' },
+    { id: 'release-s', status: 'Done' },
+  ];
+  const cfg = buildRoadmapConfig({ cards, indexOrders: {}, existing });
+  assert.deepEqual(cfg.kanban.columns.map((c) => c.key), ['Backlog', 'Done', 'Deferred']);
+});
+
+test('normalizeStatus: Shipped aliases to Done', () => {
+  assert.equal(normalizeStatus('Shipped'), 'Done');
+  assert.equal(normalizeStatus('Done'), 'Done');
+  assert.equal(normalizeStatus(''), 'Backlog');
+  assert.equal(normalizeStatus(null), 'Backlog');
 });
 
 test('buildRoadmapConfig: idempotent — rebuilding yields identical output', () => {

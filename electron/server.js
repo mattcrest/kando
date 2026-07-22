@@ -33,6 +33,7 @@ import {
   ordersFromConfig,
   setCardColumn,
   setColumnOrders,
+  normalizeStatus,
   ROADMAP_FILENAME,
   LEGACY_FILENAME,
 } from './roadmap-config.js';
@@ -362,7 +363,7 @@ app.get('/api/cards', async (req, res) => {
           cards.push({
             id: cardId,
             title: data.plan_anchor || cardId,
-            status: data.status || 'Backlog',
+            status: normalizeStatus(data.status),
             roadmap_order: data.roadmap_order || null,
             category: data.category || null,
             plan_anchor: data.plan_anchor || null,
@@ -445,7 +446,7 @@ app.get('/api/cards/:cardId', async (req, res) => {
     res.json({
       id: cardId,
       title: data.plan_anchor || cardId,
-      status: data.status || 'Backlog',
+      status: normalizeStatus(data.status),
       roadmap_order: data.roadmap_order || null,
       category: data.category || null,
       plan_anchor: data.plan_anchor || null,

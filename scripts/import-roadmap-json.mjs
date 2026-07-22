@@ -20,6 +20,7 @@ import {
   buildRoadmapConfig,
   serializeConfig,
   loadRoadmapConfig,
+  normalizeStatus,
   ROADMAP_FILENAME,
 } from '../electron/roadmap-config.js';
 
@@ -54,7 +55,7 @@ async function collectCards(vaultDir) {
       const id = file.replace(/\.md$/, '');
       cards.push({
         id,
-        status: data.status || 'Backlog',
+        status: normalizeStatus(data.status),
         roadmap_order: data.roadmap_order ?? null,
         shipped_at: data.shipped_at || null,
         is_initiative: data.initiative === true,

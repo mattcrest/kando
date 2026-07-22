@@ -11,7 +11,8 @@ export function headerToStatus(header) {
   if (h.includes('prioritized')) return 'Prioritized';
   if (h.includes('backlog')) return 'Backlog';
   if (h.includes('shipped')) return 'Done';
-  if (h.includes('deferred') || h.includes('blocked')) return 'Blocked';
+  if (h.includes('deferred')) return 'Deferred';
+  if (h.includes('blocked')) return 'Blocked';
   return null;
 }
 

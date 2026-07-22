@@ -24,10 +24,22 @@ export const STATUS_LABELS = {
   Prioritized: 'Prioritized',
   Backlog: 'Backlog',
   Blocked: 'Blocked',
+  Deferred: 'Deferred',
 };
 
+/**
+ * Canonicalize frontmatter status aliases. `Shipped` is the UI label for `Done`,
+ * not a separate column key — treat it as Done so importers don't create a
+ * second "Shipped" column beside Done.
+ */
+export function normalizeStatus(status) {
+  const s = String(status || 'Backlog').trim();
+  if (/^shipped$/i.test(s)) return 'Done';
+  return s || 'Backlog';
+}
+
 /** Column order the UI falls back to when no explicit column list exists. */
-export const DEFAULT_COLUMN_ORDER = ['Done', 'Active', 'Prioritized', 'Backlog', 'Blocked'];
+export const DEFAULT_COLUMN_ORDER = ['Done', 'Active', 'Prioritized', 'Backlog', 'Blocked', 'Deferred'];
 
 /** Statuses whose order comes from roadmap-index.md wiki-link position. */
 const INDEX_ORDERED = new Set(['Active', 'Prioritized', 'Backlog']);
@@ -114,7 +126,7 @@ function cleanVault(vault) {
 }
 
 function orderCardIdsForStatus(status, cards, indexOrders) {
-  const inStatus = cards.filter((c) => (c.status || 'Backlog') === status);
+  const inStatus = cards.filter((c) => normalizeStatus(c.status) === status);
 
   if (INDEX_ORDERED.has(status)) {
     const order = indexOrders?.[status] || [];
@@ -158,23 +170,26 @@ function orderCardIdsForStatus(status, cards, indexOrders) {
  */
 export function buildRoadmapConfig({ cards = [], indexOrders = {}, existing = null } = {}) {
   const existingCfg = existing ? normalizeConfig(existing) : null;
-  const presentStatuses = new Set(cards.map((c) => c.status || 'Backlog'));
+  const presentStatuses = new Set(cards.map((c) => normalizeStatus(c.status)));
 
   // Column definitions: preserve existing order + labels; append any newly
-  // present statuses in default order.
+  // present statuses in default order, then any leftover present keys.
   let columnDefs;
   const existingCols = existingCfg?.kanban?.columns;
   if (existingCols && existingCols.length) {
     columnDefs = existingCols.map((c) => ({ key: c.key, label: c.label || STATUS_LABELS[c.key] || c.key }));
-    for (const s of DEFAULT_COLUMN_ORDER) {
-      if (presentStatuses.has(s) && !columnDefs.some((c) => c.key === s)) {
-        columnDefs.push({ key: s, label: STATUS_LABELS[s] || s });
-      }
-    }
   } else {
-    columnDefs = DEFAULT_COLUMN_ORDER
-      .filter((s) => presentStatuses.has(s))
-      .map((s) => ({ key: s, label: STATUS_LABELS[s] || s }));
+    columnDefs = [];
+  }
+  for (const s of DEFAULT_COLUMN_ORDER) {
+    if (presentStatuses.has(s) && !columnDefs.some((c) => c.key === s)) {
+      columnDefs.push({ key: s, label: STATUS_LABELS[s] || s });
+    }
+  }
+  for (const s of presentStatuses) {
+    if (!columnDefs.some((c) => c.key === s)) {
+      columnDefs.push({ key: s, label: STATUS_LABELS[s] || s });
+    }
   }
 
   const columns = columnDefs.map((def) => ({
@@ -190,7 +205,8 @@ export function buildRoadmapConfig({ cards = [], indexOrders = {}, existing = nu
       .filter((c) => normalizeHorizon(c.horizon) === key)
       .sort(
         (a, b) =>
-          (STRATEGY_STATUS_RANK[a.status] ?? 9) - (STRATEGY_STATUS_RANK[b.status] ?? 9) ||
+          (STRATEGY_STATUS_RANK[normalizeStatus(a.status)] ?? 9) -
+            (STRATEGY_STATUS_RANK[normalizeStatus(b.status)] ?? 9) ||
           (a.title || '').localeCompare(b.title || '')
       )
       .map((c) => c.id),
