@@ -4139,14 +4139,15 @@ async function loadCards(){
     if(vaultsResp.ok) {
       const data = await vaultsResp.json();
       const vaults = data.vaults || [];
-      const vault = vaults.find(v => v.key === currentVault || v.name.toLowerCase() === currentVault.toLowerCase());
+      let vault = vaults.find(v => v.key === currentVault || v.name.toLowerCase() === currentVault.toLowerCase());
       if(!vault && vaults.length > 0){
         const fallback = vaults.find(v => v.isDefault) || vaults[0];
         currentVault = fallback.key || fallback.name;
         localStorage.setItem(VAULT_STORAGE_KEY, currentVault);
+        vault = fallback;
       }
-      if(vault?.kanban || (vaults.find(v => v.key === currentVault)?.kanban)) {
-        currentKanbanConfig = (vault || vaults.find(v => v.key === currentVault)).kanban;
+      if(vault?.kanban) {
+        currentKanbanConfig = vault.kanban;
       }
     }
 
@@ -4199,8 +4200,14 @@ async function initializeVaultSelector(){
     const nameSpan = document.getElementById('vault-switcher-name');
     const logo = document.getElementById('logo');
 
-    // Update logo with current vault
-    const currentVaultObj = vaults.find(v => v.key === currentVault);
+    // Fall back to default vault if saved vault no longer exists
+    let currentVaultObj = vaults.find(v => v.key === currentVault);
+    if(!currentVaultObj && vaults.length > 0){
+      const fallback = vaults.find(v => v.isDefault) || vaults[0];
+      currentVault = fallback.key || fallback.name;
+      localStorage.setItem(VAULT_STORAGE_KEY, currentVault);
+      currentVaultObj = fallback;
+    }
     const currentVaultName = currentVaultObj?.name || currentVault;
     if(logo) {
       logo.textContent = currentVaultName.charAt(0).toUpperCase();
