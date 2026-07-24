@@ -62,8 +62,8 @@ const DEFAULT_VAULTS = {
 let DEFAULT_VAULT = 'venubase';
 let VAULTS = { ...DEFAULT_VAULTS };
 let VAULT_COLORS = {
-  venubase: '#5b5bd6',
-  playerpath: '#8b5cf6',
+  venubase: '#0e7490',
+  playerpath: '#0369a1',
 };
 let VAULT_GIT = {};
 let VAULT_ROUTING = {};
