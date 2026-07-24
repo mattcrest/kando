@@ -53,7 +53,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Vaults configuration file
-const VAULTS_CONFIG_FILE = './vaults.json';
+const VAULTS_CONFIG_FILE = path.resolve(__dirname, '../vaults.json');
 
 // Default vaults: sibling checkout layout —
 //   /dev/kando  →  /dev/venubase-roadmap  (canonical roadmap repo)
@@ -80,7 +80,9 @@ async function loadVaultsConfig() {
   try {
     const data = await fs.readFile(VAULTS_CONFIG_FILE, 'utf-8');
     const config = JSON.parse(data);
-    VAULTS = { ...DEFAULT_VAULTS, ...config.vaults };
+    VAULTS = config.vaults && Object.keys(config.vaults).length > 0
+      ? { ...config.vaults }
+      : { ...DEFAULT_VAULTS };
     if (config.colors) {
       VAULT_COLORS = { ...VAULT_COLORS, ...config.colors };
     }
