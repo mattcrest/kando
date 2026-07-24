@@ -18,6 +18,13 @@ import {
   setCardColumn,
   setColumnOrders,
   normalizeStatus,
+  normalizeHorizon,
+  isArchivedHorizon,
+  HORIZON_ORDER,
+  strategyPlacementFromConfig,
+  setInitiativeHorizon,
+  setStrategyOrders,
+  strategyParity,
 } from '../electron/roadmap-config.js';
 
 const INDEX_ORDERED = ['Active', 'Prioritized', 'Backlog'];
@@ -46,9 +53,24 @@ test('buildRoadmapConfig: columns in default order, index-driven membership', ()
   assert.deepEqual(byKey.Backlog, ['release-gamma', 'initiative-one']);
 });
 
-test('buildRoadmapConfig: strategy groups initiatives by horizon', () => {
+test('buildRoadmapConfig: strategy groups initiatives by horizon (all five lanes)', () => {
   const cfg = buildRoadmapConfig({ cards: sampleCards, indexOrders: sampleIndex });
-  assert.deepEqual(cfg.strategy.horizons, [{ key: 'Now', initiatives: ['initiative-one'] }]);
+  assert.deepEqual(
+    cfg.strategy.horizons.map((h) => h.key),
+    HORIZON_ORDER
+  );
+  assert.deepEqual(cfg.strategy.horizons.find((h) => h.key === 'Now').initiatives, ['initiative-one']);
+  assert.deepEqual(cfg.strategy.horizons.find((h) => h.key === 'Past').initiatives, []);
+});
+
+test('normalizeHorizon: Past and Future are not coerced to Later', () => {
+  assert.equal(normalizeHorizon('Past'), 'Past');
+  assert.equal(normalizeHorizon('future'), 'Future');
+  assert.equal(normalizeHorizon('Now'), 'Now');
+  assert.equal(normalizeHorizon(''), 'Later');
+  assert.equal(isArchivedHorizon('Past'), true);
+  assert.equal(isArchivedHorizon('Future'), true);
+  assert.equal(isArchivedHorizon('Now'), false);
 });
 
 test('buildRoadmapConfig: Deferred column appended; Shipped alias folds into Done', () => {
@@ -208,6 +230,54 @@ test('setColumnOrders: replaces named columns and drops moved-away cards', () =>
   assert.deepEqual(next.kanban.columns.find((c) => c.key === 'Done').cards, ['release-c']); // untouched
 });
 
+const strategyConfig = {
+  version: 1,
+  strategy: {
+    horizons: [
+      { key: 'Now', initiatives: ['initiative-a', 'initiative-b'] },
+      { key: 'Next', initiatives: ['initiative-c'] },
+    ],
+  },
+};
+
+test('strategyPlacementFromConfig: maps initiative to horizon + order', () => {
+  const p = strategyPlacementFromConfig(strategyConfig);
+  assert.deepEqual(p.get('initiative-a'), { horizon: 'Now', order: 0 });
+  assert.deepEqual(p.get('initiative-b'), { horizon: 'Now', order: 1 });
+  assert.deepEqual(p.get('initiative-c'), { horizon: 'Next', order: 0 });
+});
+
+test('setInitiativeHorizon: moves across lanes and creates Past/Future', () => {
+  const next = setInitiativeHorizon(strategyConfig, 'initiative-a', 'Past');
+  const p = strategyPlacementFromConfig(next);
+  assert.equal(p.get('initiative-a').horizon, 'Past');
+  assert.deepEqual(
+    next.strategy.horizons.find((h) => h.key === 'Now').initiatives,
+    ['initiative-b']
+  );
+  assert.ok(next.strategy.horizons.some((h) => h.key === 'Future'));
+});
+
+test('setStrategyOrders: replaces named lanes and ensures all five keys', () => {
+  const next = setStrategyOrders(strategyConfig, {
+    Now: ['initiative-b'],
+    Past: ['initiative-a'],
+  });
+  assert.deepEqual(next.strategy.horizons.map((h) => h.key), HORIZON_ORDER);
+  assert.deepEqual(next.strategy.horizons.find((h) => h.key === 'Now').initiatives, ['initiative-b']);
+  assert.deepEqual(next.strategy.horizons.find((h) => h.key === 'Past').initiatives, ['initiative-a']);
+  assert.deepEqual(next.strategy.horizons.find((h) => h.key === 'Next').initiatives, ['initiative-c']);
+});
+
+test('strategyParity: flags horizon drift', () => {
+  const legacy = new Map([
+    ['initiative-a', { horizon: 'Next', order: 0 }],
+    ['initiative-b', { horizon: 'Now', order: 1 }],
+  ]);
+  const diffs = strategyParity(strategyPlacementFromConfig(strategyConfig), legacy);
+  assert.ok(diffs.some((d) => d.includes('initiative-a') && d.includes('horizon')));
+});
+
 // --- End-to-end importer against a fixture vault -------------------------------
 
 function writeCard(dir, name, frontmatter, body = '') {
@@ -251,7 +321,11 @@ test('importer: writes roadmap.json matching frontmatter + index, leaves Markdow
     assert.deepEqual(byKey.Active, ['release-beta', 'release-alpha']);
     assert.deepEqual(byKey.Backlog, ['release-gamma', 'initiative-one']);
     assert.deepEqual(byKey.Done, ['release-shipped']);
-    assert.deepEqual(cfg.strategy.horizons, [{ key: 'Now', initiatives: ['initiative-one'] }]);
+    assert.deepEqual(
+      cfg.strategy.horizons.map((h) => h.key),
+      ['Now', 'Next', 'Later', 'Past', 'Future']
+    );
+    assert.deepEqual(cfg.strategy.horizons.find((h) => h.key === 'Now').initiatives, ['initiative-one']);
 
     assert.deepEqual(snapshotMarkdown(dir), before, 'Markdown files must be unchanged');
   } finally {

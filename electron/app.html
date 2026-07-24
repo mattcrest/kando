@@ -1204,19 +1204,42 @@ body:has(.overlay.open) { overflow: hidden; }
   display: flex; flex-direction: column; gap: 36px;
 }
 
-/* horizon lane header — Now / Next / Later */
+/* horizon lane header — Now / Next / Later / Past / Future */
 .strategy-lane { display: flex; flex-direction: column; gap: 12px; }
+.strategy-lane.collapsed .strategy-lane-body { display: none; }
 .strategy-lane-head {
-  display: flex; align-items: baseline; gap: 10px;
+  display: flex; align-items: center; gap: 10px;
   position: sticky; top: 0; z-index: 2;
   background: var(--bg); padding: 12px 0 8px;
+  cursor: pointer; user-select: none;
 }
+.strategy-lane-head:hover .strategy-lane-name { color: var(--accent); }
+.strategy-lane-chevron {
+  font-size: 10px; color: var(--text-3); width: 12px; flex-shrink: 0;
+  transition: transform .15s;
+}
+.strategy-lane.collapsed .strategy-lane-chevron { transform: rotate(-90deg); }
 .strategy-lane-name {
   font-size: 13px; font-weight: 700; color: var(--accent);
   text-transform: uppercase; letter-spacing: .1em;
 }
 .strategy-lane-hint { font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
+.strategy-lane-count {
+  font-size: 11px; font-weight: 600; color: var(--text-2);
+  background: var(--surface-sub); border: 1px solid var(--border);
+  padding: 1px 7px; border-radius: 99px;
+}
 .strategy-lane-rule { flex: 1; height: 1px; background: var(--border); align-self: center; }
+.strategy-lane-body { display: flex; flex-direction: column; gap: 12px; min-height: 8px; }
+.strategy-lane.drag-over .strategy-lane-body {
+  outline: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 4px; border-radius: var(--r-md);
+}
+.strategy-lane-empty {
+  font-size: 12.5px; color: var(--text-3); padding: 14px 12px;
+  border: 1px dashed var(--border); border-radius: var(--r-md);
+  text-align: center;
+}
 
 /* initiative row — wide, two-column: narrative left, epics right */
 .strategy-row {
@@ -1225,8 +1248,14 @@ body:has(.overlay.open) { overflow: hidden; }
   border: 1px solid var(--border); border-radius: var(--r-lg);
   background: var(--surface);
   padding: 20px 24px;
-  cursor: pointer;
-  transition: border-color .2s cubic-bezier(.4,0,.2,1), box-shadow .2s cubic-bezier(.4,0,.2,1), transform .2s cubic-bezier(.4,0,.2,1);
+  cursor: grab;
+  transition: border-color .2s cubic-bezier(.4,0,.2,1), box-shadow .2s cubic-bezier(.4,0,.2,1), transform .2s cubic-bezier(.4,0,.2,1), opacity .12s;
+}
+.strategy-row:active { cursor: grabbing; }
+.strategy-row.dragging { opacity: .45; }
+.strategy-drop-indicator {
+  height: 3px; margin: -4px 0; border-radius: 2px;
+  background: var(--accent); flex-shrink: 0;
 }
 .strategy-row:hover { border-color: var(--border-md); box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
 .strategy-row.deferred { opacity: .55; }
@@ -1420,6 +1449,32 @@ body:has(.overlay.open) { overflow: hidden; }
 }
 .prop-value { min-width: 0; font-size: 13px; color: var(--text-1); }
 .prop-value-muted { font-size: 12.5px; color: var(--text-2); line-height: 1.45; word-break: break-word; }
+.prop-value-with-action {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.prop-value-with-action .prop-select { flex: 1; min-width: 0; }
+.prop-icon-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.prop-icon-btn:hover { background: var(--bg); color: var(--text-1); }
+.prop-icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.prop-icon-btn.is-archived { color: var(--text-2); }
+.prop-icon-btn svg { display: block; }
 
 .prop-select {
   appearance: none;
@@ -2095,11 +2150,14 @@ function setViewMode(mode){
   else renderBoard();
 }
 
-const HORIZON_ORDER = { 'Now': 0, 'Next': 1, 'Later': 2 };
+const HORIZON_KEYS = ['Now', 'Next', 'Later', 'Past', 'Future'];
+const ARCHIVE_HORIZONS = new Set(['Past', 'Future']);
 const HORIZON_META = {
-  'Now':   { label: 'Now',   hint: 'Milestone A — Venue #2 ready' },
-  'Next':  { label: 'Next',  hint: 'Cohort 2–4 venues' },
-  'Later': { label: 'Later', hint: 'Milestone B — scale to 10' },
+  'Now':    { label: 'Now',    hint: 'Active focus' },
+  'Next':   { label: 'Next',   hint: 'Near-term' },
+  'Later':  { label: 'Later',  hint: 'On the roadmap' },
+  'Past':   { label: 'Past',   hint: 'Shipped / archived' },
+  'Future': { label: 'Future', hint: 'Parked / far-out' },
 };
 
 function normalizeHorizon(h){
@@ -2107,7 +2165,32 @@ function normalizeHorizon(h){
   const s = String(h).trim();
   if(/^now/i.test(s)) return 'Now';
   if(/^next/i.test(s)) return 'Next';
+  if(/^past/i.test(s)) return 'Past';
+  if(/^future/i.test(s)) return 'Future';
   return 'Later';
+}
+
+function isArchivedInitiative(card){
+  if(!card?.is_initiative) return false;
+  if(card.archived != null) return !!card.archived;
+  return ARCHIVE_HORIZONS.has(normalizeHorizon(card.horizon));
+}
+
+function strategyCollapsedKey(){
+  return `kando:strategy-collapsed:${currentVault}`;
+}
+
+function loadStrategyCollapsed(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(strategyCollapsedKey()) || 'null');
+    if(raw && typeof raw === 'object') return raw;
+  } catch {}
+  // Defaults: Past & Future collapsed
+  return { Past: true, Future: true };
+}
+
+function saveStrategyCollapsed(map){
+  localStorage.setItem(strategyCollapsedKey(), JSON.stringify(map));
 }
 
 /** Progress across an epic's slices: shipped / total. */
@@ -2143,67 +2226,140 @@ function renderStrategyEpicRow(row){
   </button>`;
 }
 
+function renderStrategyInitiativeCard(card){
+  const content = getContent(card.id);
+  const summary = stripInlineMd(getSummary(content));
+  const epics = parseInitiativeEpicsFromContent(content);
+  let rollDone = 0, rollTotal = 0;
+  for(const row of epics){
+    const p = epicSliceProgress(row.id);
+    rollDone += p.done; rollTotal += p.total;
+  }
+  const rollPct = rollTotal > 0 ? Math.round(rollDone/rollTotal*100) : 0;
+  const title = stripInlineMd(card.title||card.id).split('—')[0].trim();
+  return `<article class="strategy-row${card.status==='Deferred'?' deferred':''}" data-card="${esc(card.id)}" draggable="true" tabindex="0" role="button">
+    <div class="strategy-row-main">
+      <div class="strategy-row-titleline">
+        <h3 class="strategy-row-title">${esc(title)}</h3>
+        <span class="meta-pill" style="${statusStyle(card.status)}">${esc(STATUS_LABELS[card.status]||card.status)}</span>
+        ${card.milestone ? `<span class="meta-pill meta-pill-plain">${esc(card.milestone)}</span>` : ''}
+      </div>
+      <p class="strategy-row-summary">${esc(summary||'No summary yet.')}</p>
+      ${rollTotal > 0 ? `<div class="strategy-row-roll">
+        <span class="strategy-epic-bar strategy-roll-bar"><span class="strategy-epic-fill" style="width:${rollPct}%"></span></span>
+        <span class="strategy-roll-label">${rollDone} of ${rollTotal} slices shipped</span>
+      </div>` : ''}
+    </div>
+    <div class="strategy-row-epics">
+      ${epics.length ? epics.map(renderStrategyEpicRow).join('') : '<span class="initiative-epics-hint">No epics linked</span>'}
+    </div>
+  </article>`;
+}
+
+function collectStrategyHorizonOrders(){
+  const orders = {};
+  for(const key of HORIZON_KEYS) orders[key] = [];
+  for(const card of state.cards.filter(c=>c.is_initiative)){
+    orders[normalizeHorizon(card.horizon)].push(card.id);
+  }
+  // Prefer strategy_order within each lane when present
+  for(const key of HORIZON_KEYS){
+    orders[key].sort((a,b)=>{
+      const ca = getCard(a), cb = getCard(b);
+      const ao = ca?.strategy_order, bo = cb?.strategy_order;
+      if(ao != null && bo != null && ao !== bo) return ao - bo;
+      if(ao != null && bo == null) return -1;
+      if(ao == null && bo != null) return 1;
+      return (ca?.title||a).localeCompare(cb?.title||b);
+    });
+  }
+  return orders;
+}
+
+async function saveStrategyOrders(orders){
+  const resp = await fetch(apiUrl('/api/strategy'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ horizons: orders }),
+  });
+  if(!resp.ok){
+    const err = await resp.json().catch(()=>({}));
+    throw new Error(err.error || `Strategy save failed (${resp.status})`);
+  }
+  // Sync local card horizons + strategy_order
+  for(const [horizon, ids] of Object.entries(orders)){
+    ids.forEach((id, i)=>{
+      const card = getCard(id);
+      if(!card) return;
+      card.horizon = horizon;
+      card.strategy_order = i;
+      card.archived = ARCHIVE_HORIZONS.has(horizon);
+    });
+  }
+}
+
 function renderStrategyView(){
   const root = document.getElementById('strategy-view');
   if(!root) return;
-  const initiatives = state.cards.filter(c=>c.is_initiative);
-
-  const lanes = { 'Now': [], 'Next': [], 'Later': [] };
-  for(const card of initiatives){
+  const collapsed = loadStrategyCollapsed();
+  const statusOrder = { Active:0, Prioritized:1, Backlog:2, Blocked:3, Done:4, Deferred:5 };
+  const lanes = {};
+  for(const key of HORIZON_KEYS) lanes[key] = [];
+  for(const card of state.cards.filter(c=>c.is_initiative)){
     lanes[normalizeHorizon(card.horizon)].push(card);
   }
-  const statusOrder = { Active:0, Prioritized:1, Backlog:2, Blocked:3, Done:4, Deferred:5 };
-  for(const key of Object.keys(lanes)){
-    lanes[key].sort((a,b)=>(statusOrder[a.status]??9)-(statusOrder[b.status]??9) || (a.title||'').localeCompare(b.title||''));
+  for(const key of HORIZON_KEYS){
+    lanes[key].sort((a,b)=>{
+      if(a.strategy_order != null && b.strategy_order != null && a.strategy_order !== b.strategy_order){
+        return a.strategy_order - b.strategy_order;
+      }
+      if(a.strategy_order != null && b.strategy_order == null) return -1;
+      if(a.strategy_order == null && b.strategy_order != null) return 1;
+      return (statusOrder[a.status]??9)-(statusOrder[b.status]??9) || (a.title||'').localeCompare(b.title||'');
+    });
   }
 
   let html = '<div class="strategy-lanes">';
-  for(const [horizon, cards] of Object.entries(lanes)){
-    if(!cards.length) continue;
+  for(const horizon of HORIZON_KEYS){
+    const cards = lanes[horizon];
     const meta = HORIZON_META[horizon];
-    html += `<section class="strategy-lane" aria-label="${esc(meta.label)}">
-      <header class="strategy-lane-head">
+    const isCollapsed = !!collapsed[horizon];
+    html += `<section class="strategy-lane${isCollapsed?' collapsed':''}" data-horizon="${esc(horizon)}" aria-label="${esc(meta.label)}">
+      <header class="strategy-lane-head" data-horizon-toggle="${esc(horizon)}" title="Click to ${isCollapsed?'expand':'collapse'}">
+        <span class="strategy-lane-chevron" aria-hidden="true">▼</span>
         <span class="strategy-lane-name">${esc(meta.label)}</span>
+        <span class="strategy-lane-count">${cards.length}</span>
         <span class="strategy-lane-hint">${esc(meta.hint)}</span>
         <span class="strategy-lane-rule"></span>
       </header>
-      ${cards.map(card=>{
-        const content = getContent(card.id);
-        const summary = stripInlineMd(getSummary(content));
-        const epics = parseInitiativeEpicsFromContent(content);
-        // roll-up: shipped slices across all child epics
-        let rollDone = 0, rollTotal = 0;
-        for(const row of epics){
-          const p = epicSliceProgress(row.id);
-          rollDone += p.done; rollTotal += p.total;
-        }
-        const rollPct = rollTotal > 0 ? Math.round(rollDone/rollTotal*100) : 0;
-        const title = stripInlineMd(card.title||card.id).split('—')[0].trim();
-        return `<article class="strategy-row${card.status==='Deferred'?' deferred':''}" data-card="${esc(card.id)}" tabindex="0" role="button">
-          <div class="strategy-row-main">
-            <div class="strategy-row-titleline">
-              <h3 class="strategy-row-title">${esc(title)}</h3>
-              <span class="meta-pill" style="${statusStyle(card.status)}">${esc(STATUS_LABELS[card.status]||card.status)}</span>
-              ${card.milestone ? `<span class="meta-pill meta-pill-plain">${esc(card.milestone)}</span>` : ''}
-            </div>
-            <p class="strategy-row-summary">${esc(summary||'No summary yet.')}</p>
-            ${rollTotal > 0 ? `<div class="strategy-row-roll">
-              <span class="strategy-epic-bar strategy-roll-bar"><span class="strategy-epic-fill" style="width:${rollPct}%"></span></span>
-              <span class="strategy-roll-label">${rollDone} of ${rollTotal} slices shipped</span>
-            </div>` : ''}
-          </div>
-          <div class="strategy-row-epics">
-            ${epics.length ? epics.map(renderStrategyEpicRow).join('') : '<span class="initiative-epics-hint">No epics linked</span>'}
-          </div>
-        </article>`;
-      }).join('')}
+      <div class="strategy-lane-body" data-horizon="${esc(horizon)}">
+        ${cards.length
+          ? cards.map(renderStrategyInitiativeCard).join('')
+          : `<div class="strategy-lane-empty">Drop initiatives here</div>`}
+      </div>
     </section>`;
   }
   html += '</div>';
   root.innerHTML = html;
+  bindStrategyViewEvents(root);
+}
+
+let strategyDragId = null;
+
+function bindStrategyViewEvents(root){
+  root.querySelectorAll('[data-horizon-toggle]').forEach(head=>{
+    head.addEventListener('click', ()=>{
+      const key = head.dataset.horizonToggle;
+      const map = loadStrategyCollapsed();
+      map[key] = !map[key];
+      saveStrategyCollapsed(map);
+      renderStrategyView();
+    });
+  });
 
   root.querySelectorAll('.strategy-row').forEach(el=>{
     el.addEventListener('click', e=>{
+      if(strategyDragId) return;
       if(e.target.closest('.strategy-epic-row')) return;
       navigateToCard(el.dataset.card);
     });
@@ -2212,11 +2368,106 @@ function renderStrategyView(){
         e.preventDefault(); navigateToCard(el.dataset.card);
       }
     });
+    el.addEventListener('dragstart', e=>{
+      if(e.target.closest('.strategy-epic-row')){ e.preventDefault(); return; }
+      strategyDragId = el.dataset.card;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', strategyDragId);
+      requestAnimationFrame(()=> el.classList.add('dragging'));
+    });
+    el.addEventListener('dragend', ()=>{
+      el.classList.remove('dragging');
+      root.querySelectorAll('.strategy-lane.drag-over').forEach(l=>l.classList.remove('drag-over'));
+      root.querySelectorAll('.strategy-drop-indicator').forEach(d=>d.remove());
+      strategyDragId = null;
+    });
   });
+
   root.querySelectorAll('.strategy-epic-row').forEach(el=>{
     el.addEventListener('click', e=>{
       e.stopPropagation();
       navigateToCard(el.dataset.card);
+    });
+    el.addEventListener('dragstart', e=> e.preventDefault());
+  });
+
+  root.querySelectorAll('.strategy-lane-body').forEach(body=>{
+    const lane = body.closest('.strategy-lane');
+    body.addEventListener('dragover', e=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if(!strategyDragId) return;
+      lane.classList.add('drag-over');
+      // Expand collapsed lane on dragover
+      if(lane.classList.contains('collapsed')){
+        const map = loadStrategyCollapsed();
+        map[lane.dataset.horizon] = false;
+        saveStrategyCollapsed(map);
+        lane.classList.remove('collapsed');
+      }
+      body.querySelectorAll('.strategy-drop-indicator').forEach(d=>d.remove());
+      const cards = [...body.querySelectorAll('.strategy-row:not(.dragging)')];
+      let insertBefore = null;
+      for(const c of cards){
+        const rect = c.getBoundingClientRect();
+        if(e.clientY < rect.top + rect.height/2){ insertBefore = c; break; }
+      }
+      const ind = document.createElement('div');
+      ind.className = 'strategy-drop-indicator';
+      if(insertBefore) body.insertBefore(ind, insertBefore);
+      else {
+        const empty = body.querySelector('.strategy-lane-empty');
+        if(empty) body.insertBefore(ind, empty);
+        else body.appendChild(ind);
+      }
+    });
+    body.addEventListener('dragleave', e=>{
+      if(!body.contains(e.relatedTarget)){
+        lane.classList.remove('drag-over');
+        body.querySelectorAll('.strategy-drop-indicator').forEach(d=>d.remove());
+      }
+    });
+    body.addEventListener('drop', async e=>{
+      e.preventDefault();
+      lane.classList.remove('drag-over');
+      body.querySelectorAll('.strategy-drop-indicator').forEach(d=>d.remove());
+      const id = strategyDragId || e.dataTransfer.getData('text/plain');
+      if(!id) return;
+      const horizon = body.dataset.horizon;
+      const card = getCard(id);
+      if(!card?.is_initiative) return;
+
+      const orders = collectStrategyHorizonOrders();
+      // Remove from all lanes
+      for(const key of HORIZON_KEYS){
+        orders[key] = orders[key].filter(x=>x !== id);
+      }
+      // Insert at drop position
+      const siblings = [...body.querySelectorAll('.strategy-row:not(.dragging)')].map(r=>r.dataset.card);
+      let index = siblings.length;
+      // Use indicator position from last dragover — recompute from mouse
+      for(let i=0; i<siblings.length; i++){
+        const el = body.querySelector(`.strategy-row[data-card="${CSS.escape(siblings[i])}"]`);
+        if(!el) continue;
+        const rect = el.getBoundingClientRect();
+        if(e.clientY < rect.top + rect.height/2){ index = i; break; }
+      }
+      orders[horizon].splice(index, 0, id);
+
+      // Optimistic
+      card.horizon = horizon;
+      card.archived = ARCHIVE_HORIZONS.has(horizon);
+      card.strategy_order = index;
+      try {
+        await saveStrategyOrders(orders);
+        renderStrategyView();
+        if(viewMode === 'board') renderBoard();
+        if(modalCardId === id) showModal(id);
+      } catch(err){
+        console.error(err);
+        alert(err.message || 'Failed to update strategy');
+        await loadCards();
+      }
     });
   });
 }
@@ -2650,7 +2901,11 @@ function renderBoard(){
   const cols = getColumns();
   let html = '';
   for(const col of cols){
-    let cards = state.cards.filter(c=>c.status===col.key && cardMatchesTypeFilter(c));
+    let cards = state.cards.filter(c=>
+      c.status===col.key &&
+      cardMatchesTypeFilter(c) &&
+      !isArchivedInitiative(c)
+    );
     if(col.key==='Done') cards.sort((a,b)=>new Date(b.shipped_at||0)-new Date(a.shipped_at||0));
     else cards.sort(compareCardOrder);
 
@@ -3040,8 +3295,20 @@ function renderSidebar(card, deps, prs){
   let html = `<div class="prop-group">`;
   html += propRow('Status', `<select class="prop-select" id="modal-status" data-dynamic>${cols.map(col => `<option value="${col.key}">${col.label}</option>`).join('')}</select>`);
   html += propRow('Category', `<input class="prop-input" id="modal-category" value="${esc(card.category||'')}" placeholder="Add category">`);
-  if(card.is_initiative && card.horizon){
-    html += propRow('Horizon', `<span class="prop-value">${esc(card.horizon)}</span>`);
+  if(card.is_initiative){
+    const horizon = normalizeHorizon(card.horizon);
+    const archived = isArchivedInitiative(card);
+    const archiveIcon = archived
+      ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M12 12v5"/><path d="M9 15l3-3 3 3"/></svg>`
+      : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg>`;
+    html += propRow('Horizon', `<div class="prop-value-with-action">
+      <select class="prop-select" id="modal-horizon">${HORIZON_KEYS.map(h =>
+        `<option value="${h}"${h===horizon?' selected':''}>${h}</option>`
+      ).join('')}</select>
+      <button type="button" class="prop-icon-btn${archived ? ' is-archived' : ''}" id="modal-archive-toggle"
+        title="${archived ? 'Unarchive (move to Later)' : 'Archive (hide from Board)'}"
+        aria-label="${archived ? 'Unarchive initiative' : 'Archive initiative'}">${archiveIcon}</button>
+    </div>`);
   }
   if(card.is_initiative && card.milestone){
     html += propRow('Milestone', `<span class="prop-value-muted">${esc(card.milestone)}</span>`);
@@ -3121,6 +3388,60 @@ function bindSidebarInputs(){
       statusSel.style = statusStyle(statusSel.value);
       markUnsaved();
     };
+  }
+
+  const horizonSel = document.getElementById('modal-horizon');
+  if(horizonSel){
+    horizonSel.onchange = async () => {
+      await applyInitiativeHorizon(modalCardId, horizonSel.value);
+    };
+  }
+
+  const archiveToggle = document.getElementById('modal-archive-toggle');
+  if(archiveToggle){
+    archiveToggle.onclick = async () => {
+      const card = getCard(modalCardId);
+      if(!card) return;
+      if(isArchivedInitiative(card)){
+        await applyInitiativeHorizon(modalCardId, 'Later');
+        return;
+      }
+      const target = card.status === 'Done' ? 'Past' : 'Future';
+      await applyInitiativeHorizon(modalCardId, target);
+    };
+  }
+}
+
+async function applyInitiativeHorizon(cardId, horizonRaw){
+  const card = getCard(cardId);
+  if(!card?.is_initiative) return;
+  const horizon = normalizeHorizon(horizonRaw);
+  const prev = normalizeHorizon(card.horizon);
+  if(horizon === prev) return;
+
+  const orders = collectStrategyHorizonOrders();
+  for(const key of HORIZON_KEYS){
+    orders[key] = orders[key].filter(id => id !== cardId);
+  }
+  orders[horizon].push(cardId);
+
+  card.horizon = horizon;
+  card.archived = ARCHIVE_HORIZONS.has(horizon);
+  card.strategy_order = orders[horizon].length - 1;
+
+  try {
+    await saveStrategyOrders(orders);
+    if(viewMode === 'strategy') renderStrategyView();
+    else renderBoard();
+    if(modalCardId === cardId){
+      const deps = parseDeps(getContent(cardId));
+      const prs = parsePRs(getContent(cardId));
+      renderSidebar(card, deps, prs);
+    }
+  } catch(err){
+    console.error(err);
+    alert(err.message || 'Failed to update horizon');
+    await loadCards();
   }
 }
 

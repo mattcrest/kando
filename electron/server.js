@@ -34,6 +34,13 @@ import {
   setCardColumn,
   setColumnOrders,
   normalizeStatus,
+  normalizeHorizon,
+  isArchivedHorizon,
+  HORIZON_ORDER,
+  strategyPlacementFromConfig,
+  setInitiativeHorizon,
+  setStrategyOrders,
+  strategyParity,
   ROADMAP_FILENAME,
   LEGACY_FILENAME,
 } from './roadmap-config.js';
@@ -425,6 +432,43 @@ app.get('/api/cards', async (req, res) => {
       attachIndexOrder(cards, positionMaps);
     }
 
+    // Strategy placement: when roadmap.json has strategy membership, apply
+    // horizon from it for initiatives and flag Past/Future as archived.
+    if (roadmapCfg?.file === ROADMAP_FILENAME) {
+      const strategyPlacement = strategyPlacementFromConfig(roadmapCfg.raw);
+      if (strategyPlacement.size > 0) {
+        const legacyStrategy = new Map(
+          cards
+            .filter((c) => c.is_initiative)
+            .map((c) => [c.id, { horizon: normalizeHorizon(c.horizon), order: null }])
+        );
+        const strategyDiffs = strategyParity(strategyPlacement, legacyStrategy);
+        // Only warn on horizon mismatches (ignore order — legacy has no stable order).
+        const horizonDiffs = strategyDiffs.filter((d) => d.includes('horizon') || d.includes('unplaced'));
+        if (horizonDiffs.length) {
+          console.warn(
+            `[roadmap.json] strategy drift in vault '${vaultKey}' (${horizonDiffs.length}):\n  ` +
+              horizonDiffs.slice(0, 10).join('\n  ') +
+              (horizonDiffs.length > 10 ? `\n  …and ${horizonDiffs.length - 10} more` : '')
+          );
+        }
+        for (const card of cards) {
+          if (!card.is_initiative) continue;
+          const sp = strategyPlacement.get(card.id);
+          if (sp) {
+            card.horizon = sp.horizon;
+            card.strategy_order = sp.order;
+          }
+        }
+      }
+    }
+    for (const card of cards) {
+      if (card.is_initiative) {
+        card.horizon = normalizeHorizon(card.horizon);
+        card.archived = isArchivedHorizon(card.horizon);
+      }
+    }
+
     cards.sort(compareCardsByIndex);
 
     res.json(cards);
@@ -442,6 +486,16 @@ app.get('/api/cards/:cardId', async (req, res) => {
 
     const content = await fs.readFile(cardPath, 'utf-8');
     const { data, content: markdownContent } = matter(content);
+    const isInitiative = data.initiative === true;
+    let horizon = data.horizon ? normalizeHorizon(data.horizon) : null;
+    if (isInitiative) {
+      const roadmapCfg = await loadRoadmapConfig(vaultDir);
+      if (roadmapCfg?.file === ROADMAP_FILENAME) {
+        const sp = strategyPlacementFromConfig(roadmapCfg.raw).get(cardId);
+        if (sp) horizon = sp.horizon;
+      }
+      if (!horizon) horizon = 'Later';
+    }
 
     res.json({
       id: cardId,
@@ -453,10 +507,11 @@ app.get('/api/cards/:cardId', async (req, res) => {
       path: `${cardId}.md`,
       shipped_at: data.shipped_at || null,
       is_epic: data.epic === true,
-      is_initiative: data.initiative === true,
-      horizon: data.horizon || null,
+      is_initiative: isInitiative,
+      horizon,
       milestone: data.milestone || null,
       parent: extractParentId(data),
+      archived: isInitiative && isArchivedHorizon(horizon),
       frontmatter: data,
       content: markdownContent,
     });
@@ -478,6 +533,12 @@ app.put('/api/cards/:cardId', async (req, res) => {
 
     // Merge updates with existing frontmatter
     const newData = { ...data, ...updates };
+    if (Object.prototype.hasOwnProperty.call(updates, 'horizon')) {
+      newData.horizon = normalizeHorizon(newData.horizon);
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
+      newData.status = normalizeStatus(newData.status);
+    }
 
     // Preserve field order for consistency
     const orderedData = {
@@ -508,11 +569,91 @@ app.put('/api/cards/:cardId', async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
       await updateRoadmapConfigFile(vaultDir, (raw) => setCardColumn(raw, cardId, newData.status));
     }
+    if (Object.prototype.hasOwnProperty.call(updates, 'horizon')) {
+      await updateRoadmapConfigFile(vaultDir, (raw) =>
+        setInitiativeHorizon(raw, cardId, newData.horizon)
+      );
+    }
 
     const vaultKey = getVaultKey(req);
     await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} metadata`);
 
     res.json({ id: cardId, success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/strategy - Strategy horizon membership from roadmap.json (or empty)
+app.get('/api/strategy', async (req, res) => {
+  try {
+    const vaultDir = getVaultDir(req);
+    const loaded = await loadRoadmapConfig(vaultDir);
+    const placement = loaded ? strategyPlacementFromConfig(loaded.raw) : new Map();
+    const horizons = {};
+    for (const key of HORIZON_ORDER) horizons[key] = [];
+    if (loaded?.raw?.strategy?.horizons) {
+      for (const lane of loaded.raw.strategy.horizons) {
+        const key = normalizeHorizon(lane.key);
+        horizons[key] = [...(lane.initiatives || [])];
+      }
+    }
+    res.json({
+      horizons,
+      orderedHorizons: HORIZON_ORDER,
+      placementSize: placement.size,
+      file: loaded?.file || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/strategy - Replace strategy horizon membership + sync frontmatter horizons
+app.put('/api/strategy', async (req, res) => {
+  try {
+    const vaultKey = getVaultKey(req);
+    const vaultDir = getVaultDir(req);
+    const { horizons } = req.body || {};
+    if (!horizons || typeof horizons !== 'object') {
+      return res.status(400).json({ error: 'horizons object is required' });
+    }
+
+    const filtered = {};
+    for (const key of HORIZON_ORDER) {
+      if (Array.isArray(horizons[key])) filtered[key] = horizons[key];
+    }
+    if (Object.keys(filtered).length === 0) {
+      return res.status(400).json({ error: 'horizons must include at least one named lane' });
+    }
+
+    const roadmapUpdated = await updateRoadmapConfigFile(vaultDir, (raw) =>
+      setStrategyOrders(raw, filtered)
+    );
+    if (!roadmapUpdated) {
+      return res.status(404).json({ error: 'roadmap.json not found — migrate vault first' });
+    }
+
+    // Dual-write frontmatter horizon for each initiative listed.
+    for (const [horizon, ids] of Object.entries(filtered)) {
+      for (const id of ids) {
+        try {
+          await patchCardFrontmatter(vaultDir, id, { horizon });
+        } catch (err) {
+          console.warn(`strategy: could not update frontmatter for ${id}: ${err.message}`);
+        }
+      }
+    }
+
+    await maybeAutoCommitVault(vaultKey, vaultDir, 'roadmap: update strategy horizons');
+
+    const loaded = await loadRoadmapConfig(vaultDir);
+    const out = {};
+    for (const key of HORIZON_ORDER) out[key] = [];
+    for (const lane of loaded.raw.strategy?.horizons || []) {
+      out[normalizeHorizon(lane.key)] = [...(lane.initiatives || [])];
+    }
+    res.json({ success: true, horizons: out });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1040,6 +1181,8 @@ async function start() {
     console.log(`PUT /api/cards/:cardId/content?vault=<name> - Update card content`);
     console.log(`GET /api/roadmap-index?vault=<name> - Read index section order`);
     console.log(`PUT /api/roadmap-index?vault=<name> - Update index section order`);
+    console.log(`GET /api/strategy?vault=<name> - Read strategy horizon membership`);
+    console.log(`PUT /api/strategy?vault=<name> - Update strategy horizon membership`);
     console.log(`GET /api/vaults - List available vaults (includes routing metadata)`);
     console.log(`GET /api/routing/resolve?workspaceRoot=<path> - Resolve vault for workspace`);
     console.log(`POST /api/vaults/add - Add new vault`);

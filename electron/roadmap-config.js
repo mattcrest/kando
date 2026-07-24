@@ -44,7 +44,11 @@ export const DEFAULT_COLUMN_ORDER = ['Done', 'Active', 'Prioritized', 'Backlog',
 /** Statuses whose order comes from roadmap-index.md wiki-link position. */
 const INDEX_ORDERED = new Set(['Active', 'Prioritized', 'Backlog']);
 
-const HORIZON_ORDER = ['Now', 'Next', 'Later'];
+/** Strategy lane order (active → archive). Past/Future are archive destinations. */
+export const HORIZON_ORDER = ['Now', 'Next', 'Later', 'Past', 'Future'];
+
+/** Horizons that hide initiatives from the Board status columns. */
+export const ARCHIVE_HORIZONS = new Set(['Past', 'Future']);
 
 /** Strategy-lane sort rank by status (mirrors the UI's statusOrder). */
 const STRATEGY_STATUS_RANK = { Active: 0, Prioritized: 1, Backlog: 2, Blocked: 3, Done: 4, Deferred: 5 };
@@ -58,7 +62,13 @@ export function normalizeHorizon(horizon) {
   const s = String(horizon || '').trim();
   if (/^now/i.test(s)) return 'Now';
   if (/^next/i.test(s)) return 'Next';
+  if (/^past/i.test(s)) return 'Past';
+  if (/^future/i.test(s)) return 'Future';
   return 'Later';
+}
+
+export function isArchivedHorizon(horizon) {
+  return ARCHIVE_HORIZONS.has(normalizeHorizon(horizon));
 }
 
 /**
@@ -199,6 +209,7 @@ export function buildRoadmapConfig({ cards = [], indexOrders = {}, existing = nu
   }));
 
   const initiatives = cards.filter((c) => c.is_initiative);
+  // Always emit all five horizon keys (empty Past/Future OK) so Strategy lanes exist after import.
   const horizons = HORIZON_ORDER.map((key) => ({
     key,
     initiatives: initiatives
@@ -210,7 +221,7 @@ export function buildRoadmapConfig({ cards = [], indexOrders = {}, existing = nu
           (a.title || '').localeCompare(b.title || '')
       )
       .map((c) => c.id),
-  })).filter((h) => h.initiatives.length > 0);
+  }));
 
   const config = {
     version: ROADMAP_SCHEMA_VERSION,
@@ -353,6 +364,89 @@ export function setColumnOrders(raw, sectionOrders) {
     }
   }
   return { ...cfg, kanban: { ...cfg.kanban, columns } };
+}
+
+/**
+ * Placement map from strategy.horizons: initiativeId -> { horizon, order }.
+ * First occurrence wins if an id appears in more than one lane.
+ */
+export function strategyPlacementFromConfig(raw) {
+  const cfg = normalizeConfig(raw);
+  const map = new Map();
+  for (const lane of cfg?.strategy?.horizons || []) {
+    const horizon = normalizeHorizon(lane.key);
+    (lane.initiatives || []).forEach((id, i) => {
+      if (!map.has(id)) map.set(id, { horizon, order: i });
+    });
+  }
+  return map;
+}
+
+/** Ensure strategy.horizons has an entry for every HORIZON_ORDER key (empty lists OK). */
+function ensureHorizonLanes(horizons) {
+  const byKey = new Map((horizons || []).map((h) => [normalizeHorizon(h.key), [...(h.initiatives || [])]]));
+  return HORIZON_ORDER.map((key) => ({ key, initiatives: byKey.get(key) || [] }));
+}
+
+/**
+ * Move an initiative into `horizonKey` (creating the lane if needed), removing it
+ * from every other lane. Appends unless a valid `index` is given.
+ */
+export function setInitiativeHorizon(raw, initiativeId, horizonKey, { index = null } = {}) {
+  const cfg = normalizeConfig(raw) || emptyConfig();
+  const target = normalizeHorizon(horizonKey);
+  const horizons = ensureHorizonLanes(cfg.strategy?.horizons).map((lane) => ({
+    ...lane,
+    initiatives: (lane.initiatives || []).filter((id) => id !== initiativeId),
+  }));
+  const lane = horizons.find((h) => h.key === target);
+  if (index == null || index < 0 || index >= lane.initiatives.length) lane.initiatives.push(initiativeId);
+  else lane.initiatives.splice(index, 0, initiativeId);
+  return { ...cfg, strategy: { ...cfg.strategy, horizons } };
+}
+
+/**
+ * Replace ordered membership for named horizons. Unnamed lanes are left untouched
+ * (then re-normalized so all five keys exist). Caller supplies complete lists.
+ */
+export function setStrategyOrders(raw, horizonOrders = {}) {
+  const cfg = normalizeConfig(raw) || emptyConfig();
+  const horizons = ensureHorizonLanes(cfg.strategy?.horizons).map((lane) =>
+    Object.prototype.hasOwnProperty.call(horizonOrders, lane.key)
+      ? { ...lane, initiatives: [...horizonOrders[lane.key]] }
+      : lane
+  );
+  // Also accept keys that normalizeHorizon would map (e.g. if caller used raw strings).
+  for (const [key, ids] of Object.entries(horizonOrders)) {
+    const canon = normalizeHorizon(key);
+    if (!horizons.some((h) => h.key === canon)) {
+      horizons.push({ key: canon, initiatives: [...ids] });
+    }
+  }
+  return { ...cfg, strategy: { ...cfg.strategy, horizons: ensureHorizonLanes(horizons) } };
+}
+
+/**
+ * Compare strategy placement against legacy frontmatter horizons.
+ * Returns sorted human-readable mismatch strings; empty means agreement.
+ */
+export function strategyParity(newMap, legacyMap) {
+  const diffs = [];
+  const ids = new Set([...newMap.keys(), ...legacyMap.keys()]);
+  for (const id of ids) {
+    const n = newMap.get(id);
+    const l = legacyMap.get(id);
+    if (!n) {
+      diffs.push(`${id}: ${l.horizon} in frontmatter but unplaced in roadmap.json strategy`);
+    } else if (!l) {
+      diffs.push(`${id}: in roadmap.json strategy (${n.horizon}) but not a current initiative`);
+    } else if (n.horizon !== l.horizon) {
+      diffs.push(`${id}: horizon ${l.horizon} (frontmatter) vs ${n.horizon} (roadmap.json)`);
+    } else if (l.order != null && n.order !== l.order) {
+      diffs.push(`${id}: ${n.horizon} order ${l.order} (legacy) vs ${n.order} (roadmap.json)`);
+    }
+  }
+  return diffs.sort();
 }
 
 /** Serialize a config for disk: 2-space JSON, one array item per line, trailing newline. */
