@@ -2003,7 +2003,7 @@ body:has(.overlay.open) { overflow: hidden; }
 /* ── API Configuration ──────────────────────── */
 const API_URL = 'http://localhost:3001';
 const VAULT_STORAGE_KEY = 'venubase-kanban-vault';
-let currentVault = localStorage.getItem(VAULT_STORAGE_KEY) || 'venubase';
+let currentVault = localStorage.getItem(VAULT_STORAGE_KEY) || '';
 let vaultColors = {}; // Cache vault colors from API
 
 function apiUrl(endpoint) {
@@ -4137,10 +4137,16 @@ async function loadCards(){
     // Fetch kanban config for current vault
     const vaultsResp = await fetch(`${API_URL}/api/vaults`);
     if(vaultsResp.ok) {
-      const { vaults } = await vaultsResp.json();
+      const data = await vaultsResp.json();
+      const vaults = data.vaults || [];
       const vault = vaults.find(v => v.key === currentVault || v.name.toLowerCase() === currentVault.toLowerCase());
-      if(vault?.kanban) {
-        currentKanbanConfig = vault.kanban;
+      if(!vault && vaults.length > 0){
+        const fallback = vaults.find(v => v.isDefault) || vaults[0];
+        currentVault = fallback.key || fallback.name;
+        localStorage.setItem(VAULT_STORAGE_KEY, currentVault);
+      }
+      if(vault?.kanban || (vaults.find(v => v.key === currentVault)?.kanban)) {
+        currentKanbanConfig = (vault || vaults.find(v => v.key === currentVault)).kanban;
       }
     }
 
