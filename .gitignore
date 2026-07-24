@@ -3,3 +3,4 @@ dist/
 vaults.json
 *.log
 .DS_Store
+.env
