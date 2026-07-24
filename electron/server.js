@@ -55,15 +55,25 @@ const __dirname = dirname(__filename);
 // Vaults configuration file
 const VAULTS_CONFIG_FILE = path.resolve(__dirname, '../vaults.json');
 
-// Default vaults: sibling checkout layout —
-//   /dev/kando  →  /dev/venubase-roadmap  (canonical roadmap repo)
-// Override with VENUBASE_ROADMAP_DIR (absolute path) for nonstandard layouts.
-const DEFAULT_VENUBASE_ROADMAP = process.env.VENUBASE_ROADMAP_DIR
-  ? path.resolve(process.env.VENUBASE_ROADMAP_DIR)
-  : path.resolve(__dirname, '../../venubase-roadmap');
+// Default vaults: use VENUBASE_ROADMAP_DIR env override, then sibling
+// venubase-roadmap checkout, then fall back to the bundled demo-vault.
+const SIBLING_ROADMAP = path.resolve(__dirname, '../../venubase-roadmap');
+const DEMO_VAULT = path.resolve(__dirname, '../demo-vault');
+
+async function resolveDefaultVaultPath() {
+  if (process.env.VENUBASE_ROADMAP_DIR) {
+    return path.resolve(process.env.VENUBASE_ROADMAP_DIR);
+  }
+  try {
+    await fs.access(SIBLING_ROADMAP);
+    return SIBLING_ROADMAP;
+  } catch {
+    return DEMO_VAULT;
+  }
+}
 
 const DEFAULT_VAULTS = {
-  venubase: DEFAULT_VENUBASE_ROADMAP,
+  venubase: DEMO_VAULT, // placeholder; replaced in start()
 };
 
 let DEFAULT_VAULT = 'venubase';
@@ -77,6 +87,9 @@ let VAULT_ROUTING = {};
 
 // Load vaults from config file if it exists
 async function loadVaultsConfig() {
+  const resolvedDefault = await resolveDefaultVaultPath();
+  DEFAULT_VAULTS.venubase = resolvedDefault;
+
   try {
     const data = await fs.readFile(VAULTS_CONFIG_FILE, 'utf-8');
     const config = JSON.parse(data);
