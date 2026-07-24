@@ -1052,16 +1052,6 @@ html[data-theme="dark"] {
 }
 
 .card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
-.card-order {
-  width: 20px; height: 20px;
-  background: var(--accent-light);
-  color: var(--accent);
-  border-radius: var(--r-xs);
-  font-size: 9px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; margin-top: 1px;
-  letter-spacing: 0;
-}
 .card-title {
   font-size: 12.5px; font-weight: 600; line-height: 1.4;
   color: var(--text-1); letter-spacing: .01em; flex: 1;
@@ -1089,10 +1079,10 @@ html[data-theme="dark"] {
   border: 1.5px solid var(--border-md);
 }
 .card.card-epic {
-  border-left: var(--thick) solid rgba(176,120,48,.5);
+  background: color-mix(in srgb, #b07830 6%, var(--surface));
 }
 .card.card-initiative {
-  border-left: var(--thick) solid rgba(122,154,110,.5);
+  background: color-mix(in srgb, var(--done-c) 6%, var(--surface));
 }
 .card-summary {
   font-size: 11.5px; line-height: 1.45; color: var(--text-2);
@@ -1162,28 +1152,49 @@ body:has(.overlay.open) { overflow: hidden; }
 }
 .initiative-epic-row {
   display: grid;
-  grid-template-columns: 24px 1fr auto 24px;
+  grid-template-columns: minmax(0, 1fr) auto 24px;
   gap: 10px; align-items: center;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
+.initiative-epic-row[draggable="true"] { cursor: grab; }
+.initiative-epic-row[draggable="true"]:active { cursor: grabbing; }
 .initiative-epic-row:last-child { border-bottom: none; }
 .initiative-epic-row.dragging { opacity: .45; }
 .initiative-epic-row.drag-over { background: var(--accent-subtle); }
-.initiative-epic-grip {
-  cursor: grab; color: var(--text-3); font-size: 13px; text-align: center;
-  user-select: none;
-}
 .initiative-epic-main { min-width: 0; }
-.initiative-epic-title { font-size: 12px; font-weight: 600; color: var(--text-1); margin: 0 0 2px; letter-spacing: .01em; }
+.initiative-epic-title {
+  font-size: 12px; font-weight: 600; color: var(--text-1); margin: 0 0 2px; letter-spacing: .01em;
+  line-height: 1.35;
+}
+/* Epic titles are wiki card-links — keep them primary text, not accent pills */
+.initiative-epic-title .card-link {
+  background: transparent;
+  color: var(--text-1);
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  white-space: normal;
+  text-align: left;
+  cursor: pointer;
+}
+.initiative-epic-title .card-link:hover {
+  color: var(--accent);
+  background: transparent;
+  text-decoration: underline;
+}
 .initiative-epic-notes {
   width: 100%; font-size: 11px; color: var(--text-2);
   border: none; background: transparent; padding: 0; resize: none;
   font-family: inherit; line-height: 1.35;
+  cursor: text;
 }
+.initiative-epic-notes::placeholder { color: var(--text-3); opacity: 1; }
 .initiative-epic-notes:focus { outline: none; color: var(--text-1); }
-.initiative-epic-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.initiative-epic-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.initiative-epic-progress { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .initiative-epic-status {
   font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: var(--r-xs); white-space: nowrap;
   letter-spacing: .06em; text-transform: uppercase;
@@ -2142,8 +2153,7 @@ function cardMatchesTypeFilter(card){
 
 function cardTypeBadgeHtml(card){
   if(card.is_initiative){
-    const horizon = card.horizon ? ` · ${esc(card.horizon)}` : '';
-    return `<span class="card-type-badge card-type-initiative">Initiative${horizon}</span>`;
+    return `<span class="card-type-badge card-type-initiative">Initiative</span>`;
   }
   if(card.is_epic) return `<span class="card-type-badge card-type-epic">Epic</span>`;
   return `<span class="card-type-badge card-type-slice">Slice</span>`;
@@ -2586,15 +2596,27 @@ function renderInitiativeEpicsPanel(initiativeId){
   panel.classList.remove('hidden');
   list.innerHTML = initiativeEpicsRows.map((row, idx)=>{
     const epic = getCard(row.id);
-    const title = epic?.plan_anchor || epic?.title || row.id;
+    const label = epic?.plan_anchor
+      || (epic?.title || '').replace(/^(Shipped: |release-)/i, '').trim()
+      || row.id.replace(/^release-epic-/, '').replace(/-/g, ' ');
+    const fullTitle = epic?.title || row.id;
     const status = epic?.status || row.status || 'Backlog';
-    return `<li class="initiative-epic-row" data-epic-id="${esc(row.id)}" data-index="${idx}" draggable="true">
-      <span class="initiative-epic-grip" aria-hidden="true">⋮⋮</span>
+    const { done, total } = epicSliceProgress(row.id);
+    const pct = total > 0 ? Math.round(done/total*100) : (status === 'Done' ? 100 : 0);
+    const progressLabel = total > 0 ? `${done}/${total}` : (STATUS_LABELS[status]||status);
+    const missing = !epic;
+    return `<li class="initiative-epic-row" data-epic-id="${esc(row.id)}" data-index="${idx}" draggable="true" title="Drag to reorder">
       <div class="initiative-epic-main">
-        <div class="initiative-epic-title">${wikiToCardLink(`[[${row.id}]]`, row.id)}</div>
+        <div class="initiative-epic-title">
+          <button type="button" class="card-link${missing ? ' card-link-missing' : ''}" data-card="${esc(row.id)}" title="${esc(fullTitle)}"${missing ? ' disabled' : ''}>${esc(label)}</button>
+        </div>
         <textarea class="initiative-epic-notes" rows="1" data-epic-id="${esc(row.id)}" placeholder="Notes…">${esc(row.notes||'')}</textarea>
       </div>
       <div class="initiative-epic-meta">
+        <span class="initiative-epic-progress" title="${esc(total > 0 ? `${done} of ${total} slices shipped` : status)}">
+          <span class="strategy-epic-bar"><span class="strategy-epic-fill${status==='Done'?' done':''}" style="width:${pct}%"></span></span>
+          <span class="strategy-epic-count">${esc(progressLabel)}</span>
+        </span>
         <span class="initiative-epic-status" style="${statusStyle(status)}">${esc(STATUS_LABELS[status]||status)}</span>
       </div>
       <button type="button" class="initiative-epic-remove" data-epic-id="${esc(row.id)}" title="Remove from initiative" aria-label="Remove epic">×</button>
@@ -2611,6 +2633,10 @@ function bindInitiativeEpicsPanelEvents(initiativeId){
 
   list.querySelectorAll('.initiative-epic-row[draggable]').forEach(row=>{
     row.addEventListener('dragstart', e=>{
+      if(e.target.closest('textarea, button, .card-link, .initiative-epic-remove')){
+        e.preventDefault();
+        return;
+      }
       initiativeEpicsDragId = row.dataset.epicId;
       e.dataTransfer.effectAllowed = 'move';
       requestAnimationFrame(()=> row.classList.add('dragging'));
@@ -2878,7 +2904,7 @@ function formatDate(d){
   return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 }
 
-function renderCard(card, position){
+function renderCard(card, staggerIndex = 0){
   const content = getContent(card.id);
   const {done:acDone, total:acTotal} = countAC(content);
   const deps = parseDeps(content);
@@ -2923,9 +2949,8 @@ function renderCard(card, position){
     bottom = `<div class="card-footer"><div>${tag}</div></div>`;
   }
 
-  return `<div class="card${cardShellClass(card)}" data-card="${card.id}" data-is-epic="${card.is_epic ? '1' : '0'}" data-is-initiative="${card.is_initiative ? '1' : '0'}" draggable="true" style="animation-delay:${(position||0)*30}ms">
+  return `<div class="card${cardShellClass(card)}" data-card="${card.id}" data-is-epic="${card.is_epic ? '1' : '0'}" data-is-initiative="${card.is_initiative ? '1' : '0'}" draggable="true" style="animation-delay:${staggerIndex * 30}ms">
     <div class="card-top">
-      ${position ? `<div class="card-order">${position}</div>` : ''}
       <div class="card-title">${esc(card.title)}</div>
       ${typeBadge}
     </div>
@@ -2947,9 +2972,8 @@ function renderBoard(){
     if(col.key==='Done') cards.sort((a,b)=>new Date(b.shipped_at||0)-new Date(a.shipped_at||0));
     else cards.sort(compareCardOrder);
 
-    const showPosition = col.key === 'Active' || col.key === 'Prioritized';
     const cardsHtml = cards.length
-      ? cards.map((c,i)=>renderCard(c, showPosition ? i+1 : null)).join('')
+      ? cards.map((c, i) => renderCard(c, i)).join('')
       : `<div class="col-empty"><span style="font-size:18px;opacity:.3">${col.key==='Done'?'✓':'○'}</span><span>No items</span></div>`;
 
     const isCollapsed = JSON.parse(localStorage.getItem('COLLAPSED_COLS')||'{}')[col.key];
