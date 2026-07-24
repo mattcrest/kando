@@ -4898,8 +4898,10 @@ async function syncVaultGit(){
 document.getElementById('git-sync-btn')?.addEventListener('click', syncVaultGit);
 
 initVaultFromUrl();
-initializeVaultSelector();
-loadCards();
+(async () => {
+  await initializeVaultSelector();
+  await loadCards();
+})();
 refreshGitStatus();
 setInterval(refreshGitStatus, 30000);
 </script>
