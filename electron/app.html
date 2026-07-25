@@ -2635,6 +2635,7 @@ const VAULT_STORAGE_KEY = 'venubase-kanban-vault';
 let currentVault = localStorage.getItem(VAULT_STORAGE_KEY) || 'venubase';
 let vaultColors = {}; // Cache vault colors from API
 let vaultRegistry = []; // Full /api/vaults response, incl. path + routing.canonicalRepo (for Workbench prompts)
+let lastSuggestionsData = null; // Last-loaded /api/agent-suggestions response, for "AI Reorder" prompts
 
 function apiUrl(endpoint) {
   return `${API_URL}${endpoint}?vault=${currentVault}`;
@@ -3399,6 +3400,7 @@ async function loadWorkbenchSuggestions(){
 function renderWorkbenchSuggestions(data){
   const el = document.getElementById('workbench-suggestions');
   if(!el) return;
+  lastSuggestionsData = data;
   const items = data.items || [];
   if(!items.length){
     el.innerHTML = `<div class="notepaper-empty">
@@ -3415,7 +3417,7 @@ function renderWorkbenchSuggestions(data){
             <span class="notepaper-item-rationale">${esc(item.rationale || '')}</span>
           </li>`).join('')}
       </ol>
-      <button type="button" class="stamp-btn stamp-btn-small" id="workbench-ask-btn">+ ask again</button>`;
+      <button type="button" class="stamp-btn stamp-btn-small" id="workbench-ask-btn">AI Reorder</button>`;
   }
   el.querySelectorAll('.notepaper-item').forEach(li=>{
     li.addEventListener('click', ()=> navigateToCard(li.dataset.card));
@@ -3456,12 +3458,28 @@ function buildSuggestionPrompt(contextText, count){
     return bits.join('\n');
   });
 
+  const currentItems = lastSuggestionsData?.items || [];
+  const currentListBlock = currentItems.length
+    ? [
+        `Current "up next" list (${currentItems.length} items` +
+          (lastSuggestionsData?.context ? `, generated from context: "${lastSuggestionsData.context}"` : '') + '):',
+        ...currentItems.map((item, i) => `${i + 1}. [[${item.cardId}]] — ${item.rationale || ''}`),
+      ].join('\n')
+    : 'Current "up next" list: empty — this is the first pass.';
+
   return [
     `Task: Suggest the next ${count} roadmap slices to work on next.`,
     '',
     `Vault: ${currentVault}${vaultMeta?.path ? ` (${vaultMeta.path})` : ''}`,
     '',
     contextText ? `My constraints/context: ${contextText}` : 'No additional constraints given.',
+    '',
+    currentListBlock,
+    '',
+    'Keep vs. replace: decide based on my constraints/context above, not a fixed rule.',
+    "- If I asked you to keep, build on, or reorder specific items, preserve those picks (reordering them or refreshing their rationale is fine) rather than discarding them.",
+    "- If I gave new priorities that supersede the old list, or didn't mention keeping anything, feel free to replace items that no longer fit.",
+    "- Either way, re-validate every kept pick against the current backlog below — don't keep something that's already shipped, blocked, or gone.",
     '',
     `Backlog + Prioritized slices to rank (${candidates.length} total):`,
     lines.join('\n') || '(none found)',
