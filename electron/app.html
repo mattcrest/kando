@@ -15,6 +15,7 @@
   --bg: #1a1714;
   --surface: #252019;
   --surface-sub: #2e2820;
+  --toolbar-bg: color-mix(in srgb, var(--bg) 94%, #1a1714 6%);
   --border: rgba(232,226,217,.08);
   --border-md: rgba(232,226,217,.14);
   --text-1: #e8e2d9;
@@ -149,10 +150,21 @@ html[data-theme="dark"] {
 .header-brand { color: #e8e2d9; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .header-spacer { flex: 1; min-width: 12px; }
 .header-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  padding-top: 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+}
+.header-center .view-mode-toggle {
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
 }
 .header-utilities {
   display: flex;
@@ -164,9 +176,95 @@ html[data-theme="dark"] {
 .header-git-sync {
   display: flex;
   align-items: center;
+  position: relative;
+  -webkit-app-region: no-drag;
 }
 
 .header-git-sync.hidden { display: none; }
+
+.header-git-tooltip {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 260px;
+  max-width: 340px;
+  padding: 10px 12px;
+  background: #2a2420;
+  border: 1px solid rgba(232,226,217,.18);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 24px rgba(10,8,5,.45);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .15s, transform .15s;
+  z-index: 210;
+}
+.header-git-sync:hover .header-git-tooltip,
+.header-git-sync:focus-within .header-git-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.git-tooltip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(232,226,217,.12);
+}
+.git-tooltip-branch {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(232,226,217,.92);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.git-tooltip-remote {
+  font-size: 10px;
+  color: rgba(232,226,217,.5);
+  white-space: nowrap;
+}
+.git-tooltip-body { display: flex; flex-direction: column; gap: 6px; }
+.git-tooltip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+}
+.git-tooltip-label { color: rgba(232,226,217,.55); }
+.git-tooltip-value { color: rgba(232,226,217,.9); font-weight: 600; text-align: right; }
+.git-tooltip-ok { color: var(--done-c); font-size: 11px; font-weight: 600; }
+.git-tooltip-files {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.git-tooltip-file {
+  font-size: 10px;
+  color: rgba(232,226,217,.65);
+  padding: 3px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.git-tooltip-file.git-tooltip-more { color: rgba(232,226,217,.45); font-style: italic; }
+.git-tooltip-action {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(232,226,217,.12);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-selected);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
 
 .header-git-btn {
   display: inline-flex;
@@ -204,9 +302,29 @@ html[data-theme="dark"] {
 }
 
 .header-git-dot.needs-sync {
-  background: var(--accent);
+  background: var(--accent-selected-text);
   animation: git-pulse 2.5s ease-in-out infinite;
 }
+
+.header-git-dot.hidden { display: none; }
+
+.header-git-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--accent-selected-text);
+  color: var(--accent-selected);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.header-git-count.hidden { display: none; }
 
 @keyframes git-pulse {
   0%, 100% { opacity: 1; }
@@ -221,16 +339,16 @@ html[data-theme="dark"] {
 }
 
 .header-git-btn.needs-sync {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #1f1b16;
+  background: var(--accent-selected);
+  border-color: var(--accent-selected);
+  color: var(--accent-selected-text);
   font-weight: 700;
   opacity: 1;
 }
 .header-git-btn.needs-sync:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-  color: #1f1b16;
+  background: var(--accent-selected-hover);
+  border-color: var(--accent-selected-hover);
+  color: var(--accent-selected-text);
 }
 
 .header-git-btn.synced-state {
@@ -589,7 +707,7 @@ html[data-theme="dark"] {
   gap: 12px;
   padding: 10px 20px;
   border-bottom: 1px dashed var(--rule);
-  background: var(--bg);
+  background: var(--toolbar-bg);
   flex-shrink: 0;
 }
 .content-toolbar-filters {
@@ -2063,10 +2181,12 @@ body:has(.overlay.open) { overflow: hidden; }
   </div>
   <div class="header-utilities">
     <div class="header-git-sync hidden" id="git-sync-wrap">
-      <button class="header-git-btn" id="git-sync-btn" title="Git sync status">
+      <button class="header-git-btn" id="git-sync-btn" aria-describedby="git-status-tooltip">
         <span class="header-git-dot" id="git-status-dot" aria-hidden="true"></span>
+        <span class="header-git-count hidden" id="git-status-count" aria-hidden="true"></span>
         <span class="header-git-label" id="git-status-label"></span>
       </button>
+      <div class="header-git-tooltip" id="git-status-tooltip" role="tooltip"></div>
     </div>
     <div class="header-settings">
       <button class="header-settings-btn" id="settings-btn" title="Settings" aria-haspopup="true" aria-expanded="false">
@@ -5228,34 +5348,50 @@ document.addEventListener('keydown', (e) => {
 let gitSyncInFlight = false;
 let gitSyncButtonDefault = 'Commit & Push';
 
-function applyGitUiState({ label, dot, btn, wrap, statusText, btnText, state }) {
+function gitActionCount(status){
+  let n = 0;
+  if(status.ahead > 0) n += status.ahead;
+  if(!status.clean) n += status.changed.length;
+  return n;
+}
+
+function applyGitUiState({ label, dot, btn, wrap, countEl, statusText, btnText, state, count }){
   wrap.classList.remove('hidden');
   label.textContent = btnText;
-  btn.title = statusText;
+  btn.removeAttribute('title');
 
-  dot.classList.remove('synced', 'needs-sync');
+  dot.classList.remove('synced', 'needs-sync', 'hidden');
   btn.classList.remove('needs-sync', 'synced-state', 'syncing');
+  countEl?.classList.add('hidden');
 
-  if (state === 'synced') {
+  if(state === 'synced'){
     dot.classList.add('synced');
     btn.classList.add('synced-state');
     btn.disabled = true;
   } else {
-    dot.classList.add('needs-sync');
     btn.classList.add('needs-sync');
     btn.disabled = gitSyncInFlight;
+    if(count > 0 && countEl){
+      countEl.textContent = String(count);
+      countEl.classList.remove('hidden');
+      dot.classList.add('hidden');
+    } else {
+      dot.classList.add('needs-sync');
+    }
   }
 }
 
 function describeGitStatus(status) {
   const branch = status.branch || 'main';
   const remote = status.upstream || `origin/${branch}`;
+  const count = gitActionCount(status);
 
   if (status.syncedWithRemote) {
     return {
       state: 'synced',
       statusText: `Up to date with ${remote}`,
       btnText: 'Synced with main',
+      count: 0,
     };
   }
 
@@ -5282,13 +5418,61 @@ function describeGitStatus(status) {
     state: 'needs-sync',
     statusText: parts.join(' · ') || 'Sync needed',
     btnText,
+    count,
   };
+}
+
+function renderGitTooltipHtml(status){
+  if(!status?.isRepo) return '';
+  const branch = status.branch || 'main';
+  const remote = status.upstream || `origin/${branch}`;
+  const ui = describeGitStatus(status);
+
+  let rows = '';
+  if(status.syncedWithRemote){
+    rows = `<div class="git-tooltip-row"><span class="git-tooltip-ok">Up to date with ${esc(remote)}</span></div>`;
+  } else {
+    if(status.ahead > 0){
+      rows += `<div class="git-tooltip-row"><span class="git-tooltip-label">To push</span><span class="git-tooltip-value">${status.ahead} commit${status.ahead === 1 ? '' : 's'}</span></div>`;
+    }
+    if(status.behind > 0){
+      rows += `<div class="git-tooltip-row"><span class="git-tooltip-label">Behind</span><span class="git-tooltip-value">${status.behind} on ${esc(remote)}</span></div>`;
+    }
+    if(!status.clean){
+      rows += `<div class="git-tooltip-row"><span class="git-tooltip-label">Uncommitted</span><span class="git-tooltip-value">${status.changed.length} file${status.changed.length === 1 ? '' : 's'}</span></div>`;
+    }
+  }
+
+  const files = status.changed.slice(0, 6).map(f =>
+    `<li class="git-tooltip-file">${esc(f)}</li>`
+  ).join('');
+  const more = status.changed.length > 6
+    ? `<li class="git-tooltip-file git-tooltip-more">+ ${status.changed.length - 6} more</li>` : '';
+  const filesBlock = !status.clean && status.changed.length
+    ? `<ul class="git-tooltip-files">${files}${more}</ul>` : '';
+
+  const action = status.syncedWithRemote
+    ? ''
+    : `<div class="git-tooltip-action">Click to ${esc(ui.btnText.toLowerCase())}</div>`;
+
+  return `<div class="git-tooltip-head">
+      <span class="git-tooltip-branch">${esc(branch)}</span>
+      <span class="git-tooltip-remote">${esc(remote)}</span>
+    </div>
+    <div class="git-tooltip-body">${rows}${filesBlock}</div>
+    ${action}`;
+}
+
+function updateGitTooltip(status){
+  const el = document.getElementById('git-status-tooltip');
+  if(el) el.innerHTML = renderGitTooltipHtml(status);
 }
 
 async function refreshGitStatus(){
   const wrap = document.getElementById('git-sync-wrap');
   const label = document.getElementById('git-status-label');
   const dot = document.getElementById('git-status-dot');
+  const countEl = document.getElementById('git-status-count');
   const btn = document.getElementById('git-sync-btn');
   if(!wrap || !label || !dot || !btn) return;
 
@@ -5305,7 +5489,8 @@ async function refreshGitStatus(){
     }
 
     const ui = describeGitStatus(status);
-    applyGitUiState({ label, dot, btn, wrap, ...ui });
+    updateGitTooltip(status);
+    applyGitUiState({ label, dot, btn, wrap, countEl, ...ui });
     if (ui.state === 'needs-sync') {
       gitSyncButtonDefault = ui.btnText;
     }
@@ -5321,6 +5506,7 @@ async function syncVaultGit(){
   const wrap = document.getElementById('git-sync-wrap');
   const label = document.getElementById('git-status-label');
   const dot = document.getElementById('git-status-dot');
+  const countEl = document.getElementById('git-status-count');
   gitSyncInFlight = true;
   if(btn){
     btn.disabled = true;
@@ -5339,7 +5525,8 @@ async function syncVaultGit(){
 
     if (data.status && wrap && label && dot && btn) {
       const ui = describeGitStatus(data.status);
-      applyGitUiState({ label, dot, btn, wrap, ...ui });
+      updateGitTooltip(data.status);
+      applyGitUiState({ label, dot, btn, wrap, countEl, ...ui });
     }
 
     if (data.pulled) {
