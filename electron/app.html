@@ -1860,25 +1860,31 @@ body:has(.overlay.open) { overflow: hidden; }
 .bench-why { margin-bottom: 4px; }
 .bench-next { color: var(--text-2); }
 
-/* "Up next" — ruled notepaper strip */
+/* "Up next" — ruled notepaper strip; every row is exactly one rule-line
+   tall (--line) and bottom-aligned within it, so text sits on the rule
+   the way handwriting sits on ruled paper, not floating between lines. */
 .notepaper {
+  --line: 28px;
   background: var(--workbench-paper);
+  background-image: repeating-linear-gradient(var(--workbench-paper) 0 calc(var(--line) - 1px), var(--rule) calc(var(--line) - 1px) var(--line));
   border: 1px solid var(--border-md);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-card);
-  padding: 18px 22px;
-  background-image: repeating-linear-gradient(var(--workbench-paper) 0 27px, var(--rule) 27px 28px);
-  background-position: 0 6px;
+  padding: 0 22px 16px;
 }
 .notepaper-context {
+  height: var(--line); line-height: var(--line);
+  display: flex; align-items: flex-end;
   font-family: var(--font-hand); font-size: 18px; color: var(--text-2);
-  margin-bottom: 6px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 .notepaper-list { list-style: none; counter-reset: notepaper; }
 .notepaper-item {
-  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-  padding: 3px 4px; margin: 0 -4px; border-radius: var(--r-xs);
+  height: var(--line);
+  display: flex; align-items: flex-end; gap: 10px;
+  padding: 0 4px; margin: 0 -4px; border-radius: var(--r-xs);
   cursor: pointer; counter-increment: notepaper;
+  overflow: hidden;
   transition: background .1s;
 }
 .notepaper-item:hover { background: var(--accent-subtle); }
@@ -1889,10 +1895,12 @@ body:has(.overlay.open) { overflow: hidden; }
 }
 .notepaper-item-title {
   font-family: 'SFMono-Regular', monospace; font-size: var(--fs-base); font-weight: 700;
-  color: var(--text-1);
+  color: var(--text-1); white-space: nowrap; flex-shrink: 0;
 }
 .notepaper-item-rationale {
-  font-family: var(--font-hand); font-size: 18px; color: var(--text-2); line-height: 1.2;
+  font-family: var(--font-hand); font-size: 18px; color: var(--text-2); line-height: 1;
+  min-width: 0; flex: 1 1 auto;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 .notepaper-empty { text-align: center; padding: 18px 8px; }
 .notepaper-empty p { font-size: var(--fs-sm); color: var(--text-3); margin-bottom: 12px; }
