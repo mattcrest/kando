@@ -8,7 +8,7 @@ Use it to plan releasable slices, drag cards across columns, and let coding agen
 
 - **Multi-vault** — Venubase, PlayerPath, or any project; switch vaults in the UI
 - **Three-layer hierarchy** — initiatives (`initiative: true`) → epics (`epic: true`) → story slices, linked by frontmatter wikilinks (`initiative:` on epics, `epic:` on slices)
-- **Board + Strategy views** — kanban board for execution; a Now/Next/Later roadmap of initiative rows with per-epic slice progress (header toggle)
+- **Board + Strategy + Workbench views** — kanban board for execution; a Now/Next/Later roadmap of initiative rows with per-epic slice progress; a Workbench view showing which slices agents are actively working on (and why), an AI-suggested "up next" queue, and one-click prompts to hand a slice to a coding agent (header toggle)
 - **Card-type filter** — All / Initiatives / Epics / Slices dropdown in the header
 - **Initiative epic manager** — drag-to-reorder, add/remove, and annotate an initiative's epics from the card modal; writes the card's `## Epics` table and each epic's `initiative:` link
 - **Cross-project routing** — `vaults.json` maps app repo paths → roadmap vault + convention files
@@ -60,6 +60,12 @@ Opens **http://127.0.0.1:3001** (or run `./scripts/kando-dev.sh start`).
 | **Story slice** | neither flag | `epic: '[[release-epic-<slug>]]'` | Board; epic sidebar slice list |
 
 All layers still require `release: true` to appear in Kando. The card modal derives its breadcrumb (Initiative › Epic › Slice) and progress roll-ups from these links. Per-vault details live in each vault's `roadmap-conventions.md`.
+
+Slices also carry an optional set of **agent progress fields** —
+`agent_status`, `agent_provider`, `agent_summary`, `agent_next`,
+`agent_updated_at` — written by coding agents as they work, never by hand.
+They power the **Workbench** view (see below) and are documented in
+[docs/agent-routing.md](docs/agent-routing.md#5-keep-progress-tracking-current).
 
 ## Configuration (`vaults.json`)
 
@@ -118,6 +124,8 @@ export VENUBASE_ROADMAP_DIR=/path/to/roadmap-vault
 | `GET/PUT /api/cards/:id` | Read/update card metadata and body |
 | `GET/PUT /api/initiatives/:id/epics` | Read/reorder/add/remove an initiative's epics (syncs `## Epics` table + epic `initiative:` frontmatter) |
 | `GET/PUT /api/roadmap-index?vault=<key>` | Read/update queue order in `roadmap-index.md` |
+| `GET /api/agent-suggestions?vault=<key>` | Parsed `agent-suggestions.md`, resolved against cards (Workbench "up next") |
+| `GET /api/vaults/:name/conventions` | Raw text of the vault's `roadmap-conventions.md` |
 | `GET /api/vaults/:name/git/status` | Git status for vault directory |
 | `POST /api/vaults/:name/git/sync` | Commit and optional push |
 

@@ -12,6 +12,8 @@ Kando is a local kanban UI + API over Markdown roadmap cards in Tolaria-style va
 
 Routing config lives in **`vaults.json`** (`routing` section). No agent-specific mapping tables are required.
 
+**Whenever you edit a slice, also update its `agent_status` / `agent_provider` / `agent_summary` / `agent_next` / `agent_updated_at` frontmatter** — this is what Kando's **Workbench** view surfaces to the user as "what's being worked on and why," so it needs to reflect reality, not what it said last time. See [docs/agent-routing.md](docs/agent-routing.md#5-keep-progress-tracking-current). If asked to suggest what to work on next, write the ranked list to `agent-suggestions.md` in the vault instead of only replying in chat (§6 of the same doc) — that's what populates Workbench's "up next" list.
+
 ## Configuration
 
 - Copy [`vaults.example.json`](vaults.example.json) → `vaults.json` (gitignored).
