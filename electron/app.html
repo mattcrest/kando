@@ -179,6 +179,15 @@ html[data-theme="dark"] {
   position: relative;
   -webkit-app-region: no-drag;
 }
+.header-git-sync:hover::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 340px;
+  height: 10px;
+  z-index: 209;
+}
 
 .header-git-sync.hidden { display: none; }
 
@@ -186,7 +195,7 @@ html[data-theme="dark"] {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 6px;
+  margin-top: 2px;
   min-width: 260px;
   max-width: 340px;
   padding: 10px 12px;
@@ -200,27 +209,57 @@ html[data-theme="dark"] {
   transition: opacity .15s, transform .15s;
   z-index: 210;
 }
+.header-git-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
 .header-git-sync:hover .header-git-tooltip,
-.header-git-sync:focus-within .header-git-tooltip {
+.header-git-sync:focus-within .header-git-tooltip,
+.header-git-tooltip:hover {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
 }
 .git-tooltip-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(232,226,217,.12);
 }
-.git-tooltip-branch {
+.git-tooltip-repo-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.git-tooltip-repo {
   font-size: 11px;
   font-weight: 700;
   color: rgba(232,226,217,.92);
-  letter-spacing: .04em;
+  letter-spacing: .02em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+a.git-tooltip-repo:hover {
+  color: var(--accent-selected);
+  text-decoration: underline;
+}
+.git-tooltip-branch {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(232,226,217,.72);
+  letter-spacing: .06em;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 .git-tooltip-remote {
   font-size: 10px;
@@ -2173,9 +2212,9 @@ body:has(.overlay.open) { overflow: hidden; }
   <div class="header-spacer"></div>
   <div class="header-center">
     <div class="header-card-filter">
-      <div class="view-mode-toggle" id="view-mode-toggle" title="Board vs strategy view">
-        <button type="button" class="view-mode-btn active" data-view="board">Board</button>
+      <div class="view-mode-toggle" id="view-mode-toggle" title="Strategy vs board view">
         <button type="button" class="view-mode-btn" data-view="strategy">Strategy</button>
+        <button type="button" class="view-mode-btn" data-view="board">Board</button>
       </div>
     </div>
   </div>
@@ -2327,7 +2366,6 @@ body:has(.overlay.open) { overflow: hidden; }
         </button>
       </div>
       <div class="modal-footer-actions">
-        <button class="modal-footer-link" id="modal-open-tolaria" type="button">Open in Tolaria</button>
         <button class="modal-footer-link" id="modal-open-cursor" type="button">Open in Cursor</button>
       </div>
     </div>
@@ -2517,7 +2555,7 @@ function cardTypeFilterLabel(){
   const names = { initiative:'Initiatives', epic:'Epics', slice:'Slices' };
   return CARD_TYPES.filter(t=>cardTypeFilter.has(t)).map(t=>names[t]).join(' + ');
 }
-let viewMode = localStorage.getItem(VIEW_MODE_KEY) || 'board';
+let viewMode = localStorage.getItem(VIEW_MODE_KEY) || 'strategy';
 let initiativeEpicsRows = [];
 let initiativeEpicsSaving = false;
 let initiativeEpicsDragId = null;
@@ -4270,11 +4308,6 @@ document.getElementById('modal-next').addEventListener('click', ()=>{
   if(idx<all.length-1) navigateToCard(all[idx+1].id);
 });
 
-document.getElementById('modal-open-tolaria').addEventListener('click', ()=>{
-  if(!modalCardId) return;
-  openInTolaria(modalCardId);
-});
-
 document.getElementById('modal-open-cursor').addEventListener('click', ()=>{
   if(!modalCardId) return;
   openInCursor(modalCardId);
@@ -4292,33 +4325,6 @@ document.getElementById('modal-copy-path').addEventListener('click', async () =>
     showToast('Copy failed');
   }
 });
-
-async function openInTolaria(cardId){
-  const card = getCard(cardId);
-  if(!card) return;
-
-  try {
-    const resp = await fetch(`${API_URL}/api/tolaria/open`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cardPath: card.path,
-        vault: currentVault
-      })
-    });
-
-    if(resp.ok){
-      showToast('Opening in Tolaria…');
-      return;
-    }
-
-    const data = await resp.json().catch(() => ({}));
-    showToast(data.error || 'Could not open in Tolaria');
-  } catch(err){
-    console.error(err);
-    showToast('Could not open in Tolaria');
-  }
-}
 
 async function openInCursor(cardId){
   const card = getCard(cardId);
@@ -5426,6 +5432,15 @@ function renderGitTooltipHtml(status){
   if(!status?.isRepo) return '';
   const branch = status.branch || 'main';
   const remote = status.upstream || `origin/${branch}`;
+  const repoName = status.repoName
+    || (status.canonicalRepo ? status.canonicalRepo.split('/').pop() : null)
+    || currentVault;
+  const repoWebUrl = status.repoWebUrl
+    || (status.canonicalRepo ? `https://github.com/${status.canonicalRepo}` : null)
+    || (status.remoteUrl ? status.remoteUrl.replace(/\.git$/, '').replace(/^git@([^:]+):/, 'https://$1/') : null);
+  const repoEl = repoWebUrl
+    ? `<a class="git-tooltip-repo" href="${esc(repoWebUrl)}" target="_blank" rel="noopener" title="${esc(repoName)}" onclick="event.stopPropagation()">${esc(repoName)}</a>`
+    : `<span class="git-tooltip-repo" title="${esc(repoName)}">${esc(repoName)}</span>`;
   const ui = describeGitStatus(status);
 
   let rows = '';
@@ -5456,7 +5471,10 @@ function renderGitTooltipHtml(status){
     : `<div class="git-tooltip-action">Click to ${esc(ui.btnText.toLowerCase())}</div>`;
 
   return `<div class="git-tooltip-head">
-      <span class="git-tooltip-branch">${esc(branch)}</span>
+      <div class="git-tooltip-repo-line">
+        ${repoEl}
+        <span class="git-tooltip-branch">${esc(branch)}</span>
+      </div>
       <span class="git-tooltip-remote">${esc(remote)}</span>
     </div>
     <div class="git-tooltip-body">${rows}${filesBlock}</div>

@@ -1060,7 +1060,23 @@ app.get('/api/vaults/:name/git/status', async (req, res) => {
     }
     const status = await getGitStatus(VAULTS[name]);
     const gitOptions = getVaultGitOptions(name);
-    res.json({ ...status, autoCommit: gitOptions.autoCommit, autoPush: gitOptions.autoPush });
+    const routing = getRoutingForVault(name, VAULT_ROUTING);
+    const canonicalRepo = routing?.canonicalRepo || null;
+    let repoName = status.repoName;
+    let repoWebUrl = status.repoWebUrl;
+    if (canonicalRepo) {
+      const short = canonicalRepo.split('/').pop();
+      if (short) repoName = short;
+      if (!repoWebUrl) repoWebUrl = `https://github.com/${canonicalRepo}`;
+    }
+    res.json({
+      ...status,
+      canonicalRepo,
+      repoName,
+      repoWebUrl,
+      autoCommit: gitOptions.autoCommit,
+      autoPush: gitOptions.autoPush,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1118,43 +1134,6 @@ app.post('/api/cursor/open', async (req, res) => {
 
     cursorProcess.unref();
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/tolaria/open - Open a card in Tolaria (or Obsidian)
-app.post('/api/tolaria/open', async (req, res) => {
-  try {
-    const { spawn } = await import('child_process');
-    const { cardPath, vault } = req.body;
-    if (!cardPath) {
-      return res.status(400).json({ error: 'cardPath is required' });
-    }
-
-    const vaultDir = getVaultDir({ query: { vault } });
-    const fullPath = path.resolve(vaultDir, cardPath);
-    await fs.access(fullPath);
-
-    const openWith = (args) =>
-      new Promise((resolve, reject) => {
-        const proc = spawn('open', args, { detached: true, stdio: 'ignore' });
-        proc.on('error', reject);
-        proc.unref();
-        resolve();
-      });
-
-    for (const app of ['Tolaria', 'Obsidian']) {
-      try {
-        await openWith(['-a', app, fullPath]);
-        return res.json({ success: true, app });
-      } catch {
-        // try next app
-      }
-    }
-
-    await openWith([fullPath]);
-    res.json({ success: true, app: 'default' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
