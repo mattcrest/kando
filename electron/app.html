@@ -772,6 +772,7 @@ a.git-tooltip-repo:hover {
   background: var(--toolbar-bg);
   flex-shrink: 0;
 }
+.content-toolbar.hidden { display: none; }
 .content-toolbar-filters {
   display: flex;
   align-items: center;
@@ -2952,6 +2953,7 @@ function setViewMode(mode){
   document.getElementById('board-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   document.getElementById('strategy-view')?.classList.toggle('visible', viewMode === 'strategy');
   document.getElementById('workbench-view')?.classList.toggle('visible', viewMode === 'workbench');
+  document.getElementById('content-toolbar')?.classList.toggle('hidden', viewMode === 'workbench');
   document.getElementById('card-type-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   document.getElementById('initiative-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   if(viewMode === 'strategy') renderStrategyView();
@@ -3336,7 +3338,7 @@ function agentStatusLabel(card){
 }
 
 function benchCards(){
-  return state.cards.filter(c => c.agent_status || c.status === 'Active');
+  return state.cards.filter(c => !c.is_epic && !c.is_initiative && (c.agent_status || c.status === 'Active'));
 }
 
 function renderBenchCard(card){
@@ -5114,6 +5116,7 @@ if(epicAddPickerTrigger && epicAddPickerMenu){
     }
   });
 }
+document.getElementById('content-toolbar')?.classList.toggle('hidden', viewMode === 'workbench');
 document.getElementById('card-type-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
 document.getElementById('initiative-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
 
