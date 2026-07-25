@@ -24,6 +24,10 @@
   --accent-light: rgba(196,135,59,.12);
   --accent-hover: #d4975b;
   --accent-subtle: rgba(196,135,59,.07);
+  /* selection — active tabs, menu items, dropdown options (anchored to bright gold, not theme accent) */
+  --accent-selected: color-mix(in srgb, #d4975b 82%, #f0d4a0 18%);
+  --accent-selected-text: #1a1410;
+  --accent-selected-hover: color-mix(in srgb, #d4975b 68%, #f5ddb0 32%);
   --done-c: #7a9a6e;
   --done-bg: rgba(122,154,110,.1);
   --defer-c: #c4873b;
@@ -39,6 +43,20 @@
   --col-w: 320px;
   --header-h: 52px;
   --thick: 3px;
+  /* notebook: dashed rules between entries on a paper sheet */
+  --rule: rgba(232,226,217,.16);
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23p)'/%3E%3C/svg%3E");
+  /* type scale — readable first; labels stay compact but never microscopic */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --lh-tight: 1.35;
+  --lh-body: 1.5;
+  --card-epic-bg: color-mix(in srgb, #b07830 6%, var(--surface));
+  --card-initiative-bg: color-mix(in srgb, var(--done-c) 6%, var(--surface));
 }
 
 html { font-family: var(--font); -webkit-font-smoothing: antialiased; letter-spacing: 0.01em; }
@@ -46,9 +64,9 @@ body { background: var(--bg); color: var(--text-1); min-height: 100vh; }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: #f5f0e8;
-    --surface: #fffdf9;
-    --surface-sub: #f0ebe3;
+    --bg: #f8f4ec;
+    --surface: #ffffff;
+    --surface-sub: #f8f4ec;
     --border: rgba(44,34,22,.08);
     --border-md: rgba(44,34,22,.14);
     --text-1: #2c2216;
@@ -61,13 +79,16 @@ body { background: var(--bg); color: var(--text-1); min-height: 100vh; }
     --shadow-card: 0 1px 3px rgba(44,34,22,.06);
     --shadow-card-hover: 0 4px 12px rgba(44,34,22,.1);
     --shadow-modal: 0 24px 80px rgba(44,34,22,.18), 0 4px 16px rgba(44,34,22,.1);
+    --rule: rgba(44,34,22,.18);
+    --card-epic-bg: color-mix(in srgb, #b07830 4%, #ffffff);
+    --card-initiative-bg: color-mix(in srgb, #7a9a6e 4%, #ffffff);
   }
 }
 
 html[data-theme="light"] {
-  --bg: #f5f0e8;
-  --surface: #fffdf9;
-  --surface-sub: #f0ebe3;
+  --bg: #f8f4ec;
+  --surface: #ffffff;
+  --surface-sub: #f8f4ec;
   --border: rgba(44,34,22,.08);
   --border-md: rgba(44,34,22,.14);
   --text-1: #2c2216;
@@ -80,6 +101,9 @@ html[data-theme="light"] {
   --shadow-card: 0 1px 3px rgba(44,34,22,.06);
   --shadow-card-hover: 0 4px 12px rgba(44,34,22,.1);
   --shadow-modal: 0 24px 80px rgba(44,34,22,.18), 0 4px 16px rgba(44,34,22,.1);
+  --rule: rgba(44,34,22,.18);
+  --card-epic-bg: color-mix(in srgb, #b07830 4%, #ffffff);
+  --card-initiative-bg: color-mix(in srgb, #7a9a6e 4%, #ffffff);
 }
 
 html[data-theme="dark"] {
@@ -98,6 +122,7 @@ html[data-theme="dark"] {
   --shadow-card: 0 1px 2px rgba(10,8,5,.2);
   --shadow-card-hover: 0 3px 12px rgba(10,8,5,.25);
   --shadow-modal: 0 24px 80px rgba(5,4,3,.5), 0 4px 16px rgba(5,4,3,.3);
+  --rule: rgba(232,226,217,.16);
 }
 
 /* ── Header ─────────────────────────────────── */
@@ -122,41 +147,49 @@ html[data-theme="dark"] {
   flex-shrink: 0;
 }
 .header-brand { color: #e8e2d9; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.header-divider { color: rgba(232,226,217,.2); font-size: 14px; }
-.header-sub { color: rgba(232,226,217,.5); font-size: 12px; font-weight: 500; letter-spacing: .02em; }
-.header-spacer { flex: 1; }
+.header-spacer { flex: 1; min-width: 12px; }
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.header-utilities {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 
-.header-reset-btn {
+.header-git-sync {
+  display: flex;
+  align-items: center;
+}
+
+.header-git-sync.hidden { display: none; }
+
+.header-git-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid rgba(232,226,217,.15);
   background: transparent;
-  color: rgba(232,226,217,.5);
+  color: rgba(232,226,217,.6);
   font-size: 10px;
   font-family: var(--font);
   font-weight: 600;
   padding: 4px 10px;
   border-radius: var(--r-sm);
   cursor: pointer;
-  transition: color .15s, border-color .15s;
+  transition: color .15s, border-color .15s, background .15s, opacity .15s;
   letter-spacing: .06em;
   text-transform: uppercase;
-}
-.header-reset-btn:hover { color: rgba(232,226,217,.8); border-color: rgba(232,226,217,.3); }
-
-.header-git-sync {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-right: 8px;
-}
-
-.header-git-sync.hidden { display: none; }
-
-.header-git-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  max-width: 160px;
   min-width: 0;
 }
+.header-git-btn:hover:not(:disabled) { color: rgba(232,226,217,.9); border-color: rgba(232,226,217,.3); }
+.header-git-btn:disabled { opacity: .45; cursor: default; }
+.header-git-btn.syncing { opacity: .7; }
 
 .header-git-dot {
   width: 6px;
@@ -180,36 +213,12 @@ html[data-theme="dark"] {
   50% { opacity: .5; }
 }
 
-.header-git-status {
-  font-size: 10px;
-  color: rgba(232,226,217,.4);
-  max-width: 140px;
+.header-git-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  letter-spacing: .02em;
+  min-width: 0;
 }
-
-.header-git-status.synced { color: var(--done-c); }
-.header-git-status.needs-sync { color: var(--accent); }
-
-.header-git-btn {
-  border: 1px solid rgba(232,226,217,.15);
-  background: transparent;
-  color: rgba(232,226,217,.6);
-  font-size: 10px;
-  font-family: var(--font);
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: color .15s, border-color .15s, background .15s, opacity .15s;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-.header-git-btn:hover:not(:disabled) { color: rgba(232,226,217,.9); border-color: rgba(232,226,217,.3); }
-.header-git-btn:disabled { opacity: .45; cursor: default; }
-.header-git-btn.syncing { opacity: .7; }
 
 .header-git-btn.needs-sync {
   background: var(--accent);
@@ -232,13 +241,13 @@ html[data-theme="dark"] {
   cursor: default;
 }
 
-.header-theme-selector {
+.header-settings {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.header-theme-btn {
+.header-settings-btn {
   border: 1px solid rgba(232,226,217,.15);
   background: transparent;
   color: rgba(232,226,217,.5);
@@ -252,60 +261,89 @@ html[data-theme="dark"] {
   width: 28px;
   height: 28px;
 }
-.header-theme-btn:hover { color: rgba(232,226,217,.8); border-color: rgba(232,226,217,.3); }
+.header-settings-btn:hover { color: rgba(232,226,217,.8); border-color: rgba(232,226,217,.3); }
 
-.theme-icon {
+.settings-icon {
   width: 14px;
   height: 14px;
 }
 
-.theme-menu {
+.settings-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  background: #252019;
-  border: 1px solid var(--border-md);
+  background: #2a2420;
+  border: 1px solid rgba(232,226,217,.18);
   border-radius: var(--r-md);
-  padding: 4px;
+  padding: 6px;
   margin-top: 4px;
-  min-width: 140px;
+  min-width: 168px;
   opacity: 0;
   pointer-events: none;
   transform: translateY(-4px);
   transition: opacity .15s, transform .15s;
   z-index: 200;
-  box-shadow: 0 8px 24px rgba(10,8,5,.4);
+  box-shadow: 0 8px 24px rgba(10,8,5,.45);
 }
 
-.theme-menu.open {
+.settings-menu.open {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
 }
 
+.settings-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-menu-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(232,226,217,.58);
+  padding: 4px 10px 4px;
+}
+
+.settings-menu-divider {
+  height: 1px;
+  background: rgba(232,226,217,.12);
+  margin: 6px 4px;
+}
+
 .theme-option {
   padding: 8px 12px;
-  color: var(--text-2);
+  color: rgba(232,226,217,.88);
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  letter-spacing: .02em;
   cursor: pointer;
   border-radius: var(--r-sm);
   transition: all .1s;
   display: flex;
   align-items: center;
   gap: 8px;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  text-align: left;
+  width: 100%;
 }
 
 .theme-option:hover {
-  background: var(--accent-light);
-  color: var(--text-1);
+  background: rgba(232,226,217,.1);
+  color: #f5f0e8;
 }
 
-.theme-option.active {
-  background: var(--accent);
-  color: #1f1b16;
+.ui-selected,
+.view-mode-btn.active,
+.theme-option.active,
+.vault-switcher-item.active,
+.initiative-filter-option.active {
+  background: var(--accent-selected);
+  color: var(--accent-selected-text);
   font-weight: 700;
 }
 
@@ -315,6 +353,27 @@ html[data-theme="dark"] {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-menu-action {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: rgba(232,226,217,.88);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font);
+  letter-spacing: .02em;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background .1s, color .1s;
+}
+.settings-menu-action:hover {
+  background: rgba(184,66,51,.14);
+  color: #e8a8a0;
 }
 
 /* ── Vault Switcher ────────────────────────── */
@@ -359,8 +418,8 @@ html[data-theme="dark"] {
 
 .vault-switcher-menu {
   position: absolute; top: 100%; left: 0;
-  background: #252019;
-  border: 1px solid var(--border-md);
+  background: #2a2420;
+  border: 1px solid rgba(232,226,217,.18);
   border-radius: var(--r-md);
   padding: 4px;
   margin-top: 4px;
@@ -369,7 +428,7 @@ html[data-theme="dark"] {
   transform: translateY(-4px);
   transition: opacity .15s, transform .15s;
   z-index: 200;
-  box-shadow: 0 8px 24px rgba(10,8,5,.4);
+  box-shadow: 0 8px 24px rgba(10,8,5,.45);
 }
 .vault-switcher-menu.open {
   opacity: 1;
@@ -379,7 +438,7 @@ html[data-theme="dark"] {
 
 .vault-switcher-item {
   padding: 8px 12px;
-  color: var(--text-2);
+  color: rgba(232,226,217,.88);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: .04em;
@@ -390,28 +449,24 @@ html[data-theme="dark"] {
   display: flex; align-items: center; gap: 6px;
 }
 .vault-switcher-item:hover {
-  background: var(--accent-light);
-  color: var(--text-1);
+  background: rgba(232,226,217,.1);
+  color: #f5f0e8;
 }
-.vault-switcher-item.active {
-  background: var(--accent);
-  color: #1f1b16;
-  font-weight: 700;
-}
+
 .vault-switcher-item .vault-indicator {
   display: none;
 }
 
 .vault-switcher-item.manage-vaults {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(232,226,217,.12);
   margin-top: 4px;
   padding-top: 8px;
-  color: var(--text-3);
+  color: rgba(232,226,217,.58);
   font-size: 10px;
 }
 .vault-switcher-item.manage-vaults:hover {
-  background: var(--accent-light);
-  color: var(--text-2);
+  background: rgba(232,226,217,.1);
+  color: rgba(232,226,217,.82);
 }
 
 /* ── Search & card filter ───────────────────── */
@@ -460,7 +515,7 @@ html[data-theme="dark"] {
   color: rgba(232,226,217,.9);
 }
 .card-type-filter-menu {
-  position: absolute; top: 100%; right: 0;
+  position: absolute; top: 100%; left: 0; right: auto;
   background: #252019;
   border: 1px solid var(--border-md);
   border-radius: var(--r-md);
@@ -526,6 +581,120 @@ html[data-theme="dark"] {
   border-bottom-color: var(--accent);
 }
 .header-search-input::placeholder { color: rgba(232,226,217,.3); }
+
+/* ── Content toolbar (filters + search above board) ── */
+.content-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px dashed var(--rule);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.content-toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.content-toolbar .card-type-filter-btn {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+}
+.content-toolbar .card-type-filter-btn:hover,
+.content-toolbar .card-type-filter-btn[aria-expanded="true"] {
+  border-color: var(--border-md);
+  color: var(--text-1);
+}
+.content-toolbar .card-type-filter-menu {
+  background: var(--surface);
+  border-color: var(--border-md);
+  box-shadow: 0 8px 24px rgba(10,8,5,.12);
+}
+.initiative-filter-wrap { position: relative; }
+.initiative-filter-wrap.hidden,
+.card-type-filter-wrap.hidden { display: none; }
+.initiative-filter-menu {
+  min-width: 220px;
+  max-width: 320px;
+}
+.initiative-filter-search-wrap {
+  padding: 4px 4px 6px;
+  border-bottom: 1px dashed var(--rule);
+}
+.initiative-filter-search {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  outline: none;
+}
+.initiative-filter-search:focus { border-color: var(--accent); }
+.initiative-filter-search::placeholder { color: var(--text-3); }
+.initiative-filter-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.initiative-filter-option {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font);
+  letter-spacing: .02em;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: background .1s, color .1s;
+}
+.initiative-filter-option:hover { background: var(--accent-light); color: var(--text-1); }
+.initiative-filter-option.hidden { display: none; }
+.initiative-filter-empty {
+  padding: 8px 12px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+.content-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.content-search-icon {
+  color: var(--text-3);
+  flex-shrink: 0;
+  display: flex;
+}
+.content-search-input {
+  width: 200px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  outline: none;
+  transition: border-color .15s, width .2s;
+}
+.content-search-input:focus {
+  border-color: var(--accent);
+  width: 260px;
+}
+.content-search-input::placeholder { color: var(--text-3); }
 
 /* ── Vault Selector ──────────────────────────── */
 .header-vault-select {
@@ -950,8 +1119,8 @@ html[data-theme="dark"] {
 /* ── Board ───────────────────────────────────── */
 .board-wrap {
   overflow-x: auto;
-  padding: 20px 20px 40px;
-  min-height: calc(100vh - var(--header-h));
+  padding: 16px 20px 40px;
+  min-height: calc(100vh - var(--header-h) - 48px);
 }
 .board {
   display: flex; gap: 14px;
@@ -969,10 +1138,10 @@ html[data-theme="dark"] {
 .column:nth-child(6) { animation-delay: .15s; }
 @keyframes col-enter { from { opacity: 0; } to { opacity: 1; } }
 .col-head {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 4px 8px;
-  margin-bottom: 6px;
-  border-bottom: var(--thick) solid var(--border-md);
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 6px 24px 8px;
+  margin-bottom: 8px;
+  position: relative;
 }
 .col-dot {
   width: 6px; height: 6px;
@@ -985,23 +1154,33 @@ html[data-theme="dark"] {
 
 .col-name {
   font-size: 10px; font-weight: 700; color: var(--text-2);
-  flex: 1; letter-spacing: .1em; text-transform: uppercase;
+  flex: none; letter-spacing: .1em; text-transform: uppercase;
 }
 .col-count {
   color: var(--text-3);
   font-size: 10px; font-weight: 600;
   letter-spacing: .02em;
 }
+/* column body is one sheet of paper; cards are entries ruled off from each other */
 .col-body {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column;
   min-height: 100px;
-  padding: 4px;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border-md);
   border-radius: var(--r-md);
+  box-shadow: var(--shadow-card), inset 0 1px 0 var(--border);
   transition: background .15s ease-out, outline .15s;
   outline: 2px solid transparent;
 }
+.col-body::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: var(--paper-grain);
+  opacity: .04; pointer-events: none;
+}
 .col-body.drag-over {
-  background: var(--accent-subtle);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
   outline-color: var(--accent);
 }
 .col-empty {
@@ -1010,42 +1189,46 @@ html[data-theme="dark"] {
   color: var(--text-3); font-size: 11px;
   letter-spacing: .02em;
   min-height: 60px;
+  position: relative; z-index: 1;
 }
 .drop-indicator {
-  height: var(--thick);
+  height: 2px;
   background: var(--accent);
-  border-radius: 2px;
-  margin: 2px 0;
+  position: relative; z-index: 1;
 }
 
-.col-toggle { cursor: pointer; color: var(--text-3); padding: 4px 2px; font-size: 11px; flex-shrink: 0; }
+.col-toggle {
+  cursor: pointer; color: var(--text-3); padding: 4px 2px; font-size: 11px; flex-shrink: 0;
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+}
 .col-toggle:hover { color: var(--text-2); }
 
 .column.collapsed { width: 36px; }
-.column.collapsed .col-head { flex-direction: column; gap: 4px; border-bottom: none; padding-bottom: 0; }
+.column.collapsed .col-head { flex-direction: column; gap: 4px; padding: 8px 0; }
+.column.collapsed .col-toggle { position: static; transform: none; }
 .column.collapsed .col-name { writing-mode: vertical-rl; text-orientation: mixed; font-size: 9px; transform: rotate(180deg); }
 .column.collapsed .col-body { display: none; }
 .column.collapsed .col-count { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 9px; }
 
 /* ── Card ────────────────────────────────────── */
+/* an entry on the sheet: no shell of its own, just a dashed rule below it */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--rule);
   padding: 12px 14px;
   cursor: grab;
-  box-shadow: var(--shadow-card);
-  transition: box-shadow .15s ease-out, border-color .15s, transform .1s ease-out, opacity .1s;
+  transition: box-shadow .12s ease-out, opacity .1s;
   user-select: none;
   position: relative;
+  z-index: 1;
   animation: card-enter .15s ease-out both;
 }
-.card:hover {
-  box-shadow: var(--shadow-card-hover);
-  border-color: var(--border-md);
-}
-.card:active { cursor: grabbing; transform: scale(.985); }
-.card.dragging { opacity: .3; transform: scale(.97); box-shadow: none; }
+.card:last-child { border-bottom: none; }
+/* inset shadow tints the row while leaving any type wash visible underneath */
+.card:hover { box-shadow: inset 0 0 0 999px var(--accent-subtle); }
+.card:active { cursor: grabbing; }
+.card.dragging { opacity: .3; box-shadow: none; }
 @keyframes card-enter {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -1053,14 +1236,14 @@ html[data-theme="dark"] {
 
 .card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
 .card-title {
-  font-size: 12.5px; font-weight: 600; line-height: 1.4;
+  font-size: var(--fs-md); font-weight: 600; line-height: var(--lh-tight);
   color: var(--text-1); letter-spacing: .01em; flex: 1;
 }
 .card-type-badge {
   display: inline-flex; align-items: center;
-  font-size: 8px; font-weight: 800;
-  padding: 2px 6px; border-radius: var(--r-xs);
-  letter-spacing: .1em; text-transform: uppercase;
+  font-size: var(--fs-xs); font-weight: 700;
+  padding: 2px 7px; border-radius: var(--r-xs);
+  letter-spacing: .06em; text-transform: uppercase;
   flex-shrink: 0; margin-top: 2px;
 }
 .card-type-epic {
@@ -1079,26 +1262,26 @@ html[data-theme="dark"] {
   border: 1.5px solid var(--border-md);
 }
 .card.card-epic {
-  background: color-mix(in srgb, #b07830 6%, var(--surface));
+  background: var(--card-epic-bg);
 }
 .card.card-initiative {
-  background: color-mix(in srgb, var(--done-c) 6%, var(--surface));
+  background: var(--card-initiative-bg);
 }
 .card-summary {
-  font-size: 11.5px; line-height: 1.45; color: var(--text-2);
+  font-size: var(--fs-sm); line-height: var(--lh-body); color: var(--text-2);
   margin: 6px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .card-tag {
   display: inline-flex; align-items: center;
-  font-size: 9px; font-weight: 600;
+  font-size: var(--fs-xs); font-weight: 600;
   padding: 2px 7px; border-radius: var(--r-xs);
   letter-spacing: .04em; text-transform: uppercase;
   white-space: nowrap;
 }
+/* no inner rule — the dashed entry separator is the only ruling on the sheet */
 .card-footer {
   display: flex; align-items: center; justify-content: space-between;
-  margin-top: 8px; padding-top: 8px;
-  border-top: 1px solid var(--border);
+  margin-top: 10px;
   gap: 8px;
 }
 .card-footer > div:first-child { flex-shrink: 0; }
@@ -1106,11 +1289,11 @@ html[data-theme="dark"] {
 .card-progress { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
 .progress-bar { flex: 1; max-width: 72px; height: 4px; background: var(--border-md); border-radius: 99px; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .2s ease-out; }
-.card-progress-label { font-size: 9.5px; color: var(--text-3); font-weight: 600; white-space: nowrap; letter-spacing: .02em; }
-.card-deps { font-size: 9.5px; color: var(--text-3); white-space: nowrap; letter-spacing: .02em; }
-.card-shipped { font-size: 9.5px; color: var(--done-c); font-weight: 600; white-space: nowrap; letter-spacing: .02em; }
+.card-progress-label { font-size: var(--fs-xs); color: var(--text-3); font-weight: 600; white-space: nowrap; letter-spacing: .02em; }
+.card-deps { font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; letter-spacing: .02em; }
+.card-shipped { font-size: var(--fs-xs); color: var(--done-c); font-weight: 600; white-space: nowrap; letter-spacing: .02em; }
 .card-pr {
-  font-size: 9.5px; color: var(--accent); font-weight: 600;
+  font-size: var(--fs-xs); color: var(--accent); font-weight: 600;
   text-decoration: none; white-space: nowrap; letter-spacing: .02em;
 }
 .card-pr:hover { text-decoration: underline; }
@@ -1147,26 +1330,30 @@ body:has(.overlay.open) { overflow: hidden; }
 .initiative-epics-hint { font-size: 11px; color: var(--text-3); letter-spacing: .02em; }
 .initiative-epics-list {
   list-style: none; margin: 0; padding: 0;
-  border: 1px solid var(--border); border-radius: var(--r-md);
+  border: 1px solid var(--border-md); border-radius: var(--r-md);
   overflow: hidden; background: var(--surface);
 }
 .initiative-epic-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 24px;
   gap: 10px; align-items: center;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  padding: 10px 14px;
+  border-bottom: 1px dashed var(--rule);
+  background: transparent;
+  position: relative;
+  z-index: 1;
+  transition: box-shadow .12s ease-out, opacity .1s;
 }
 .initiative-epic-row[draggable="true"] { cursor: grab; }
 .initiative-epic-row[draggable="true"]:active { cursor: grabbing; }
 .initiative-epic-row:last-child { border-bottom: none; }
-.initiative-epic-row.dragging { opacity: .45; }
-.initiative-epic-row.drag-over { background: var(--accent-subtle); }
+.initiative-epic-row:hover { box-shadow: inset 0 0 0 999px var(--accent-subtle); }
+.initiative-epic-row.dragging { opacity: .45; box-shadow: none; }
+.initiative-epic-row.drag-over { box-shadow: inset 0 0 0 999px var(--accent-subtle); }
 .initiative-epic-main { min-width: 0; }
 .initiative-epic-title {
-  font-size: 12px; font-weight: 600; color: var(--text-1); margin: 0 0 2px; letter-spacing: .01em;
-  line-height: 1.35;
+  font-size: var(--fs-md); font-weight: 600; color: var(--text-1); margin: 0 0 4px; letter-spacing: .01em;
+  line-height: var(--lh-tight);
 }
 /* Epic titles are wiki card-links — keep them primary text, not accent pills */
 .initiative-epic-title .card-link {
@@ -1186,9 +1373,9 @@ body:has(.overlay.open) { overflow: hidden; }
   text-decoration: underline;
 }
 .initiative-epic-notes {
-  width: 100%; font-size: 11px; color: var(--text-2);
+  width: 100%; font-size: var(--fs-sm); color: var(--text-2);
   border: none; background: transparent; padding: 0; resize: none;
-  font-family: inherit; line-height: 1.35;
+  font-family: inherit; line-height: var(--lh-body);
   cursor: text;
 }
 .initiative-epic-notes::placeholder { color: var(--text-3); opacity: 1; }
@@ -1196,7 +1383,7 @@ body:has(.overlay.open) { overflow: hidden; }
 .initiative-epic-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .initiative-epic-progress { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .initiative-epic-status {
-  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: var(--r-xs); white-space: nowrap;
+  font-size: var(--fs-xs); font-weight: 700; padding: 2px 7px; border-radius: var(--r-xs); white-space: nowrap;
   letter-spacing: .06em; text-transform: uppercase;
 }
 .initiative-epic-remove {
@@ -1207,10 +1394,32 @@ body:has(.overlay.open) { overflow: hidden; }
 .initiative-epics-add {
   display: flex; gap: 8px; margin-top: 12px; align-items: center;
 }
-.initiative-epics-add select {
-  flex: 1; min-width: 0; font-size: 11px; padding: 7px 10px;
-  border: 1px solid var(--border); border-radius: var(--r-sm);
-  background: var(--surface); color: var(--text-1); font-family: var(--font);
+.initiative-epic-add-picker {
+  flex: 1; min-width: 0; position: relative;
+}
+.initiative-epic-add-picker .card-type-filter-btn {
+  width: 100%;
+  min-width: 0;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  text-transform: none;
+  letter-spacing: .02em;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  justify-content: space-between;
+}
+.initiative-epic-add-picker .card-type-filter-btn:hover,
+.initiative-epic-add-picker .card-type-filter-btn[aria-expanded="true"] {
+  border-color: var(--border-md);
+  color: var(--text-1);
+}
+.initiative-epic-add-picker .card-type-filter-menu {
+  left: 0; right: 0;
+  width: 100%; min-width: 0; max-width: none;
+  background: var(--surface);
+  border-color: var(--border-md);
+  box-shadow: 0 8px 24px rgba(10,8,5,.12);
 }
 .initiative-epics-add .btn { flex-shrink: 0; font-size: 11px; padding: 7px 12px; }
 .initiative-epics-status {
@@ -1223,16 +1432,13 @@ body:has(.overlay.open) { overflow: hidden; }
   display: flex; gap: 2px; background: rgba(232,226,217,.06); border-radius: var(--r-sm); padding: 2px;
 }
 .view-mode-btn {
-  border: none; background: transparent; color: var(--text-3);
+  border: none; background: transparent; color: rgba(232,226,217,.72);
   font-size: 10px; font-weight: 700; padding: 5px 14px; cursor: pointer;
   letter-spacing: .1em; text-transform: uppercase;
   border-radius: var(--r-xs); transition: all .12s;
   font-family: var(--font);
 }
-.view-mode-btn.active {
-  background: var(--accent); color: #1f1b16;
-}
-.view-mode-btn:not(.active):hover { color: var(--text-1); background: rgba(232,226,217,.08); }
+.view-mode-btn:not(.active):hover { color: rgba(232,226,217,.95); background: rgba(232,226,217,.1); }
 .strategy-view {
   display: none;
   padding: 8px 0 48px;
@@ -1248,11 +1454,11 @@ body:has(.overlay.open) { overflow: hidden; }
 .strategy-lane { display: flex; flex-direction: column; gap: 10px; }
 .strategy-lane.collapsed .strategy-lane-body { display: none; }
 .strategy-lane-head {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
   position: sticky; top: 0; z-index: 2;
-  background: var(--bg); padding: 10px 0 6px;
+  background: var(--bg); padding: 8px 0;
+  margin-bottom: 2px;
   cursor: pointer; user-select: none;
-  border-bottom: var(--thick) solid var(--border-md);
 }
 .strategy-lane-head:hover .strategy-lane-name { color: var(--accent); }
 .strategy-lane-chevron {
@@ -1261,97 +1467,116 @@ body:has(.overlay.open) { overflow: hidden; }
 }
 .strategy-lane.collapsed .strategy-lane-chevron { transform: rotate(-90deg); }
 .strategy-lane-name {
-  font-size: 10px; font-weight: 800; color: var(--accent);
-  text-transform: uppercase; letter-spacing: .14em;
+  font-size: var(--fs-xs); font-weight: 800; color: var(--accent);
+  text-transform: uppercase; letter-spacing: .1em;
 }
-.strategy-lane-hint { font-size: 11px; color: var(--text-3); white-space: nowrap; letter-spacing: .02em; }
+.strategy-lane-hint { font-size: var(--fs-sm); color: var(--text-3); white-space: nowrap; letter-spacing: .01em; }
 .strategy-lane-count {
-  font-size: 10px; font-weight: 600; color: var(--text-3);
+  font-size: var(--fs-xs); font-weight: 600; color: var(--text-3);
   letter-spacing: .02em;
 }
 .strategy-lane-rule { flex: 1; height: 0; align-self: center; }
-.strategy-lane-body { display: flex; flex-direction: column; gap: 10px; min-height: 8px; padding-top: 8px; }
+/* lane body is a sheet; initiative rows are ruled entries on it */
+.strategy-lane-body {
+  display: flex; flex-direction: column; min-height: 8px;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 2px solid var(--border-md);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card), inset 0 1px 0 var(--border);
+}
+.strategy-lane-body::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: var(--paper-grain);
+  opacity: .04; pointer-events: none;
+}
 .strategy-lane.drag-over .strategy-lane-body {
   outline: 2px solid var(--accent);
-  outline-offset: 4px; border-radius: var(--r-md);
+  outline-offset: 2px;
 }
 .strategy-lane-empty {
-  font-size: 11px; color: var(--text-3); padding: 14px 12px;
+  font-size: 11px; color: var(--text-3); padding: 18px 12px;
   text-align: center; letter-spacing: .02em;
+  position: relative; z-index: 1;
 }
 
 /* initiative row — wide, two-column: narrative left, epics right */
 .strategy-row {
   display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
-  gap: 20px;
-  border: 1px solid var(--border); border-radius: var(--r-md);
-  background: var(--surface);
-  padding: 16px 20px;
+  gap: 22px;
+  border: none; border-bottom: 2px dashed var(--rule);
+  background: transparent;
+  padding: 18px 22px;
   cursor: grab;
-  transition: border-color .15s ease-out, box-shadow .15s ease-out, opacity .1s;
+  position: relative; z-index: 1;
+  transition: box-shadow .12s ease-out, opacity .1s;
 }
+.strategy-row:last-child { border-bottom: none; }
 .strategy-row:active { cursor: grabbing; }
 .strategy-row.dragging { opacity: .45; }
 .strategy-drop-indicator {
-  height: var(--thick); margin: -4px 0; border-radius: 2px;
-  background: var(--accent); flex-shrink: 0;
+  height: 2px; background: var(--accent);
+  flex-shrink: 0; position: relative; z-index: 1;
 }
-.strategy-row:hover { border-color: var(--border-md); box-shadow: var(--shadow-card-hover); }
+.strategy-row:hover { box-shadow: inset 0 0 0 999px var(--accent-subtle); }
 .strategy-row.deferred { opacity: .55; }
 .strategy-row.deferred:hover { opacity: 1; }
-.strategy-row-main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.strategy-row-titleline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.strategy-row-main { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.strategy-row-titleline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .strategy-row-title {
-  font-size: 14px; font-weight: 700; letter-spacing: .01em;
-  color: var(--text-1); margin: 0; line-height: 1.3;
+  font-size: var(--fs-lg); font-weight: 700; letter-spacing: .005em;
+  color: var(--text-1); margin: 0; line-height: var(--lh-tight);
 }
 .strategy-row-summary {
-  font-size: 12px; line-height: 1.55; color: var(--text-2); margin: 0;
+  font-size: var(--fs-base); line-height: var(--lh-body); color: var(--text-2); margin: 0;
+  font-weight: 500;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .strategy-row-roll { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
-.strategy-roll-bar { width: 120px; }
-.strategy-roll-label { font-size: 10px; color: var(--text-3); white-space: nowrap; letter-spacing: .02em; font-weight: 600; }
+.strategy-roll-bar { width: 132px; }
+.strategy-roll-label { font-size: var(--fs-sm); color: var(--text-3); white-space: nowrap; letter-spacing: .01em; font-weight: 600; }
 
 /* epic mini-rows inside an initiative */
 .strategy-row-epics {
   display: flex; flex-direction: column; gap: 2px;
   justify-content: center; min-width: 0;
-  border-left: var(--thick) solid var(--border-md); padding-left: 16px;
+  border-left: 1px dashed var(--rule); padding-left: 16px;
 }
 .strategy-epic-row {
   display: grid; grid-template-columns: 8px minmax(0,1fr) auto;
-  gap: 9px; align-items: center;
+  gap: 10px; align-items: center;
   border: none; background: transparent; font: inherit; text-align: left;
-  padding: 5px 8px; margin: 0 -8px; border-radius: var(--r-sm);
+  padding: 6px 8px; margin: 0 -8px; border-radius: var(--r-sm);
   cursor: pointer; min-width: 0;
-  transition: background .1s;
+  position: relative; z-index: 1;
+  transition: box-shadow .12s ease-out;
 }
-.strategy-epic-row:hover { background: var(--accent-subtle); }
-.strategy-epic-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.strategy-epic-row:hover { box-shadow: inset 0 0 0 999px var(--accent-subtle); }
+.strategy-epic-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .strategy-epic-name {
-  font-size: 11.5px; font-weight: 500; color: var(--text-2); line-height: 1.35;
+  font-size: var(--fs-base); font-weight: 600; color: var(--text-2); line-height: var(--lh-tight);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  letter-spacing: .01em;
+  letter-spacing: .005em;
 }
 .strategy-epic-row:hover .strategy-epic-name { color: var(--text-1); }
-.strategy-epic-progress { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.strategy-epic-progress { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .strategy-epic-bar {
-  display: inline-block; width: 52px; height: 4px; border-radius: 2px;
+  display: inline-block; width: 56px; height: 5px; border-radius: 2px;
   background: var(--bg); overflow: hidden;
   box-shadow: inset 0 0 0 1px var(--border);
 }
 .strategy-epic-fill { display: block; height: 100%; border-radius: 2px; background: var(--done-c); }
 .strategy-epic-fill.done { background: var(--done-c); }
 .strategy-epic-count {
-  font-size: 9.5px; font-weight: 600; color: var(--text-3);
-  min-width: 30px; text-align: right; white-space: nowrap;
-  font-variant-numeric: tabular-nums; letter-spacing: .02em;
+  font-size: var(--fs-xs); font-weight: 600; color: var(--text-3);
+  min-width: 34px; text-align: right; white-space: nowrap;
+  font-variant-numeric: tabular-nums; letter-spacing: .01em;
 }
 
 @media (max-width: 820px){
   .strategy-row { grid-template-columns: 1fr; gap: 14px; }
-  .strategy-row-epics { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 12px; }
+  .strategy-row-epics { border-left: none; padding-left: 0; border-top: 1px dashed var(--rule); padding-top: 12px; }
 }
 .board-wrap.hidden { display: none; }
 
@@ -1379,18 +1604,20 @@ body:has(.overlay.open) { overflow: hidden; }
   border-bottom: var(--thick) solid var(--border-md);
 }
 .modal-nav {
-  display: flex; align-items: center; gap: 6px; min-width: 0;
+  display: flex; align-items: center; gap: 6px;
+  flex: 1; min-width: 0;
 }
 .modal-breadcrumb {
   display: flex; align-items: center; gap: 2px;
-  min-width: 0; margin-left: 6px;
-  white-space: nowrap; overflow: hidden;
+  flex: 1; min-width: 0; margin-left: 6px;
+  overflow: hidden;
 }
 .modal-breadcrumb-item {
   border: none; background: transparent; font: inherit;
   font-size: 11px; font-weight: 600; color: var(--text-3);
   padding: 3px 7px; border-radius: var(--r-sm); cursor: pointer;
-  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 200px; min-width: 0; flex-shrink: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   transition: background .1s, color .1s;
   letter-spacing: .04em; text-transform: uppercase;
 }
@@ -1398,7 +1625,8 @@ body:has(.overlay.open) { overflow: hidden; }
 .modal-breadcrumb-current {
   font-size: 11px; font-weight: 600; color: var(--text-2);
   padding: 3px 7px;
-  max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   letter-spacing: .04em; text-transform: uppercase;
 }
 .modal-breadcrumb-sep { color: var(--text-3); opacity: .5; font-size: 11px; flex-shrink: 0; }
@@ -1465,10 +1693,10 @@ body:has(.overlay.open) { overflow: hidden; }
 .modal-header-meta:empty { display: none; }
 .meta-pill {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 9.5px; font-weight: 700;
-  padding: 3px 8px; border-radius: var(--r-xs);
+  font-size: var(--fs-xs); font-weight: 700;
+  padding: 3px 9px; border-radius: var(--r-xs);
   white-space: nowrap;
-  letter-spacing: .06em; text-transform: uppercase;
+  letter-spacing: .05em; text-transform: uppercase;
 }
 .meta-pill-plain {
   background: transparent; color: var(--text-2);
@@ -1781,8 +2009,8 @@ body:has(.overlay.open) { overflow: hidden; }
 }
 .btn-ghost { background: transparent; border: 1px solid var(--border-md); color: var(--text-2); }
 .btn-ghost:hover { background: var(--accent-subtle); color: var(--text-1); }
-.btn-primary { background: var(--accent); color: #1f1b16; }
-.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary { background: var(--accent-selected); color: var(--accent-selected-text); }
+.btn-primary:hover { background: var(--accent-selected-hover); color: var(--accent-selected-text); }
 
 /* saved flash */
 @keyframes flash-save {
@@ -1824,74 +2052,92 @@ body:has(.overlay.open) { overflow: hidden; }
     </button>
     <div class="vault-switcher-menu" id="vault-switcher-menu"></div>
   </div>
-  <span class="header-divider">/</span>
-  <span class="header-sub">Roadmap</span>
   <div class="header-spacer"></div>
+  <div class="header-center">
+    <div class="header-card-filter">
+      <div class="view-mode-toggle" id="view-mode-toggle" title="Board vs strategy view">
+        <button type="button" class="view-mode-btn active" data-view="board">Board</button>
+        <button type="button" class="view-mode-btn" data-view="strategy">Strategy</button>
+      </div>
+    </div>
+  </div>
+  <div class="header-utilities">
+    <div class="header-git-sync hidden" id="git-sync-wrap">
+      <button class="header-git-btn" id="git-sync-btn" title="Git sync status">
+        <span class="header-git-dot" id="git-status-dot" aria-hidden="true"></span>
+        <span class="header-git-label" id="git-status-label"></span>
+      </button>
+    </div>
+    <div class="header-settings">
+      <button class="header-settings-btn" id="settings-btn" title="Settings" aria-haspopup="true" aria-expanded="false">
+        <svg class="settings-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="8" cy="8" r="2.25" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8 1.5v1.25M8 13.25V14.5M14.5 8H13.25M2.75 8H1.5M12.2 3.8l-.88.88M4.68 11.32l-.88.88M12.2 12.2l-.88-.88M4.68 4.68l-.88-.88" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="settings-menu" id="settings-menu" role="menu">
+        <div class="settings-menu-section" role="group" aria-label="Appearance">
+          <div class="settings-menu-label">Appearance</div>
+          <button type="button" class="theme-option" data-theme="dark" role="menuitemradio">
+            <span class="theme-option-icon" aria-hidden="true">&#9679;</span>
+            <span>Pitch Black</span>
+          </button>
+          <button type="button" class="theme-option active" data-theme="light" role="menuitemradio">
+            <span class="theme-option-icon" aria-hidden="true">&#9675;</span>
+            <span>Kraft</span>
+          </button>
+          <button type="button" class="theme-option" data-theme="system" role="menuitemradio">
+            <span class="theme-option-icon" aria-hidden="true">&#9632;</span>
+            <span>System</span>
+          </button>
+        </div>
+        <div class="settings-menu-divider" role="separator"></div>
+        <div class="settings-menu-section" role="group" aria-label="Data">
+          <div class="settings-menu-label">Data</div>
+          <button type="button" class="settings-menu-action" id="reset-btn" role="menuitem">Reset to source</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <button class="header-vault-mgr-btn" id="vault-mgr-btn" title="Manage vaults" style="display:none;"></button>
-  <div class="header-theme-selector">
-    <button class="header-theme-btn" id="theme-btn" title="Theme">
-      <svg class="theme-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/>
-        <line x1="8" y1="1" x2="8" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="8" y1="14" x2="8" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="15" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="2" y1="8" x2="1" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="12.7" y1="3.3" x2="12" y2="2.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="4" y1="12" x2="3.3" y2="12.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="12.7" y1="12.7" x2="12" y2="13.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="4" y1="4" x2="3.3" y2="3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </button>
-    <div class="theme-menu" id="theme-menu">
-      <div class="theme-option" data-theme="dark">
-        <div class="theme-option-icon">&#9679;</div>
-        <span>Pitch Black</span>
+</header>
+
+<div class="content-toolbar" id="content-toolbar">
+  <div class="content-toolbar-filters">
+    <div class="header-card-filter card-type-filter-wrap" id="card-type-filter-wrap" style="position:relative">
+      <button type="button" class="card-type-filter-btn" id="card-type-filter-btn" title="Filter by card type" aria-label="Filter by card type" aria-haspopup="true" aria-expanded="false">
+        <span id="card-type-filter-label">All cards</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="card-type-filter-menu" id="card-type-filter-menu" role="group" aria-label="Card types">
+        <label class="card-type-filter-option"><input type="checkbox" value="initiative" checked> Initiatives</label>
+        <label class="card-type-filter-option"><input type="checkbox" value="epic" checked> Epics</label>
+        <label class="card-type-filter-option"><input type="checkbox" value="slice" checked> Slices</label>
       </div>
-      <div class="theme-option active" data-theme="light">
-        <div class="theme-option-icon">&#9675;</div>
-        <span>Kraft</span>
-      </div>
-      <div class="theme-option" data-theme="system">
-        <div class="theme-option-icon">&#9632;</div>
-        <span>System</span>
+    </div>
+    <div class="initiative-filter-wrap" id="initiative-filter-wrap">
+      <button type="button" class="card-type-filter-btn" id="initiative-filter-btn" title="Filter by initiative" aria-label="Filter by initiative" aria-haspopup="listbox" aria-expanded="false">
+        <span id="initiative-filter-label">All initiatives</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="card-type-filter-menu initiative-filter-menu" id="initiative-filter-menu" role="listbox" aria-label="Initiatives">
+        <div class="initiative-filter-search-wrap">
+          <input type="text" class="initiative-filter-search" id="initiative-filter-search" placeholder="Filter initiatives…" autocomplete="off" aria-label="Filter initiatives">
+        </div>
+        <div class="initiative-filter-list" id="initiative-filter-list"></div>
       </div>
     </div>
   </div>
-  <div class="header-card-filter">
-    <div class="view-mode-toggle" id="view-mode-toggle" title="Board vs strategy view">
-      <button type="button" class="view-mode-btn active" data-view="board">Board</button>
-      <button type="button" class="view-mode-btn" data-view="strategy">Strategy</button>
-    </div>
-  </div>
-  <div class="header-card-filter" id="card-type-filter-wrap" style="position:relative">
-    <button type="button" class="card-type-filter-btn" id="card-type-filter-btn" title="Filter board by card type" aria-label="Filter board by card type" aria-haspopup="true" aria-expanded="false">
-      <span id="card-type-filter-label">All cards</span>
-      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <div class="card-type-filter-menu" id="card-type-filter-menu" role="group" aria-label="Card types">
-      <label class="card-type-filter-option"><input type="checkbox" value="initiative" checked> Initiatives</label>
-      <label class="card-type-filter-option"><input type="checkbox" value="epic" checked> Epics</label>
-      <label class="card-type-filter-option"><input type="checkbox" value="slice" checked> Slices</label>
-    </div>
-  </div>
-  <div class="header-search-wrapper" id="search-wrapper">
-    <button class="header-search-btn" id="search-btn" title="Search">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <div class="content-search" id="search-wrapper">
+    <span class="content-search-icon" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/>
         <path d="M10 10L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-    </button>
-    <input type="text" class="header-search-input" id="search-input" placeholder="Search cards...">
+    </span>
+    <input type="text" class="content-search-input" id="search-input" placeholder="Search cards…" autocomplete="off">
   </div>
-  <div class="header-git-sync hidden" id="git-sync-wrap">
-    <div class="header-git-pill" id="git-sync-pill" title="Git sync status">
-      <span class="header-git-dot" id="git-status-dot" aria-hidden="true"></span>
-      <span class="header-git-status" id="git-status-label"></span>
-    </div>
-    <button class="header-git-btn" id="git-sync-btn" title="Commit and push roadmap changes to origin/main">Commit &amp; Push</button>
-  </div>
-  <button class="header-reset-btn" id="reset-btn" title="Reset to source data">Reset</button>
-</header>
+</div>
 
 <div class="board-wrap" id="board-wrap">
   <div class="board" id="board"></div>
@@ -1928,9 +2174,18 @@ body:has(.overlay.open) { overflow: hidden; }
             </div>
             <ul id="initiative-epics-list" class="initiative-epics-list"></ul>
             <div class="initiative-epics-add">
-              <select id="initiative-epic-add-select" aria-label="Epic to add">
-                <option value="">Add an epic…</option>
-              </select>
+              <div class="initiative-epic-add-picker" id="initiative-epic-add-picker">
+                <button type="button" class="card-type-filter-btn" id="initiative-epic-add-trigger" title="Choose epic to add" aria-label="Epic to add" aria-haspopup="listbox" aria-expanded="false">
+                  <span id="initiative-epic-add-label">Add an epic…</span>
+                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="card-type-filter-menu initiative-filter-menu" id="initiative-epic-add-menu" role="listbox" aria-label="Epics to add">
+                  <div class="initiative-filter-search-wrap">
+                    <input type="text" class="initiative-filter-search" id="initiative-epic-add-search" placeholder="Search epics…" autocomplete="off" aria-label="Search epics">
+                  </div>
+                  <div class="initiative-filter-list" id="initiative-epic-add-list"></div>
+                </div>
+              </div>
               <button type="button" class="btn btn-primary" id="initiative-epic-add-btn">Add</button>
             </div>
             <div id="initiative-epics-status" class="initiative-epics-status"></div>
@@ -2106,6 +2361,7 @@ const cardContents = {}; // { cardId: markdown content }
 /* ── Data helpers ─────────────────────────────── */
 const STORAGE_KEY = 'venubase-kanban-v2';
 const CARD_TYPE_FILTER_KEY = 'kando-card-type-filter';
+const INITIATIVE_FILTER_KEY = 'kando-initiative-filter';
 const VIEW_MODE_KEY = 'kando-view-mode';
 const CARD_TYPES = ['initiative', 'epic', 'slice'];
 let SOURCE_META = []; // Will be fetched from API
@@ -2145,10 +2401,127 @@ let viewMode = localStorage.getItem(VIEW_MODE_KEY) || 'board';
 let initiativeEpicsRows = [];
 let initiativeEpicsSaving = false;
 let initiativeEpicsDragId = null;
+let epicAddPickerValue = '';
 
 function cardMatchesTypeFilter(card){
   if(cardTypeFilter.size === 0 || cardTypeFilter.size === CARD_TYPES.length) return true;
   return cardTypeFilter.has(cardType(card));
+}
+
+let initiativeFilter = localStorage.getItem(INITIATIVE_FILTER_KEY) || '';
+
+function initiativeForCard(card){
+  if(!card) return null;
+  if(card.is_initiative) return card.id;
+  const init = ancestorChain(card).find(p=>p.is_initiative);
+  return init?.id || null;
+}
+
+function cardMatchesInitiativeFilter(card){
+  if(!initiativeFilter) return true;
+  if(card.id === initiativeFilter) return true;
+  return initiativeForCard(card) === initiativeFilter;
+}
+
+function initiativeDisplayLabel(card){
+  return (card?.title || card?.id || '').replace(/^(Shipped: |release-)/i,'');
+}
+
+function initiativeFilterButtonLabel(){
+  if(!initiativeFilter) return 'All initiatives';
+  const card = getCard(initiativeFilter);
+  if(!card) return 'All initiatives';
+  const label = initiativeDisplayLabel(card);
+  return label.length > 36 ? label.slice(0, 34).trimEnd() + '…' : label;
+}
+
+function closeInitiativeFilterMenu(){
+  const menu = document.getElementById('initiative-filter-menu');
+  const btn = document.getElementById('initiative-filter-btn');
+  const search = document.getElementById('initiative-filter-search');
+  menu?.classList.remove('open');
+  btn?.setAttribute('aria-expanded', 'false');
+  if(search) search.value = '';
+  filterInitiativeFilterList('');
+}
+
+function filterInitiativeFilterList(query){
+  const q = query.toLowerCase().trim();
+  const list = document.getElementById('initiative-filter-list');
+  if(!list) return;
+  let visible = 0;
+  list.querySelectorAll('.initiative-filter-option').forEach(btn=>{
+    if(btn.dataset.value === ''){
+      const show = q === '' || 'all initiatives'.includes(q);
+      btn.classList.toggle('hidden', !show);
+      if(show) visible++;
+      return;
+    }
+    const text = btn.textContent.toLowerCase();
+    const id = (btn.dataset.value || '').toLowerCase();
+    const match = q === '' || text.includes(q) || id.includes(q);
+    btn.classList.toggle('hidden', !match);
+    if(match) visible++;
+  });
+  let empty = list.querySelector('.initiative-filter-empty');
+  if(visible === 0){
+    if(!empty){
+      empty = document.createElement('div');
+      empty.className = 'initiative-filter-empty';
+      empty.textContent = 'No matching initiatives';
+      list.appendChild(empty);
+    }
+    empty.style.display = '';
+  } else if(empty){
+    empty.style.display = 'none';
+  }
+}
+
+function setInitiativeFilter(value){
+  initiativeFilter = value || '';
+  saveInitiativeFilter();
+  syncInitiativeFilterOptions();
+  if(viewMode === 'board') renderBoard();
+  filterCards(document.getElementById('search-input')?.value || '');
+}
+
+function syncInitiativeFilterOptions(){
+  const list = document.getElementById('initiative-filter-list');
+  const labelEl = document.getElementById('initiative-filter-label');
+  if(!list) return;
+  const prev = initiativeFilter;
+  const initiatives = state.cards
+    .filter(c=>c.is_initiative)
+    .sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+
+  if(prev && !initiatives.some(c=>c.id === prev)){
+    initiativeFilter = '';
+    localStorage.removeItem(INITIATIVE_FILTER_KEY);
+  }
+
+  if(labelEl) labelEl.textContent = initiativeFilterButtonLabel();
+
+  let html = `<button type="button" class="initiative-filter-option${!initiativeFilter ? ' active' : ''}" data-value="" role="option" aria-selected="${!initiativeFilter}">All initiatives</button>`;
+  html += initiatives.map(c=>{
+    const label = initiativeDisplayLabel(c);
+    const active = c.id === initiativeFilter;
+    return `<button type="button" class="initiative-filter-option${active ? ' active' : ''}" data-value="${esc(c.id)}" title="${esc(label)}" role="option" aria-selected="${active}">${esc(label)}</button>`;
+  }).join('');
+  list.innerHTML = html;
+
+  list.querySelectorAll('.initiative-filter-option').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      setInitiativeFilter(btn.dataset.value || '');
+      closeInitiativeFilterMenu();
+    });
+  });
+  filterInitiativeFilterList(document.getElementById('initiative-filter-search')?.value || '');
+}
+
+function saveInitiativeFilter(){
+  if(initiativeFilter) localStorage.setItem(INITIATIVE_FILTER_KEY, initiativeFilter);
+  else localStorage.removeItem(INITIATIVE_FILTER_KEY);
 }
 
 function cardTypeBadgeHtml(card){
@@ -2194,8 +2567,11 @@ function setViewMode(mode){
   });
   document.getElementById('board-wrap')?.classList.toggle('hidden', viewMode === 'strategy');
   document.getElementById('strategy-view')?.classList.toggle('visible', viewMode === 'strategy');
+  document.getElementById('card-type-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
+  document.getElementById('initiative-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   if(viewMode === 'strategy') renderStrategyView();
   else renderBoard();
+  filterCards(searchInput?.value || '');
 }
 
 const HORIZON_KEYS = ['Now', 'Next', 'Later', 'Past', 'Future'];
@@ -2576,16 +2952,82 @@ async function saveInitiativeEpics(initiativeId, rows){
   }
 }
 
-function populateInitiativeEpicAddSelect(initiativeId){
-  const select = document.getElementById('initiative-epic-add-select');
-  if(!select) return;
+function populateInitiativeEpicAddPicker(){
+  const list = document.getElementById('initiative-epic-add-list');
+  const labelEl = document.getElementById('initiative-epic-add-label');
+  if(!list) return;
   const linked = new Set(initiativeEpicsRows.map(r=>r.id));
   const options = state.cards
     .filter(c=>c.is_epic && !c.is_initiative && !linked.has(c.id))
     .sort((a,b)=>(a.title||a.id).localeCompare(b.title||b.id));
-  select.innerHTML = `<option value="">Add an epic…</option>${options.map(c=>
-    `<option value="${esc(c.id)}">${esc(c.plan_anchor || c.title || c.id)}</option>`
-  ).join('')}`;
+
+  if(epicAddPickerValue && !options.some(c=>c.id === epicAddPickerValue)){
+    epicAddPickerValue = '';
+  }
+  if(labelEl) labelEl.textContent = epicAddPickerLabel();
+
+  list.innerHTML = options.length
+    ? options.map(c=>{
+        const label = c.plan_anchor || c.title || c.id;
+        const active = c.id === epicAddPickerValue;
+        return `<button type="button" class="initiative-filter-option${active ? ' active' : ''}" data-value="${esc(c.id)}" title="${esc(label)}" role="option" aria-selected="${active}">${esc(label)}</button>`;
+      }).join('')
+    : `<div class="initiative-filter-empty">No epics available</div>`;
+
+  list.querySelectorAll('.initiative-filter-option').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      epicAddPickerValue = btn.dataset.value || '';
+      if(labelEl) labelEl.textContent = epicAddPickerLabel();
+      list.querySelectorAll('.initiative-filter-option').forEach(b=>{
+        const on = b.dataset.value === epicAddPickerValue;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      closeEpicAddPickerMenu();
+    });
+  });
+  filterEpicAddPickerList(document.getElementById('initiative-epic-add-search')?.value || '');
+}
+
+function epicAddPickerLabel(){
+  if(!epicAddPickerValue) return 'Add an epic…';
+  const card = getCard(epicAddPickerValue);
+  if(!card) return 'Add an epic…';
+  const label = card.plan_anchor || card.title || card.id;
+  return label.length > 48 ? label.slice(0, 46).trimEnd() + '…' : label;
+}
+
+function closeEpicAddPickerMenu(){
+  const menu = document.getElementById('initiative-epic-add-menu');
+  const btn = document.getElementById('initiative-epic-add-trigger');
+  const search = document.getElementById('initiative-epic-add-search');
+  menu?.classList.remove('open');
+  btn?.setAttribute('aria-expanded', 'false');
+  if(search) search.value = '';
+  filterEpicAddPickerList('');
+}
+
+function filterEpicAddPickerList(query){
+  const q = query.toLowerCase().trim();
+  const list = document.getElementById('initiative-epic-add-list');
+  if(!list) return;
+  let visible = 0;
+  list.querySelectorAll('.initiative-filter-option').forEach(btn=>{
+    const text = btn.textContent.toLowerCase();
+    const id = (btn.dataset.value || '').toLowerCase();
+    const match = q === '' || text.includes(q) || id.includes(q);
+    btn.classList.toggle('hidden', !match);
+    if(match) visible++;
+  });
+  let empty = list.querySelector('.initiative-filter-empty');
+  if(!empty && visible === 0){
+    empty = document.createElement('div');
+    empty.className = 'initiative-filter-empty';
+    list.appendChild(empty);
+  }
+  if(empty) empty.textContent = q ? 'No matching epics' : 'No epics available';
+  if(empty) empty.style.display = visible === 0 ? '' : 'none';
 }
 
 function renderInitiativeEpicsPanel(initiativeId){
@@ -2623,7 +3065,7 @@ function renderInitiativeEpicsPanel(initiativeId){
     </li>`;
   }).join('') || `<li class="initiative-epic-row" style="grid-template-columns:1fr"><div class="initiative-epic-main"><div class="initiative-epic-title" style="color:var(--text-3)">No epics yet — add one below.</div></div></li>`;
 
-  populateInitiativeEpicAddSelect(initiativeId);
+  populateInitiativeEpicAddPicker();
   bindInitiativeEpicsPanelEvents(initiativeId);
 }
 
@@ -2949,7 +3391,7 @@ function renderCard(card, staggerIndex = 0){
     bottom = `<div class="card-footer"><div>${tag}</div></div>`;
   }
 
-  return `<div class="card${cardShellClass(card)}" data-card="${card.id}" data-is-epic="${card.is_epic ? '1' : '0'}" data-is-initiative="${card.is_initiative ? '1' : '0'}" draggable="true" style="animation-delay:${staggerIndex * 30}ms">
+  return `<div class="card${cardShellClass(card)}" data-card="${card.id}" data-is-epic="${card.is_epic ? '1' : '0'}" data-is-initiative="${card.is_initiative ? '1' : '0'}" data-initiative-id="${esc(initiativeForCard(card) || '')}" draggable="true" style="animation-delay:${staggerIndex * 30}ms">
     <div class="card-top">
       <div class="card-title">${esc(card.title)}</div>
       ${typeBadge}
@@ -2967,6 +3409,7 @@ function renderBoard(){
     let cards = state.cards.filter(c=>
       c.status===col.key &&
       cardMatchesTypeFilter(c) &&
+      cardMatchesInitiativeFilter(c) &&
       !isArchivedInitiative(c)
     );
     if(col.key==='Done') cards.sort((a,b)=>new Date(b.shipped_at||0)-new Date(a.shipped_at||0));
@@ -3219,13 +3662,15 @@ function showModal(id){
   if(card.is_initiative){
     modalEl.classList.add('modal-initiative');
     initiativeEpicsRows = parseInitiativeEpicsFromContent(content);
+    epicAddPickerValue = '';
+    closeEpicAddPickerMenu();
     renderInitiativeEpicsPanel(id);
     contentForMd = stripEpicsSectionFromMd(contentForMd);
     document.getElementById('initiative-epic-add-btn').onclick = ()=>{
-      const select = document.getElementById('initiative-epic-add-select');
-      const epicId = select?.value;
+      const epicId = epicAddPickerValue;
       if(!epicId) return;
       initiativeEpicsRows = [...initiativeEpicsRows, { id: epicId, status: getCard(epicId)?.status || 'Backlog', notes: '' }];
+      epicAddPickerValue = '';
       renderInitiativeEpicsPanel(id);
       saveInitiativeEpics(id, initiativeEpicsRows);
     };
@@ -3262,6 +3707,10 @@ function showModal(id){
 }
 
 /* Breadcrumb: Initiative → Epic → Slice, parents clickable */
+function breadcrumbLabel(card){
+  return (card.plan_anchor || card.title || card.id).trim();
+}
+
 function cardCrumbLabel(card){
   const label = card.plan_anchor || card.title || card.id;
   return label.length > 44 ? label.slice(0, 42).trimEnd() + '…' : label;
@@ -3286,9 +3735,9 @@ function renderModalBreadcrumb(card){
   if(!nav) return;
   const parents = ancestorChain(card);
   const parts = parents.map(p =>
-    `<button type="button" class="modal-breadcrumb-item" data-card="${esc(p.id)}" title="${esc(p.title||p.id)}">${esc(cardCrumbLabel(p))}</button><span class="modal-breadcrumb-sep">›</span>`
+    `<button type="button" class="modal-breadcrumb-item" data-card="${esc(p.id)}" title="${esc(p.title||p.id)}">${esc(breadcrumbLabel(p))}</button><span class="modal-breadcrumb-sep">›</span>`
   );
-  parts.push(`<span class="modal-breadcrumb-current" title="${esc(card.title||card.id)}">${esc(cardCrumbLabel(card))}</span>`);
+  parts.push(`<span class="modal-breadcrumb-current" title="${esc(card.title||card.id)}">${esc(breadcrumbLabel(card))}</span>`);
   nav.innerHTML = parts.join('');
   nav.querySelectorAll('.modal-breadcrumb-item').forEach(btn=>{
     btn.addEventListener('click', ()=> navigateToCard(btn.dataset.card));
@@ -3790,6 +4239,7 @@ async function openInCursor(cardId){
 }
 
 document.getElementById('reset-btn').addEventListener('click', ()=>{
+  closeSettingsMenu();
   if(confirm('Reset to source data? All local changes will be lost.')) {
     localStorage.removeItem(STORAGE_KEY);
     state = buildInitialState();
@@ -3799,7 +4249,7 @@ document.getElementById('reset-btn').addEventListener('click', ()=>{
   }
 });
 
-/* ── Theme Selector ────────────────────────── */
+/* ── Settings menu (theme + data) ──────────── */
 function initTheme(){
   const saved = localStorage.getItem('theme-preference') || 'system';
   applyTheme(saved);
@@ -3822,31 +4272,31 @@ function setThemePreference(preference){
   localStorage.setItem('theme-preference', preference);
   applyTheme(preference);
   updateThemeMenu(preference);
-  closeThemeMenu();
+  closeSettingsMenu();
 }
 
 function updateThemeMenu(preference){
-  const options = document.querySelectorAll('.theme-option');
-  options.forEach(opt => {
-    if(opt.getAttribute('data-theme') === preference){
-      opt.classList.add('active');
-    } else {
-      opt.classList.remove('active');
-    }
+  document.querySelectorAll('.theme-option').forEach(opt => {
+    opt.classList.toggle('active', opt.getAttribute('data-theme') === preference);
   });
 }
 
-function toggleThemeMenu(){
-  const menu = document.getElementById('theme-menu');
-  menu.classList.toggle('open');
+function toggleSettingsMenu(){
+  const menu = document.getElementById('settings-menu');
+  const btn = document.getElementById('settings-btn');
+  const open = !menu.classList.contains('open');
+  menu.classList.toggle('open', open);
+  if(btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
-function closeThemeMenu(){
-  const menu = document.getElementById('theme-menu');
+function closeSettingsMenu(){
+  const menu = document.getElementById('settings-menu');
+  const btn = document.getElementById('settings-btn');
   menu.classList.remove('open');
+  if(btn) btn.setAttribute('aria-expanded', 'false');
 }
 
-document.getElementById('theme-btn').addEventListener('click', toggleThemeMenu);
+document.getElementById('settings-btn').addEventListener('click', toggleSettingsMenu);
 
 document.querySelectorAll('.theme-option').forEach(option => {
   option.addEventListener('click', ()=>{
@@ -3856,9 +4306,9 @@ document.querySelectorAll('.theme-option').forEach(option => {
 });
 
 document.addEventListener('click', (e)=>{
-  const selector = document.querySelector('.header-theme-selector');
+  const selector = document.querySelector('.header-settings');
   if(!selector.contains(e.target)){
-    closeThemeMenu();
+    closeSettingsMenu();
   }
 });
 
@@ -3872,29 +4322,30 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=
 initTheme();
 
 /* ── Search ──────────────────────────────────── */
-let searchActive = false;
 const searchWrapper = document.getElementById('search-wrapper');
-const searchBtn = document.getElementById('search-btn');
 const searchInput = document.getElementById('search-input');
+
+function cardMatchesSearchDom(cardEl, q){
+  const title = cardEl.querySelector('.card-title')?.textContent || '';
+  const summary = cardEl.querySelector('.card-summary')?.textContent || '';
+  const tags = cardEl.querySelector('.card-tag')?.textContent || '';
+  const typeOk = cardMatchesTypeFilter({
+    is_epic: cardEl.dataset.isEpic === '1',
+    is_initiative: cardEl.dataset.isInitiative === '1',
+  });
+  const initId = cardEl.dataset.initiativeId || '';
+  const cardId = cardEl.dataset.card || '';
+  const initOk = !initiativeFilter || cardId === initiativeFilter || initId === initiativeFilter;
+  return typeOk && initOk && (q === '' ||
+    title.toLowerCase().includes(q) ||
+    summary.toLowerCase().includes(q) ||
+    tags.toLowerCase().includes(q));
+}
 
 function filterCards(query){
   const q = query.toLowerCase().trim();
-  const cards = document.querySelectorAll('.card');
-  let visible = 0;
-  cards.forEach(card=>{
-    const title = card.querySelector('.card-title')?.textContent || '';
-    const summary = card.querySelector('.card-summary')?.textContent || '';
-    const tags = card.querySelector('.card-tag')?.textContent || '';
-    const typeOk = cardMatchesTypeFilter({
-      is_epic: card.dataset.isEpic === '1',
-      is_initiative: card.dataset.isInitiative === '1',
-    });
-    const matches = typeOk && (q === '' ||
-      title.toLowerCase().includes(q) ||
-      summary.toLowerCase().includes(q) ||
-      tags.toLowerCase().includes(q));
-    card.style.display = matches ? '' : 'none';
-    if(matches) visible++;
+  document.querySelectorAll('.card').forEach(card=>{
+    card.style.display = cardMatchesSearchDom(card, q) ? '' : 'none';
   });
 }
 
@@ -3911,6 +4362,8 @@ if(cardTypeFilterBtn && cardTypeFilterMenu){
 
   cardTypeFilterBtn.addEventListener('click', e=>{
     e.stopPropagation();
+    closeInitiativeFilterMenu();
+    closeEpicAddPickerMenu();
     const open = cardTypeFilterMenu.classList.toggle('open');
     cardTypeFilterBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
@@ -3918,6 +4371,8 @@ if(cardTypeFilterBtn && cardTypeFilterMenu){
   document.addEventListener('click', ()=>{
     cardTypeFilterMenu.classList.remove('open');
     cardTypeFilterBtn.setAttribute('aria-expanded', 'false');
+    closeInitiativeFilterMenu();
+    closeEpicAddPickerMenu();
   });
 
   cardTypeFilterMenu.querySelectorAll('input[type=checkbox]').forEach(cb=>{
@@ -3942,37 +4397,77 @@ document.querySelectorAll('.view-mode-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> setViewMode(btn.dataset.view));
 });
 
-searchBtn.addEventListener('click', e=>{
-  e.stopPropagation();
-  searchActive = !searchActive;
-  searchWrapper.classList.toggle('active', searchActive);
-  if(searchActive){
-    searchInput.focus();
-  } else {
-    searchInput.value = '';
-    filterCards('');
-  }
-});
+const initiativeFilterBtn = document.getElementById('initiative-filter-btn');
+const initiativeFilterMenu = document.getElementById('initiative-filter-menu');
+const initiativeFilterSearch = document.getElementById('initiative-filter-search');
+if(initiativeFilterBtn && initiativeFilterMenu){
+  initiativeFilterBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    cardTypeFilterMenu?.classList.remove('open');
+    cardTypeFilterBtn?.setAttribute('aria-expanded', 'false');
+    closeEpicAddPickerMenu();
+    const open = initiativeFilterMenu.classList.toggle('open');
+    initiativeFilterBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if(open){
+      initiativeFilterSearch?.focus();
+      filterInitiativeFilterList(initiativeFilterSearch?.value || '');
+    } else {
+      closeInitiativeFilterMenu();
+    }
+  });
+  initiativeFilterMenu.addEventListener('click', e=> e.stopPropagation());
+  initiativeFilterSearch?.addEventListener('input', e=>{
+    filterInitiativeFilterList(e.target.value);
+  });
+  initiativeFilterSearch?.addEventListener('keydown', e=>{
+    if(e.key === 'Escape'){
+      e.stopPropagation();
+      closeInitiativeFilterMenu();
+    }
+  });
+}
 
-searchInput.addEventListener('input', e=>{
+const epicAddPickerTrigger = document.getElementById('initiative-epic-add-trigger');
+const epicAddPickerMenu = document.getElementById('initiative-epic-add-menu');
+const epicAddPickerSearch = document.getElementById('initiative-epic-add-search');
+if(epicAddPickerTrigger && epicAddPickerMenu){
+  epicAddPickerTrigger.addEventListener('click', e=>{
+    e.stopPropagation();
+    cardTypeFilterMenu?.classList.remove('open');
+    cardTypeFilterBtn?.setAttribute('aria-expanded', 'false');
+    closeInitiativeFilterMenu();
+    const open = epicAddPickerMenu.classList.toggle('open');
+    epicAddPickerTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if(open){
+      epicAddPickerSearch?.focus();
+      filterEpicAddPickerList(epicAddPickerSearch?.value || '');
+    } else {
+      closeEpicAddPickerMenu();
+    }
+  });
+  epicAddPickerMenu.addEventListener('click', e=> e.stopPropagation());
+  epicAddPickerSearch?.addEventListener('input', e=>{
+    filterEpicAddPickerList(e.target.value);
+  });
+  epicAddPickerSearch?.addEventListener('keydown', e=>{
+    if(e.key === 'Escape'){
+      e.stopPropagation();
+      closeEpicAddPickerMenu();
+    }
+  });
+}
+document.getElementById('card-type-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
+document.getElementById('initiative-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
+
+searchInput?.addEventListener('input', e=>{
   filterCards(e.target.value);
 });
 
-searchInput.addEventListener('keydown', e=>{
+searchInput?.addEventListener('keydown', e=>{
   if(e.key === 'Escape'){
-    searchActive = false;
-    searchWrapper.classList.remove('active');
     searchInput.value = '';
     filterCards('');
-  }
-});
-
-document.addEventListener('click', e=>{
-  if(searchActive && !searchWrapper.contains(e.target)){
-    searchActive = false;
-    searchWrapper.classList.remove('active');
-    searchInput.value = '';
-    filterCards('');
+    searchInput.blur();
   }
 });
 
@@ -4162,6 +4657,7 @@ async function loadCards(){
     }
 
     initState();
+    syncInitiativeFilterOptions();
     setViewMode(viewMode);
 
     const route = parseCardRoute();
@@ -4732,26 +5228,21 @@ document.addEventListener('keydown', (e) => {
 let gitSyncInFlight = false;
 let gitSyncButtonDefault = 'Commit & Push';
 
-function applyGitUiState({ label, dot, btn, wrap, pill, statusText, btnText, state }) {
+function applyGitUiState({ label, dot, btn, wrap, statusText, btnText, state }) {
   wrap.classList.remove('hidden');
-  label.textContent = statusText;
-  pill.title = statusText;
+  label.textContent = btnText;
+  btn.title = statusText;
 
-  label.classList.remove('synced', 'needs-sync');
   dot.classList.remove('synced', 'needs-sync');
   btn.classList.remove('needs-sync', 'synced-state', 'syncing');
 
   if (state === 'synced') {
-    label.classList.add('synced');
     dot.classList.add('synced');
     btn.classList.add('synced-state');
-    btn.textContent = btnText;
     btn.disabled = true;
   } else {
-    label.classList.add('needs-sync');
     dot.classList.add('needs-sync');
     btn.classList.add('needs-sync');
-    btn.textContent = btnText;
     btn.disabled = gitSyncInFlight;
   }
 }
@@ -4796,11 +5287,10 @@ function describeGitStatus(status) {
 
 async function refreshGitStatus(){
   const wrap = document.getElementById('git-sync-wrap');
-  const pill = document.getElementById('git-sync-pill');
   const label = document.getElementById('git-status-label');
   const dot = document.getElementById('git-status-dot');
   const btn = document.getElementById('git-sync-btn');
-  if(!wrap || !pill || !label || !dot || !btn) return;
+  if(!wrap || !label || !dot || !btn) return;
 
   try {
     const resp = await fetch(`${API_URL}/api/vaults/${currentVault}/git/status`);
@@ -4815,7 +5305,7 @@ async function refreshGitStatus(){
     }
 
     const ui = describeGitStatus(status);
-    applyGitUiState({ label, dot, btn, wrap, pill, ...ui });
+    applyGitUiState({ label, dot, btn, wrap, ...ui });
     if (ui.state === 'needs-sync') {
       gitSyncButtonDefault = ui.btnText;
     }
@@ -4829,14 +5319,13 @@ async function syncVaultGit(){
   if(gitSyncInFlight) return;
   const btn = document.getElementById('git-sync-btn');
   const wrap = document.getElementById('git-sync-wrap');
-  const pill = document.getElementById('git-sync-pill');
   const label = document.getElementById('git-status-label');
   const dot = document.getElementById('git-status-dot');
   gitSyncInFlight = true;
   if(btn){
     btn.disabled = true;
     btn.classList.add('syncing');
-    btn.textContent = 'Syncing…';
+    if(label) label.textContent = 'Syncing…';
   }
 
   try {
@@ -4848,9 +5337,9 @@ async function syncVaultGit(){
     const data = await resp.json();
     if(!resp.ok) throw new Error(data.error || 'Sync failed');
 
-    if (data.status && wrap && pill && label && dot && btn) {
+    if (data.status && wrap && label && dot && btn) {
       const ui = describeGitStatus(data.status);
-      applyGitUiState({ label, dot, btn, wrap, pill, ...ui });
+      applyGitUiState({ label, dot, btn, wrap, ...ui });
     }
 
     if (data.pulled) {
