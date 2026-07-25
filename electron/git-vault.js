@@ -50,6 +50,23 @@ async function getOriginUrl(dir) {
   return git(dir, 'remote', 'get-url', 'origin');
 }
 
+function parseRepoNameFromRemoteUrl(url) {
+  if(!url || typeof url !== 'string') return null;
+  const cleaned = url.trim().replace(/\/$/, '').replace(/\.git$/, '');
+  const parts = cleaned.split(/[:/]/).filter(Boolean);
+  return parts[parts.length - 1] || null;
+}
+
+/** git@github.com:org/repo.git or https://github.com/org/repo → browser URL */
+export function remoteUrlToWebUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim().replace(/\/$/, '');
+  const ssh = trimmed.match(/^git@([^:]+):(.+)$/);
+  if (ssh) return `https://${ssh[1]}/${ssh[2].replace(/\.git$/, '')}`;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed.replace(/\.git$/, '');
+  return null;
+}
+
 async function runWithSshFallback(dir, run) {
   try {
     return await run('origin');
@@ -128,6 +145,17 @@ export async function getGitStatus(dir, { fetchRemote = true } = {}) {
     : [];
   const clean = changed.length === 0;
 
+  let remoteUrl = null;
+  let repoName = null;
+  let repoWebUrl = null;
+  try {
+    remoteUrl = await getOriginUrl(dir);
+    repoName = parseRepoNameFromRemoteUrl(remoteUrl);
+    repoWebUrl = remoteUrlToWebUrl(remoteUrl);
+  } catch {
+    // no origin remote
+  }
+
   let ahead = 0;
   let behind = 0;
   let hasUpstream = false;
@@ -155,6 +183,9 @@ export async function getGitStatus(dir, { fetchRemote = true } = {}) {
     behind,
     hasUpstream,
     upstream: hasUpstream ? `origin/${branch}` : null,
+    remoteUrl,
+    repoName,
+    repoWebUrl,
     syncedWithRemote,
     needsSync,
   };
