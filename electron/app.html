@@ -1782,6 +1782,7 @@ body:has(.overlay.open) { overflow: hidden; }
   text-transform: uppercase; letter-spacing: .12em;
   font-family: 'SFMono-Regular', monospace;
   margin-bottom: 16px;
+  text-align: center;
 }
 .workbench-empty, .workbench-loading {
   font-size: var(--fs-sm); color: var(--text-3); letter-spacing: .02em;
@@ -3338,13 +3339,13 @@ function benchCards(){
 function renderBenchCard(card){
   const rot = rotationForId(card.id);
   const stale = isAgentStale(card.agent_updated_at);
-  const crumb = ancestorChain(card).concat([card]).map(breadcrumbLabel).join(' › ');
+  const ancestors = ancestorChain(card).map(breadcrumbLabel).join(' › ');
   const statusKey = agentStatusKey(card);
   const updated = relativeTime(card.agent_updated_at);
   return `<div class="bench-card bench-status-${esc(statusKey)}${stale?' stale':''}" data-card="${esc(card.id)}" style="--bench-rot:${rot}deg" tabindex="0" role="button" aria-label="${esc(card.title||card.id)}">
     <div class="bench-tape"></div>
     ${stale ? '<div class="bench-stale-mark" title="No update in a while">?</div>' : ''}
-    <div class="bench-crumb">${esc(crumb)}</div>
+    ${ancestors ? `<div class="bench-crumb">${esc(ancestors)}</div>` : ''}
     <div class="bench-title">${esc(card.title||card.id)}</div>
     <div class="bench-meta-row">
       ${card.agent_provider ? `<span class="bench-stamp">${esc(card.agent_provider)}</span>` : ''}
