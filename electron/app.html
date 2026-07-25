@@ -3274,11 +3274,18 @@ const AGENT_STATUS_LABELS = {
   idle: 'Idle',
 };
 
-/** Small deterministic hash → a stable, non-jittery rotation per card. */
+/**
+ * Small deterministic hash → a stable, non-jittery rotation per card —
+ * looks randomly tossed on the table (varied sign + magnitude) without
+ * reshuffling on every re-render. Magnitude stays within a fixed band
+ * (1.2°..4°) so cards never land dead straight, in either direction.
+ */
 function rotationForId(id){
   let hash = 0;
   for(let i=0;i<id.length;i++){ hash = (hash * 31 + id.charCodeAt(i)) | 0; }
-  return (Math.abs(hash) % 7) - 3; // -3..3 degrees
+  const sign = (hash & 1) ? 1 : -1;
+  const magnitude = 1.2 + (Math.abs(hash) % 280) / 100; // 1.2..4.0
+  return (sign * magnitude).toFixed(1);
 }
 
 function relativeTime(iso){
