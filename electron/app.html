@@ -2263,13 +2263,16 @@ body:has(.overlay.open) { overflow: hidden; }
 .md h2:first-child { margin-top: 0; }
 .md h3 { font-size: 15px; font-weight: 600; color: var(--text-1); margin: 20px 0 6px; }
 .md p { font-size: 15px; line-height: 1.7; color: var(--text-2); margin-bottom: 10px; max-width: 68ch; }
-.md strong { color: var(--text-1); font-weight: 600; }
+.md strong {
+  color: color-mix(in srgb, var(--text-2) 70%, var(--text-1));
+  font-weight: 550;
+}
 .md em { color: var(--text-2); }
 .md a { color: var(--accent); text-decoration: none; }
 .md a:hover { text-decoration: underline; }
 .md ul,.md ol { padding-left: 18px; margin-bottom: 10px; max-width: 68ch; }
 .md li { font-size: 15px; line-height: 1.65; color: var(--text-2); margin-bottom: 4px; }
-.md li strong { color: var(--text-1); }
+.md li strong { color: color-mix(in srgb, var(--text-2) 70%, var(--text-1)); font-weight: 550; }
 .md code {
   font-family: 'SFMono-Regular','Consolas',monospace;
   font-size: 12.5px;
