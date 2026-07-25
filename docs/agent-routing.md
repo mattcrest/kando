@@ -61,6 +61,63 @@ If `canonicalRepo` is set:
 https://github.com/<canonicalRepo>/blob/main/release-<slug>.md
 ```
 
+### 5. Keep progress tracking current
+
+Kando's **Workbench** view shows, at a glance, which slices are being
+worked on and why — but only if agents keep the fields below up to date.
+This is not optional busywork: it's how the human using Kando sees status
+without asking you for an update. Update these on **every** slice you touch,
+as part of the same edit, not as a separate step:
+
+```yaml
+agent_status: in_progress   # in_progress | blocked | needs_review | idle
+agent_provider: cursor      # cursor | claude | codex | manual
+agent_summary: "Wired the POS discount modal; validating against edge cases."
+agent_next: "Add server-side validation, then update acceptance criteria."
+agent_updated_at: 2026-07-25T14:32:00Z   # ISO 8601, set to "now" on every update
+```
+
+- `agent_status`: `in_progress` while actively working, `blocked` if stuck
+  on something outside your control, `needs_review` once you've opened a PR
+  or otherwise handed it off, `idle` (or omit the field) once you've
+  stopped working on it for now.
+- `agent_summary`: one or two sentences — current state, in plain language.
+  This is the "why" a human sees first.
+- `agent_next`: one sentence — what you (or whoever picks this up) would do
+  next.
+- All five fields are optional and additive to the existing frontmatter
+  contract; omit them entirely on cards with no agent activity.
+
+### 6. Suggesting what to work on next (optional)
+
+If asked to suggest the next slices to prioritize, write your ranked list
+to `agent-suggestions.md` in the vault root (sibling to `roadmap-index.md`)
+instead of just replying in chat — this is what populates the "up next"
+list in Kando's Workbench view:
+
+```markdown
+---
+generated_at: 2026-07-25T14:00:00Z
+generated_by: claude
+context: "Focus on 2 epics at once: Checkout and Admin. Prioritize anything unblocking POS launch."
+---
+
+## Suggested next slices
+
+1. [[release-foo-slug]] — Unblocks the POS launch checklist; no open dependencies.
+2. [[release-bar-slug]] — Small, isolated, and finishes out the Admin epic.
+```
+
+- `context` in the frontmatter should capture whatever constraints the user
+  gave you (focus areas, how many epics/initiatives to run in parallel,
+  etc.) — Kando displays it alongside the list.
+- Rank by dependency readiness, epic/initiative grouping against the
+  stated constraints, and index/backlog order — same signals you'd use to
+  reprioritize `roadmap-index.md` — and give each entry a one-line
+  rationale.
+- Overwrite the file each time you're asked to re-suggest; it's a snapshot,
+  not a log.
+
 ## `vaults.json` routing schema
 
 ```json
@@ -95,6 +152,8 @@ https://github.com/<canonicalRepo>/blob/main/release-<slug>.md
 | GET | `/api/cards/:id?vault=<key>` | Card detail |
 | GET | `/api/roadmap-index?vault=<key>` | Parsed section order from index file |
 | PUT | `/api/roadmap-index?vault=<key>` | Update Active / Prioritized / Backlog order in index |
+| GET | `/api/agent-suggestions?vault=<key>` | Parsed `agent-suggestions.md` (see §6), resolved against cards |
+| GET | `/api/vaults/:name/conventions` | Raw text of that vault's `roadmap-conventions.md` |
 
 ## Install for common agents
 

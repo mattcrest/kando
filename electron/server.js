@@ -21,6 +21,7 @@ import {
   parseInitiativeEpics,
   replaceInitiativeEpics,
 } from './initiative-epics.js';
+import { loadAgentSuggestions } from './agent-suggestions.js';
 import {
   loadRoadmapConfig,
   resolveConfigFile,
@@ -381,6 +382,11 @@ app.get('/api/cards', async (req, res) => {
             horizon: data.horizon || null,
             milestone: data.milestone || null,
             parent: extractParentId(data),
+            agent_status: data.agent_status || null,
+            agent_provider: data.agent_provider || null,
+            agent_summary: data.agent_summary || null,
+            agent_next: data.agent_next || null,
+            agent_updated_at: data.agent_updated_at || null,
           });
         }
       } catch (err) {
@@ -512,6 +518,11 @@ app.get('/api/cards/:cardId', async (req, res) => {
       milestone: data.milestone || null,
       parent: extractParentId(data),
       archived: isInitiative && isArchivedHorizon(horizon),
+      agent_status: data.agent_status || null,
+      agent_provider: data.agent_provider || null,
+      agent_summary: data.agent_summary || null,
+      agent_next: data.agent_next || null,
+      agent_updated_at: data.agent_updated_at || null,
       frontmatter: data,
       content: markdownContent,
     });
@@ -670,6 +681,47 @@ app.get('/api/roadmap-index', async (req, res) => {
       return res.status(404).json({ error: 'roadmap index not found', indexPath });
     }
     res.json({ indexPath, orders, orderedStatuses: INDEX_ORDERED_STATUSES });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/agent-suggestions - Parsed agent-suggestions.md, resolved against cards
+app.get('/api/agent-suggestions', async (req, res) => {
+  try {
+    const vaultDir = getVaultDir(req);
+    const parsed = await loadAgentSuggestions(vaultDir);
+    if (!parsed) {
+      return res.json({ generated_at: null, generated_by: null, context: null, items: [] });
+    }
+
+    const items = [];
+    for (const item of parsed.items) {
+      const cardPath = getCardPath(item.cardId, vaultDir);
+      try {
+        const content = await fs.readFile(cardPath, 'utf-8');
+        const { data } = matter(content);
+        items.push({
+          cardId: item.cardId,
+          rationale: item.rationale,
+          title: data.plan_anchor || item.cardId,
+          status: normalizeStatus(data.status),
+          parent: extractParentId(data),
+          missing: false,
+        });
+      } catch {
+        items.push({
+          cardId: item.cardId,
+          rationale: item.rationale,
+          title: item.cardId,
+          status: null,
+          parent: null,
+          missing: true,
+        });
+      }
+    }
+
+    res.json({ ...parsed.frontmatter, items });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1082,6 +1134,30 @@ app.get('/api/vaults/:name/git/status', async (req, res) => {
   }
 });
 
+// GET /api/vaults/:name/conventions - Raw text of the vault's roadmap-conventions.md
+app.get('/api/vaults/:name/conventions', async (req, res) => {
+  try {
+    const name = req.params.name;
+    if (!VAULTS[name]) {
+      return res.status(404).json({ error: `Vault '${name}' not found` });
+    }
+    const routing = getRoutingForVault(name, VAULT_ROUTING);
+    const conventionsFile = routing?.conventionsFile || 'roadmap-conventions.md';
+    const conventionsPath = path.join(VAULTS[name], conventionsFile);
+    try {
+      const content = await fs.readFile(conventionsPath, 'utf-8');
+      res.json({ conventionsPath, content });
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        return res.status(404).json({ error: 'conventions file not found', conventionsPath });
+      }
+      throw err;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/vaults/:name/git/sync - Commit (optional message) and push
 app.post('/api/vaults/:name/git/sync', async (req, res) => {
   try {
@@ -1160,6 +1236,8 @@ async function start() {
     console.log(`PUT /api/cards/:cardId/content?vault=<name> - Update card content`);
     console.log(`GET /api/roadmap-index?vault=<name> - Read index section order`);
     console.log(`PUT /api/roadmap-index?vault=<name> - Update index section order`);
+    console.log(`GET /api/agent-suggestions?vault=<name> - Read agent-suggestions.md`);
+    console.log(`GET /api/vaults/:name/conventions - Read roadmap-conventions.md`);
     console.log(`GET /api/strategy?vault=<name> - Read strategy horizon membership`);
     console.log(`PUT /api/strategy?vault=<name> - Update strategy horizon membership`);
     console.log(`GET /api/vaults - List available vaults (includes routing metadata)`);

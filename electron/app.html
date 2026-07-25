@@ -10,6 +10,16 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
+/* Bundled locally — no network dependency, unlike the Jost webfont above.
+   Used sparingly, only for Workbench annotation text. */
+@font-face {
+  font-family: 'Caveat';
+  src: url('fonts/Caveat-Variable.ttf') format('truetype-variations'), url('fonts/Caveat-Variable.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --font: 'Jost', system-ui, -apple-system, sans-serif;
   --bg: #1a1714;
@@ -58,6 +68,10 @@
   --lh-body: 1.5;
   --card-epic-bg: color-mix(in srgb, #b07830 6%, var(--surface));
   --card-initiative-bg: color-mix(in srgb, var(--done-c) 6%, var(--surface));
+  --workbench-canvas-bg: #211d18;
+  --workbench-dot: rgba(232,226,217,.16);
+  --workbench-paper: #2a251e;
+  --font-hand: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
 }
 
 html { font-family: var(--font); -webkit-font-smoothing: antialiased; letter-spacing: 0.01em; }
@@ -83,6 +97,9 @@ body { background: var(--bg); color: var(--text-1); min-height: 100vh; }
     --rule: rgba(44,34,22,.18);
     --card-epic-bg: color-mix(in srgb, #b07830 4%, #ffffff);
     --card-initiative-bg: color-mix(in srgb, #7a9a6e 4%, #ffffff);
+    --workbench-canvas-bg: #f1e9d8;
+    --workbench-dot: rgba(44,34,22,.18);
+    --workbench-paper: #fffdf8;
   }
 }
 
@@ -105,6 +122,9 @@ html[data-theme="light"] {
   --rule: rgba(44,34,22,.18);
   --card-epic-bg: color-mix(in srgb, #b07830 4%, #ffffff);
   --card-initiative-bg: color-mix(in srgb, #7a9a6e 4%, #ffffff);
+  --workbench-canvas-bg: #f1e9d8;
+  --workbench-dot: rgba(44,34,22,.18);
+  --workbench-paper: #fffdf8;
 }
 
 html[data-theme="dark"] {
@@ -124,6 +144,9 @@ html[data-theme="dark"] {
   --shadow-card-hover: 0 3px 12px rgba(10,8,5,.25);
   --shadow-modal: 0 24px 80px rgba(5,4,3,.5), 0 4px 16px rgba(5,4,3,.3);
   --rule: rgba(232,226,217,.16);
+  --workbench-canvas-bg: #211d18;
+  --workbench-dot: rgba(232,226,217,.16);
+  --workbench-paper: #2a251e;
 }
 
 /* ── Header ─────────────────────────────────── */
@@ -1737,6 +1760,162 @@ body:has(.overlay.open) { overflow: hidden; }
 }
 .board-wrap.hidden { display: none; }
 
+/* ── Workbench view ─────────────────────────── */
+.workbench-view {
+  display: none;
+  min-height: calc(100vh - var(--header-h));
+}
+.workbench-view.visible { display: block; }
+
+.workbench-canvas {
+  min-height: calc(100vh - var(--header-h));
+  padding: 32px 28px 64px;
+  background-color: var(--workbench-canvas-bg);
+  background-image: radial-gradient(circle, var(--workbench-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+  display: flex; flex-direction: column; gap: 40px;
+}
+
+.workbench-section { max-width: 1100px; margin: 0 auto; width: 100%; }
+.workbench-section-title {
+  font-size: var(--fs-xs); font-weight: 800; color: var(--accent);
+  text-transform: uppercase; letter-spacing: .12em;
+  font-family: 'SFMono-Regular', monospace;
+  margin-bottom: 16px;
+}
+.workbench-empty, .workbench-loading {
+  font-size: var(--fs-sm); color: var(--text-3); letter-spacing: .02em;
+  padding: 10px 2px;
+}
+
+/* "On the bench" — scattered index cards */
+.bench-grid {
+  display: flex; flex-wrap: wrap; gap: 22px 28px;
+  align-items: flex-start;
+}
+.bench-card {
+  --bench-rot: 0deg;
+  position: relative;
+  width: 260px;
+  background: var(--workbench-paper);
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-card);
+  padding: 16px 16px 14px;
+  cursor: pointer;
+  transform: rotate(var(--bench-rot));
+  transition: transform .12s ease-out, box-shadow .12s ease-out;
+}
+.bench-card:hover, .bench-card:focus-visible {
+  transform: rotate(var(--bench-rot)) translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+  outline: none;
+  z-index: 2;
+}
+.bench-tape {
+  position: absolute; top: -7px; left: 18px;
+  width: 46px; height: 16px;
+  background: var(--accent);
+  opacity: .55;
+  transform: rotate(-3deg);
+  border-radius: 1px;
+}
+.bench-card.bench-status-blocked .bench-tape { background: #b84233; }
+.bench-card.bench-status-needs_review .bench-tape { background: var(--done-c); }
+.bench-card.bench-status-idle .bench-tape { background: var(--text-3); }
+.bench-stale-mark {
+  position: absolute; top: 6px; right: 10px;
+  font-family: var(--font-hand); font-size: 22px; line-height: 1;
+  color: #b84233; opacity: .75; transform: rotate(6deg);
+}
+.bench-crumb {
+  font-size: 10px; color: var(--text-3); letter-spacing: .03em;
+  margin-bottom: 4px; margin-top: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bench-title {
+  font-size: var(--fs-md); font-weight: 700; color: var(--text-1);
+  font-family: 'SFMono-Regular', monospace; letter-spacing: -.01em;
+  line-height: var(--lh-tight); margin-bottom: 10px;
+}
+.bench-meta-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.bench-stamp {
+  font-family: 'SFMono-Regular', monospace; font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  border: 1.5px solid var(--accent); color: var(--accent);
+  border-radius: var(--r-xs); padding: 2px 6px;
+  transform: rotate(-2deg); opacity: .85;
+}
+.bench-status-label {
+  font-size: 10px; font-weight: 600; color: var(--text-2); letter-spacing: .03em;
+}
+.bench-updated { font-size: 10px; color: var(--text-3); letter-spacing: .02em; margin-left: auto; }
+.bench-why, .bench-next {
+  font-family: var(--font-hand); font-size: 19px; line-height: 1.25;
+  color: var(--text-1);
+}
+.bench-why { margin-bottom: 4px; }
+.bench-next { color: var(--text-2); }
+
+/* "Up next" — ruled notepaper strip */
+.notepaper {
+  background: var(--workbench-paper);
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-card);
+  padding: 18px 22px;
+  background-image: repeating-linear-gradient(var(--workbench-paper) 0 27px, var(--rule) 27px 28px);
+  background-position: 0 6px;
+}
+.notepaper-context {
+  font-family: var(--font-hand); font-size: 18px; color: var(--text-2);
+  margin-bottom: 6px;
+}
+.notepaper-list { list-style: none; counter-reset: notepaper; }
+.notepaper-item {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 3px 4px; margin: 0 -4px; border-radius: var(--r-xs);
+  cursor: pointer; counter-increment: notepaper;
+  transition: background .1s;
+}
+.notepaper-item:hover { background: var(--accent-subtle); }
+.notepaper-item::before {
+  content: counter(notepaper) '.';
+  font-family: 'SFMono-Regular', monospace; font-size: 11px; font-weight: 700;
+  color: var(--accent); flex-shrink: 0;
+}
+.notepaper-item-title {
+  font-family: 'SFMono-Regular', monospace; font-size: var(--fs-base); font-weight: 700;
+  color: var(--text-1);
+}
+.notepaper-item-rationale {
+  font-family: var(--font-hand); font-size: 18px; color: var(--text-2); line-height: 1.2;
+}
+.notepaper-empty { text-align: center; padding: 18px 8px; }
+.notepaper-empty p { font-size: var(--fs-sm); color: var(--text-3); margin-bottom: 12px; }
+
+.stamp-btn {
+  font-family: 'SFMono-Regular', monospace; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  background: transparent; color: var(--accent);
+  border: 2px solid var(--accent); border-radius: var(--r-xs);
+  padding: 8px 16px; cursor: pointer;
+  transform: rotate(-1deg);
+  transition: background .12s, color .12s;
+}
+.stamp-btn:hover { background: var(--accent); color: var(--surface); }
+.stamp-btn-small { font-size: 10px; padding: 5px 10px; margin-top: 12px; }
+
+@media (max-width: 720px) {
+  .workbench-canvas { padding: 20px 14px 48px; }
+  .bench-grid { flex-direction: column; }
+  .bench-card { width: 100%; transform: none !important; }
+  .bench-card:hover, .bench-card:focus-visible { transform: none !important; }
+}
+
 .modal {
   background: var(--surface);
   border-radius: var(--r-lg);
@@ -2215,6 +2394,7 @@ body:has(.overlay.open) { overflow: hidden; }
       <div class="view-mode-toggle" id="view-mode-toggle" title="Strategy vs board view">
         <button type="button" class="view-mode-btn" data-view="strategy">Strategy</button>
         <button type="button" class="view-mode-btn" data-view="board">Board</button>
+        <button type="button" class="view-mode-btn" data-view="workbench">Workbench</button>
       </div>
     </div>
   </div>
@@ -2302,6 +2482,7 @@ body:has(.overlay.open) { overflow: hidden; }
   <div class="board" id="board"></div>
 </div>
 <div class="strategy-view" id="strategy-view" aria-label="Strategy initiatives"></div>
+<div class="workbench-view" id="workbench-view" aria-label="Workbench"></div>
 
 <!-- Modal -->
 <div class="overlay" id="overlay">
@@ -2367,6 +2548,7 @@ body:has(.overlay.open) { overflow: hidden; }
       </div>
       <div class="modal-footer-actions">
         <button class="modal-footer-link" id="modal-open-cursor" type="button">Open in Cursor</button>
+        <button class="modal-footer-link" id="modal-copy-agent-prompt" type="button">Copy agent prompt</button>
       </div>
     </div>
   </div>
@@ -2412,12 +2594,39 @@ body:has(.overlay.open) { overflow: hidden; }
   </div>
 </div>
 
+<!-- Workbench: "ask for next slices" prompt modal -->
+<div class="vault-modal" id="suggestion-modal">
+  <div class="vault-modal-content">
+    <div class="vault-modal-header">
+      <div class="vault-modal-title">Ask for next slices</div>
+      <button class="vault-modal-close" id="suggestion-modal-close">✕</button>
+    </div>
+    <div class="vault-modal-body">
+      <div class="vault-form-group">
+        <label class="vault-form-label">Context (optional)</label>
+        <textarea class="vault-form-input" id="suggestion-context-input" rows="3" placeholder="e.g. Focus on 2 epics at once: Checkout and Admin. Prioritize anything unblocking POS launch."></textarea>
+      </div>
+      <div class="vault-form-group">
+        <label class="vault-form-label">How many slices?</label>
+        <input type="number" class="vault-form-input" id="suggestion-count-input" min="3" max="15" value="8" style="max-width:100px">
+      </div>
+      <button type="button" class="vault-form-btn" id="suggestion-generate-btn">Generate prompt</button>
+      <div class="vault-form-group" id="suggestion-output-group" style="display:none; margin-top:16px">
+        <label class="vault-form-label">Copy this into Cursor or Claude</label>
+        <textarea class="vault-form-input" id="suggestion-prompt-output" rows="10" readonly style="font-family:'SFMono-Regular',monospace; font-size:11.5px"></textarea>
+        <button type="button" class="vault-form-btn" id="suggestion-copy-btn" style="margin-top:8px">Copy prompt</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ── API Configuration ──────────────────────── */
 const API_URL = 'http://localhost:3001';
 const VAULT_STORAGE_KEY = 'venubase-kanban-vault';
 let currentVault = localStorage.getItem(VAULT_STORAGE_KEY) || 'venubase';
 let vaultColors = {}; // Cache vault colors from API
+let vaultRegistry = []; // Full /api/vaults response, incl. path + routing.canonicalRepo (for Workbench prompts)
 
 function apiUrl(endpoint) {
   return `${API_URL}${endpoint}?vault=${currentVault}`;
@@ -2718,16 +2927,18 @@ function stripEpicsSectionFromMd(md){
 }
 
 function setViewMode(mode){
-  viewMode = mode === 'strategy' ? 'strategy' : 'board';
+  viewMode = (mode === 'strategy' || mode === 'workbench') ? mode : 'board';
   localStorage.setItem(VIEW_MODE_KEY, viewMode);
   document.querySelectorAll('.view-mode-btn').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.view === viewMode);
   });
-  document.getElementById('board-wrap')?.classList.toggle('hidden', viewMode === 'strategy');
+  document.getElementById('board-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   document.getElementById('strategy-view')?.classList.toggle('visible', viewMode === 'strategy');
+  document.getElementById('workbench-view')?.classList.toggle('visible', viewMode === 'workbench');
   document.getElementById('card-type-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   document.getElementById('initiative-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   if(viewMode === 'strategy') renderStrategyView();
+  else if(viewMode === 'workbench') renderWorkbenchView();
   else renderBoard();
   filterCards(searchInput?.value || '');
 }
@@ -3052,6 +3263,276 @@ function bindStrategyViewEvents(root){
       }
     });
   });
+}
+
+/* ── Workbench view ──────────────────────────── */
+const AGENT_STALE_MS = 48 * 60 * 60 * 1000;
+const AGENT_STATUS_LABELS = {
+  in_progress: 'In progress',
+  blocked: 'Blocked',
+  needs_review: 'Needs review',
+  idle: 'Idle',
+};
+
+/** Small deterministic hash → a stable, non-jittery rotation per card. */
+function rotationForId(id){
+  let hash = 0;
+  for(let i=0;i<id.length;i++){ hash = (hash * 31 + id.charCodeAt(i)) | 0; }
+  return (Math.abs(hash) % 7) - 3; // -3..3 degrees
+}
+
+function relativeTime(iso){
+  if(!iso) return '';
+  const then = new Date(iso).getTime();
+  if(Number.isNaN(then)) return '';
+  const diffMs = Date.now() - then;
+  if(diffMs < 0) return 'just now';
+  const mins = Math.floor(diffMs / 60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if(hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function isAgentStale(iso){
+  if(!iso) return false;
+  const then = new Date(iso).getTime();
+  if(Number.isNaN(then)) return false;
+  return (Date.now() - then) > AGENT_STALE_MS;
+}
+
+function agentStatusKey(card){
+  return card.agent_status || (card.status === 'Active' ? 'in_progress' : 'idle');
+}
+
+function agentStatusLabel(card){
+  return AGENT_STATUS_LABELS[agentStatusKey(card)] || 'Idle';
+}
+
+function benchCards(){
+  return state.cards.filter(c => c.agent_status || c.status === 'Active');
+}
+
+function renderBenchCard(card){
+  const rot = rotationForId(card.id);
+  const stale = isAgentStale(card.agent_updated_at);
+  const crumb = ancestorChain(card).concat([card]).map(breadcrumbLabel).join(' › ');
+  const statusKey = agentStatusKey(card);
+  const updated = relativeTime(card.agent_updated_at);
+  return `<div class="bench-card bench-status-${esc(statusKey)}${stale?' stale':''}" data-card="${esc(card.id)}" style="--bench-rot:${rot}deg" tabindex="0" role="button" aria-label="${esc(card.title||card.id)}">
+    <div class="bench-tape"></div>
+    ${stale ? '<div class="bench-stale-mark" title="No update in a while">?</div>' : ''}
+    <div class="bench-crumb">${esc(crumb)}</div>
+    <div class="bench-title">${esc(card.title||card.id)}</div>
+    <div class="bench-meta-row">
+      ${card.agent_provider ? `<span class="bench-stamp">${esc(card.agent_provider)}</span>` : ''}
+      <span class="bench-status-label">${esc(agentStatusLabel(card))}</span>
+      ${updated ? `<span class="bench-updated">${esc(updated)}</span>` : ''}
+    </div>
+    ${card.agent_summary ? `<div class="bench-why">${esc(card.agent_summary)}</div>` : ''}
+    ${card.agent_next ? `<div class="bench-next">→ next: ${esc(card.agent_next)}</div>` : ''}
+  </div>`;
+}
+
+function renderWorkbenchView(){
+  const root = document.getElementById('workbench-view');
+  if(!root) return;
+  const bench = benchCards();
+  root.innerHTML = `
+    <div class="workbench-canvas">
+      <section class="workbench-section">
+        <div class="workbench-section-title">On the bench</div>
+        <div class="bench-grid">
+          ${bench.length ? bench.map(renderBenchCard).join('') : '<div class="workbench-empty">Nothing on the bench right now — hand a slice to an agent from its card (“Copy agent prompt”).</div>'}
+        </div>
+      </section>
+      <section class="workbench-section">
+        <div class="workbench-section-title">Up next</div>
+        <div class="notepaper" id="workbench-suggestions">
+          <div class="workbench-loading">Loading…</div>
+        </div>
+      </section>
+    </div>`;
+  bindWorkbenchViewEvents(root);
+  loadWorkbenchSuggestions();
+}
+
+function bindWorkbenchViewEvents(root){
+  root.querySelectorAll('.bench-card').forEach(el=>{
+    el.addEventListener('click', ()=> navigateToCard(el.dataset.card));
+    el.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); navigateToCard(el.dataset.card); }
+    });
+  });
+}
+
+async function loadWorkbenchSuggestions(){
+  const el = document.getElementById('workbench-suggestions');
+  if(!el) return;
+  let data = { items: [] };
+  try {
+    const resp = await fetch(apiUrl('/api/agent-suggestions'));
+    if(resp.ok) data = await resp.json();
+  } catch(err){
+    console.error('Failed to load agent suggestions:', err);
+  }
+  renderWorkbenchSuggestions(data);
+}
+
+function renderWorkbenchSuggestions(data){
+  const el = document.getElementById('workbench-suggestions');
+  if(!el) return;
+  const items = data.items || [];
+  if(!items.length){
+    el.innerHTML = `<div class="notepaper-empty">
+      <p>No suggestions yet.</p>
+      <button type="button" class="stamp-btn" id="workbench-ask-btn">+ ask for next slices</button>
+    </div>`;
+  } else {
+    el.innerHTML = `
+      ${data.context ? `<div class="notepaper-context">“${esc(data.context)}”</div>` : ''}
+      <ol class="notepaper-list">
+        ${items.map(item => `
+          <li class="notepaper-item" data-card="${esc(item.cardId)}">
+            <span class="notepaper-item-title">${esc(item.title || item.cardId)}</span>
+            <span class="notepaper-item-rationale">${esc(item.rationale || '')}</span>
+          </li>`).join('')}
+      </ol>
+      <button type="button" class="stamp-btn stamp-btn-small" id="workbench-ask-btn">+ ask again</button>`;
+  }
+  el.querySelectorAll('.notepaper-item').forEach(li=>{
+    li.addEventListener('click', ()=> navigateToCard(li.dataset.card));
+  });
+  el.querySelector('#workbench-ask-btn')?.addEventListener('click', openSuggestionModal);
+}
+
+/* ── "Ask for next slices" prompt modal ──────── */
+function currentVaultMeta(){
+  return vaultRegistry.find(v => v.key === currentVault) || null;
+}
+
+function openSuggestionModal(){
+  document.getElementById('suggestion-context-input').value = '';
+  document.getElementById('suggestion-count-input').value = '8';
+  document.getElementById('suggestion-output-group').style.display = 'none';
+  document.getElementById('suggestion-prompt-output').value = '';
+  document.getElementById('suggestion-modal')?.classList.add('open');
+}
+
+function closeSuggestionModal(){
+  document.getElementById('suggestion-modal')?.classList.remove('open');
+}
+
+function buildSuggestionPrompt(contextText, count){
+  const vaultMeta = currentVaultMeta();
+  const candidates = state.cards.filter(c =>
+    !c.is_epic && !c.is_initiative && (c.status === 'Backlog' || c.status === 'Prioritized')
+  );
+  const lines = candidates.map(c => {
+    const parent = c.parent ? getCard(c.parent) : null;
+    const deps = parseDeps(getContent(c.id));
+    const bits = [
+      `- ${c.id} — "${c.title || c.id}" (status: ${c.status}${c.category ? `, category: ${c.category}` : ''})`,
+    ];
+    if(parent) bits.push(`  epic: ${parent.id} ("${parent.title || parent.id}")`);
+    if(deps.length) bits.push(`  depends on: ${deps.join(', ')}`);
+    return bits.join('\n');
+  });
+
+  return [
+    `Task: Suggest the next ${count} roadmap slices to work on next.`,
+    '',
+    `Vault: ${currentVault}${vaultMeta?.path ? ` (${vaultMeta.path})` : ''}`,
+    '',
+    contextText ? `My constraints/context: ${contextText}` : 'No additional constraints given.',
+    '',
+    `Backlog + Prioritized slices to rank (${candidates.length} total):`,
+    lines.join('\n') || '(none found)',
+    '',
+    'Instructions:',
+    `- Pick the best ${count} slices to work on next, considering: dependency readiness (don't suggest something blocked on unfinished work), grouping by epic/initiative against the constraints above, and existing backlog/prioritized order as a tiebreaker.`,
+    '- Give each pick a one-sentence rationale.',
+    `- Write the result to a file named "agent-suggestions.md" in this vault's root directory (sibling to roadmap-index.md), overwriting any existing file, in exactly this format:`,
+    '',
+    '---',
+    `generated_at: ${new Date().toISOString()}`,
+    'generated_by: <your name, e.g. cursor or claude>',
+    `context: "${(contextText || '').replace(/"/g, '\\"')}"`,
+    '---',
+    '',
+    '## Suggested next slices',
+    '',
+    '1. [[release-example-slug]] — One-sentence rationale.',
+    '2. [[release-other-slug]] — One-sentence rationale.',
+    '',
+    '(list all your picks in ranked order, using [[card-id]] wikilinks)',
+  ].join('\n');
+}
+
+async function fetchVaultConventions(){
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/${encodeURIComponent(currentVault)}/conventions`);
+    if(resp.ok){
+      const data = await resp.json();
+      return data.content || '';
+    }
+  } catch(err){
+    console.error('Failed to fetch vault conventions:', err);
+  }
+  return '';
+}
+
+function buildAgentPrompt(card, conventionsText){
+  const vaultMeta = currentVaultMeta();
+  const canonicalRepo = vaultMeta?.routing?.canonicalRepo;
+  const crumb = ancestorChain(card).concat([card]).map(breadcrumbLabel).join(' › ');
+  const content = getContent(card.id);
+
+  return [
+    `Task: Implement roadmap slice "${card.title || card.id}" (${card.id})`,
+    '',
+    `This is self-contained — don't assume you can reach my local machine or Kando's server (http://127.0.0.1:3001). Everything you need is below.`,
+    '',
+    `Vault: ${currentVault}${vaultMeta?.path ? ` (${vaultMeta.path})` : ''}`,
+    `Card file: ${card.path || (card.id + '.md')}`,
+    canonicalRepo ? `Canonical repo for this vault: ${canonicalRepo}` : null,
+    `Breadcrumb: ${crumb}`,
+    `Current status: ${card.status}`,
+    '',
+    '--- Vault conventions (roadmap-conventions.md) ---',
+    conventionsText.trim() || '(No conventions file found for this vault — use standard practice.)',
+    '',
+    `--- Card content (${card.path || card.id + '.md'}) ---`,
+    content || '(No body content found.)',
+    '',
+    '--- Your task ---',
+    'Implement this slice: read the Problem/context, Behavior & requirements, and Acceptance criteria sections above, and do the implementation work in the app repository this slice belongs to (not the roadmap vault) unless the card says otherwise.',
+    '',
+    'Keep this card\'s frontmatter updated in the roadmap vault as you work — this is what Kando\'s Workbench view shows the user, so it must reflect reality:',
+    '  agent_status: in_progress | blocked | needs_review | idle',
+    '  agent_provider: cursor | claude | codex | manual',
+    '  agent_summary: one or two sentences on current state (the "why")',
+    '  agent_next: one sentence on what happens next',
+    '  agent_updated_at: current ISO 8601 timestamp, updated every time you touch this card',
+    '',
+    'Update these on every meaningful change, not just at the end. Don\'t remove or reformat other frontmatter fields. If the roadmap vault is a separate git repo from the one you\'re implementing in, edit and commit the card file there directly.',
+  ].filter(line => line !== null).join('\n');
+}
+
+async function copyAgentPromptForCard(cardId){
+  const card = getCard(cardId);
+  if(!card) return;
+  const conventionsText = await fetchVaultConventions();
+  const prompt = buildAgentPrompt(card, conventionsText);
+  try {
+    await navigator.clipboard.writeText(prompt);
+    showToast('Agent prompt copied to clipboard');
+  } catch(err){
+    console.error('Failed to copy agent prompt:', err);
+    alert('Could not copy to clipboard.');
+  }
 }
 
 function setInitiativeEpicsStatus(msg, isError){
@@ -4313,6 +4794,11 @@ document.getElementById('modal-open-cursor').addEventListener('click', ()=>{
   openInCursor(modalCardId);
 });
 
+document.getElementById('modal-copy-agent-prompt').addEventListener('click', ()=>{
+  if(!modalCardId) return;
+  copyAgentPromptForCard(modalCardId);
+});
+
 document.getElementById('modal-copy-path').addEventListener('click', async () => {
   const pathEl = document.getElementById('modal-path');
   const text = (pathEl && pathEl.textContent) ? pathEl.textContent.trim() : '';
@@ -4759,6 +5245,7 @@ async function loadCards(){
     const vaultsResp = await fetch(`${API_URL}/api/vaults`);
     if(vaultsResp.ok) {
       const { vaults } = await vaultsResp.json();
+      vaultRegistry = vaults || [];
       const vault = vaults.find(v => v.key === currentVault || v.name.toLowerCase() === currentVault.toLowerCase());
       if(vault?.kanban) {
         currentKanbanConfig = vault.kanban;
@@ -5335,6 +5822,31 @@ vaultModal.addEventListener('click', (e) => {
   if(e.target === vaultModal) closeVaultModal();
 });
 
+/* ── Workbench: "ask for next slices" modal ──── */
+const suggestionModal = document.getElementById('suggestion-modal');
+document.getElementById('suggestion-modal-close').addEventListener('click', closeSuggestionModal);
+suggestionModal.addEventListener('click', (e) => {
+  if(e.target === suggestionModal) closeSuggestionModal();
+});
+document.getElementById('suggestion-generate-btn').addEventListener('click', () => {
+  const contextText = document.getElementById('suggestion-context-input').value.trim();
+  const count = Math.max(3, Math.min(15, parseInt(document.getElementById('suggestion-count-input').value, 10) || 8));
+  const prompt = buildSuggestionPrompt(contextText, count);
+  document.getElementById('suggestion-prompt-output').value = prompt;
+  document.getElementById('suggestion-output-group').style.display = '';
+});
+document.getElementById('suggestion-copy-btn').addEventListener('click', async () => {
+  const text = document.getElementById('suggestion-prompt-output').value;
+  if(!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Prompt copied to clipboard');
+  } catch(err){
+    console.error('Failed to copy suggestion prompt:', err);
+    alert('Could not copy to clipboard.');
+  }
+});
+
 vaultAddForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const name = document.getElementById('vault-name-input').value.trim();
@@ -5347,6 +5859,9 @@ vaultAddForm.addEventListener('submit', (e) => {
 document.addEventListener('keydown', (e) => {
   if(e.key === 'Escape' && vaultModal.classList.contains('open')){
     closeVaultModal();
+  }
+  if(e.key === 'Escape' && suggestionModal.classList.contains('open')){
+    closeSuggestionModal();
   }
 });
 
