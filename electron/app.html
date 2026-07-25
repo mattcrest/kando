@@ -1865,6 +1865,10 @@ body:has(.overlay.open) { overflow: hidden; }
    the way handwriting sits on ruled paper, not floating between lines. */
 .notepaper {
   --line: 28px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 260px;
   background: var(--workbench-paper);
   background-image: repeating-linear-gradient(var(--workbench-paper) 0 calc(var(--line) - 1px), var(--rule) calc(var(--line) - 1px) var(--line));
   border: 1px solid var(--border-md);
