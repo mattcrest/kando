@@ -2,6 +2,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import matter from 'gray-matter';
 
+// Only match wikilinks on actual list item lines ("1. [[..]]" or "- [[..]]"),
+// not on any prose paragraph that happens to mention a card — a stray
+// wikilinked sentence after the list must not become a phantom suggestion.
+const LIST_ITEM_RE = /^\s*(?:\d+[.)]|[-*])\s+(.*)$/;
 const WIKI_LINK_RE = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/;
 const RATIONALE_SEP_RE = /^\s*[—–-]\s*/;
 
@@ -17,10 +21,12 @@ export function parseAgentSuggestions(raw) {
   const items = [];
 
   for (const line of body.split('\n')) {
-    const wiki = line.match(WIKI_LINK_RE);
+    const listMatch = line.match(LIST_ITEM_RE);
+    if (!listMatch) continue;
+    const wiki = listMatch[1].match(WIKI_LINK_RE);
     if (!wiki) continue;
     const cardId = wiki[1].trim();
-    const afterLink = line.slice(wiki.index + wiki[0].length);
+    const afterLink = listMatch[1].slice(wiki.index + wiki[0].length);
     const rationale = afterLink.replace(RATIONALE_SEP_RE, '').trim();
     items.push({ cardId, rationale });
   }

@@ -689,6 +689,7 @@ app.get('/api/roadmap-index', async (req, res) => {
 // GET /api/agent-suggestions - Parsed agent-suggestions.md, resolved against cards
 app.get('/api/agent-suggestions', async (req, res) => {
   try {
+    const vaultKey = getVaultKey(req);
     const vaultDir = getVaultDir(req);
     const parsed = await loadAgentSuggestions(vaultDir);
     if (!parsed) {
@@ -701,6 +702,15 @@ app.get('/api/agent-suggestions', async (req, res) => {
       try {
         const content = await fs.readFile(cardPath, 'utf-8');
         const { data } = matter(content);
+        if (data.epic === true || data.initiative === true) {
+          // "Up next" is a slices-only surface, same contract as the
+          // Workbench bench — silently including an epic/initiative here
+          // would suggest work that isn't a single agent-sized PR.
+          console.warn(
+            `[agent-suggestions] skipping non-slice card '${item.cardId}' (epic/initiative) in vault '${vaultKey}'`
+          );
+          continue;
+        }
         items.push({
           cardId: item.cardId,
           rationale: item.rationale,
