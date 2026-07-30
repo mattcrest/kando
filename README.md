@@ -126,6 +126,9 @@ export VENUBASE_ROADMAP_DIR=/path/to/roadmap-vault
 | `GET/PUT /api/roadmap-index?vault=<key>` | Read/update queue order in `roadmap-index.md` |
 | `GET /api/agent-suggestions?vault=<key>` | Parsed `agent-suggestions.md`, resolved against cards (Workbench "up next") |
 | `GET /api/vaults/:name/conventions` | Raw text of the vault's `roadmap-conventions.md` |
+| `GET /api/vaults/:name/card-contract` | Published card write contract for agents |
+| `GET /api/vaults/:name/doctor` | Vault contract / placement diagnostics |
+| `POST /api/cards/validate?vault=<key>` | Validate card frontmatter (dry-run or on disk) |
 | `GET /api/vaults/:name/git/status` | Git status for vault directory |
 | `POST /api/vaults/:name/git/sync` | Commit and optional push |
 
@@ -137,7 +140,26 @@ Full agent workflow: **[docs/agent-routing.md](docs/agent-routing.md)**. Entry p
 
 ## Coding agents
 
-Install skills and memory snippets once (paths use `KANDO_HOME` if set):
+### Portable pack (app repos + cloud)
+
+Sync a self-contained agent pack into each app repo — works for **Cursor Cloud** and **Claude Code cloud** without local skills or `localhost:3001`:
+
+```bash
+./scripts/sync-agent-pack.sh --app-repo /path/to/app \
+  --vault-key venubase \
+  --vault-hint docs/roadmap \
+  --vault-hint ../venubase-roadmap \
+  --canonical-repo your-org/venubase-roadmap
+
+# Standalone roadmap vault:
+./scripts/sync-agent-pack.sh --vault /path/to/venubase-roadmap
+```
+
+Commits `.kando/`, project skills, `kando.agent.json`, and `AGENTS.md`/`CLAUDE.md` entry blocks. See [docs/agent-routing.md](docs/agent-routing.md#offline-and-cloud-agents).
+
+### Local machine install
+
+Install global skills and memory snippets once (paths use `KANDO_HOME` if set):
 
 ```bash
 export KANDO_HOME=/path/to/kando   # optional
@@ -152,14 +174,17 @@ npm run install:agents
 | `--claude` | Claude Code skills + `~/.claude/CLAUDE.md` |
 | `--copilot` | GitHub Copilot → `~/.copilot/copilot-instructions.md` |
 | `--gemini` | Gemini → `~/.gemini/GEMINI.md` |
-| `--app-repo PATH` | Append pointer block to that repo’s `AGENTS.md` |
+| `--app-repo PATH` | Sync portable agent pack into that repo |
+| `--vault PATH` | Sync `.kando/` + skills into roadmap vault |
 
 | Skill | Purpose |
 |-------|---------|
 | `kando-roadmap-router` | Resolve workspace → vault; follow per-project conventions |
 | `kando-dev-server` | Start/stop Kando on port 3001 |
-| `venubase-roadmap` | Venubase-specific card workflow (optional) |
-| `venubase-roadmap-submodule` | Venubase `docs/roadmap` submodule bump (optional) |
+| `release-card-writing` | Draft readable card bodies (vendored in pack) |
+| `kando-strategy-setup` | Scaffold Strategy initiatives (vendored in pack) |
+| `venubase-roadmap` | Venubase-specific paths only (not vendored) |
+| `venubase-roadmap-submodule` | Venubase `docs/roadmap` submodule bump (Venubase only) |
 
 Details: [templates/agents/README.md](templates/agents/README.md).
 
@@ -201,7 +226,9 @@ dev/
 | `npm run server` | API only |
 | `npm start` | Electron shell |
 | `npm run install:agents` | Install agent integrations (`--all`) |
+| `npm run generate:agent-pack` | Regenerate `templates/agent-pack/card-contract.json` |
 | `npm run install:cursor-skills` | Cursor skills only |
 | `./scripts/kando-dev.sh` | Start / stop / restart / status |
+| `./scripts/sync-agent-pack.sh` | Vendor agent pack into app repo or vault |
 | `./scripts/install-agent-integrations.sh` | Per-tool agent install |
 | `./scripts/install-app-repo-snippet.sh <repo>` | Add Kando block to app `AGENTS.md` |

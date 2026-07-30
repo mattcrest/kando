@@ -1,6 +1,11 @@
 # `roadmap.json` — storage format for Kando organization
 
-**Status:** accepted design, not yet implemented
+> **Status: design note — partially implemented.** `roadmap.json` kanban columns and
+> strategy horizons are live in Kando. The **card frontmatter contract in force today**
+> is `release: true`, `initiative: true` / `epic: true`, and `plan_anchor` — **not**
+> `kind` or `title`. Agents must fetch `GET /api/vaults/<key>/card-contract` before
+> creating cards. See [docs/agent-routing.md](agent-routing.md).
+
 **Branch:** `claude/kando-storage-format-psky48`
 
 ## Problem

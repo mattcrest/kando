@@ -1682,6 +1682,61 @@ body:has(.overlay.open) { overflow: hidden; }
   position: relative; z-index: 1;
 }
 
+.strategy-empty-banner {
+  max-width: 880px; margin: 0 auto 24px; padding: 0 28px;
+}
+.strategy-empty-card {
+  background: var(--surface);
+  border: 2px solid var(--border-md);
+  border-radius: var(--r-md);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-card);
+}
+.strategy-empty-title {
+  font-size: var(--fs-lg); font-weight: 700; color: var(--text-1); margin: 0 0 8px;
+}
+.strategy-empty-body {
+  font-size: var(--fs-base); line-height: var(--lh-body); color: var(--text-2); margin: 0 0 14px;
+}
+.strategy-empty-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.strategy-empty-muted {
+  font-size: var(--fs-sm); color: var(--text-3); margin-top: 10px;
+}
+.strategy-empty-warn {
+  color: #b84233; font-weight: 600;
+}
+
+.header-vault-doctor {
+  position: relative;
+}
+.header-vault-doctor.hidden { display: none; }
+.header-doctor-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid rgba(184,66,51,.45); background: rgba(184,66,51,.12);
+  color: #e8a090; border-radius: var(--r-sm); padding: 5px 10px;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  cursor: pointer;
+}
+.header-doctor-btn:hover { background: rgba(184,66,51,.22); }
+.doctor-panel {
+  display: none; position: absolute; right: 0; top: calc(100% + 8px); z-index: 50;
+  width: min(420px, 92vw); max-height: 360px; overflow: auto;
+  background: var(--surface); border: 1px solid var(--border-md);
+  border-radius: var(--r-md); box-shadow: var(--shadow-card-hover);
+  padding: 12px 14px;
+}
+.doctor-panel.open { display: block; }
+.doctor-panel-title {
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 8px;
+}
+.doctor-panel-item {
+  font-size: 12px; line-height: 1.35; color: var(--text-2);
+  border-bottom: 1px dashed var(--rule); padding: 8px 0;
+}
+.doctor-panel-item:last-child { border-bottom: none; }
+.doctor-panel-item strong { color: var(--text-1); }
+
 /* initiative row — wide, two-column: narrative left, epics right */
 .strategy-row {
   display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
@@ -2416,6 +2471,12 @@ body:has(.overlay.open) { overflow: hidden; }
     </div>
   </div>
   <div class="header-utilities">
+    <div class="header-vault-doctor hidden" id="vault-doctor-wrap">
+      <button type="button" class="header-doctor-btn" id="vault-doctor-btn" aria-expanded="false">
+        <span id="vault-doctor-label">Vault issues</span>
+      </button>
+      <div class="doctor-panel" id="vault-doctor-panel" role="dialog" aria-label="Vault health"></div>
+    </div>
     <div class="header-git-sync hidden" id="git-sync-wrap">
       <button class="header-git-btn" id="git-sync-btn" aria-describedby="git-status-tooltip">
         <span class="header-git-dot" id="git-status-dot" aria-hidden="true"></span>
@@ -2637,6 +2698,28 @@ body:has(.overlay.open) { overflow: hidden; }
   </div>
 </div>
 
+<!-- Strategy: set up initiatives with an agent -->
+<div class="vault-modal" id="strategy-setup-modal">
+  <div class="vault-modal-content">
+    <div class="vault-modal-header">
+      <div class="vault-modal-title">Set up strategy</div>
+      <button class="vault-modal-close" id="strategy-setup-modal-close">✕</button>
+    </div>
+    <div class="vault-modal-body">
+      <div class="vault-form-group">
+        <label class="vault-form-label">What do you want to focus on?</label>
+        <textarea class="vault-form-input" id="strategy-setup-context-input" rows="4" placeholder="e.g. Ship the iOS app this quarter. Monetization can wait. Organize existing epics under 2–3 big bets."></textarea>
+      </div>
+      <button type="button" class="vault-form-btn" id="strategy-setup-generate-btn">Generate prompt</button>
+      <div class="vault-form-group" id="strategy-setup-output-group" style="display:none; margin-top:16px">
+        <label class="vault-form-label">Copy this into Cursor or Claude</label>
+        <textarea class="vault-form-input" id="strategy-setup-prompt-output" rows="12" readonly style="font-family:'SFMono-Regular',monospace; font-size:11.5px"></textarea>
+        <button type="button" class="vault-form-btn" id="strategy-setup-copy-btn" style="margin-top:8px">Copy prompt</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ── API Configuration ──────────────────────── */
 const API_URL = 'http://localhost:3001';
@@ -2645,6 +2728,7 @@ let currentVault = localStorage.getItem(VAULT_STORAGE_KEY) || 'venubase';
 let vaultColors = {}; // Cache vault colors from API
 let vaultRegistry = []; // Full /api/vaults response, incl. path + routing.canonicalRepo (for Workbench prompts)
 let lastSuggestionsData = null; // Last-loaded /api/agent-suggestions response, for "AI Reorder" prompts
+let lastDoctorData = null; // Last-loaded /api/vaults/:name/doctor response
 
 function apiUrl(endpoint) {
   return `${API_URL}${endpoint}?vault=${currentVault}`;
@@ -3110,6 +3194,116 @@ async function saveStrategyOrders(orders){
   }
 }
 
+function strategyInitiatives(){
+  return state.cards.filter(c => c.is_initiative && !c.archived);
+}
+
+function contractErrorsForCard(card){
+  return (card.contract_warnings || []).filter(w => w.severity === 'error');
+}
+
+function buildStrategySetupPrompt(contextText){
+  const vaultMeta = currentVaultMeta();
+  const epics = state.cards.filter(c => c.is_epic);
+  const orphanEpics = epics.filter(c => !c.parent);
+  const linkedEpics = epics.filter(c => c.parent);
+  const initiatives = strategyInitiatives();
+  const unreadable = lastDoctorData?.unreadableInitiatives || [];
+
+  const epicLines = epics.map(c => {
+    const parent = c.parent ? getCard(c.parent) : null;
+    return `- ${c.id} — "${c.title || c.id}"${parent ? ` (under ${parent.id})` : ' (no initiative yet)'}`;
+  });
+
+  return [
+    'Task: Help me set up the Strategy view for this roadmap vault.',
+    '',
+    'Use the **kando-strategy-setup** skill. Follow **kando-roadmap-router** to resolve the vault, then fetch the card contract:',
+    `GET http://127.0.0.1:3001/api/vaults/${currentVault}/card-contract`,
+    '',
+    `Vault: ${currentVault}${vaultMeta?.path ? ` (${vaultMeta.path})` : ''}`,
+    contextText ? `My focus: ${contextText}` : 'No additional focus given yet — interview me first about what winning looks like.',
+    '',
+    `Current initiatives (${initiatives.length} readable):`,
+    initiatives.length
+      ? initiatives.map(c => `- ${c.id} — "${c.title}" (${normalizeHorizon(c.horizon)})`).join('\n')
+      : '(none yet)',
+    unreadable.length
+      ? `\nUnreadable initiative files (${unreadable.length}) — fix contract errors before they appear in Strategy:\n` +
+        unreadable.map(c => `- ${c.id} — "${c.title}"`).join('\n')
+      : '',
+    '',
+    `Epics in vault (${epics.length}):`,
+    epicLines.join('\n') || '(none)',
+    orphanEpics.length
+      ? `\nOrphan epics without an initiative (${orphanEpics.length}) — good candidates to group under new initiatives.`
+      : '',
+    '',
+    'Instructions:',
+    '- Interview me about focus and what "winning" looks like before proposing initiatives.',
+    '- Propose 2–5 initiatives at the right altitude (bigger than a single feature, smaller than "the whole product").',
+    '- Use plain language; I may not know what epics or slices are yet.',
+    '- After I confirm, create initiative-*.md files per the card contract, place them in Now/Next/Later, and link orphan epics where appropriate.',
+    '- Validate every card with POST /api/cards/validate before and after writing.',
+    '- Run GET /api/vaults/' + currentVault + '/doctor and fix anything you introduce.',
+  ].filter(Boolean).join('\n');
+}
+
+function openStrategySetupModal(){
+  document.getElementById('strategy-setup-context-input').value = '';
+  document.getElementById('strategy-setup-output-group').style.display = 'none';
+  document.getElementById('strategy-setup-prompt-output').value = '';
+  document.getElementById('strategy-setup-modal')?.classList.add('open');
+}
+
+function closeStrategySetupModal(){
+  document.getElementById('strategy-setup-modal')?.classList.remove('open');
+}
+
+async function loadVaultDoctor(){
+  try {
+    const resp = await fetch(`${API_URL}/api/vaults/${encodeURIComponent(currentVault)}/doctor`);
+    if(!resp.ok) return;
+    lastDoctorData = await resp.json();
+    renderVaultDoctorAffordance();
+    if(viewMode === 'strategy') renderStrategyView();
+  } catch(err){
+    console.error('Failed to load vault doctor:', err);
+  }
+}
+
+function renderVaultDoctorAffordance(){
+  const wrap = document.getElementById('vault-doctor-wrap');
+  const btn = document.getElementById('vault-doctor-btn');
+  const panel = document.getElementById('vault-doctor-panel');
+  const label = document.getElementById('vault-doctor-label');
+  if(!wrap || !btn || !panel || !label) return;
+
+  const errors = lastDoctorData?.errors || [];
+  const warnings = lastDoctorData?.warnings || [];
+  const count = errors.length;
+
+  if(count === 0 && warnings.length === 0){
+    wrap.classList.add('hidden');
+    panel.classList.remove('open');
+    return;
+  }
+
+  wrap.classList.remove('hidden');
+  label.textContent = count ? `${count} vault issue${count === 1 ? '' : 's'}` : `${warnings.length} warning${warnings.length === 1 ? '' : 's'}`;
+
+  const items = [...errors.slice(0, 12), ...warnings.slice(0, 6)];
+  panel.innerHTML = `
+    <div class="doctor-panel-title">Vault health</div>
+    ${items.map(item => `
+      <div class="doctor-panel-item">
+        <strong>${esc(item.id || item.category || 'vault')}</strong><br>
+        ${esc(item.message || '')}
+        ${item.fix ? `<br><span style="color:var(--text-3)">→ ${esc(item.fix)}</span>` : ''}
+      </div>`).join('')}
+    ${errors.length > 12 ? `<div class="doctor-panel-item">…and ${errors.length - 12} more errors</div>` : ''}`;
+}
+
 function renderStrategyView(){
   const root = document.getElementById('strategy-view');
   if(!root) return;
@@ -3131,7 +3325,39 @@ function renderStrategyView(){
     });
   }
 
-  let html = '<div class="strategy-lanes">';
+  const initiatives = strategyInitiatives();
+  const unreadable = lastDoctorData?.unreadableInitiatives || [];
+  const orphanEpicCount = lastDoctorData?.summary?.orphanEpics ?? state.cards.filter(c => c.is_epic && !c.parent).length;
+
+  let banner = '';
+  if(unreadable.length){
+    banner = `<div class="strategy-empty-banner"><div class="strategy-empty-card">
+      <p class="strategy-empty-title">Initiatives exist but Strategy can't read them</p>
+      <p class="strategy-empty-body"><span class="strategy-empty-warn">${unreadable.length} initiative file(s)</span> have contract errors (e.g. wrong frontmatter). Fix them so they appear in Now / Next / Later.</p>
+      <div class="strategy-empty-actions">
+        <button type="button" class="stamp-btn" id="strategy-setup-btn">Set up strategy with AI</button>
+        <button type="button" class="stamp-btn stamp-btn-small" id="strategy-doctor-btn">View issues</button>
+      </div>
+    </div></div>`;
+  } else if(initiatives.length === 0){
+    const hint = orphanEpicCount > 0
+      ? `${orphanEpicCount} epic${orphanEpicCount === 1 ? '' : 's'} in this vault ${orphanEpicCount === 1 ? 'is' : 'are'} not under any initiative yet — a good starting point.`
+      : 'Add a few big bets across Now, Next, and Later — each groups related workstreams.';
+    banner = `<div class="strategy-empty-banner"><div class="strategy-empty-card">
+      <p class="strategy-empty-title">Organize your roadmap around a few big bets</p>
+      <p class="strategy-empty-body">Strategy is where you name the outcomes you're chasing this quarter — not individual tasks. ${esc(hint)}</p>
+      <div class="strategy-empty-actions">
+        <button type="button" class="stamp-btn" id="strategy-setup-btn">Set up strategy with AI</button>
+      </div>
+      <p class="strategy-empty-muted">Uses the <strong>kando-strategy-setup</strong> agent skill — interviews you, proposes initiatives, writes cards.</p>
+    </div></div>`;
+  } else {
+    banner = `<div class="strategy-empty-banner" style="margin-bottom:12px">
+      <button type="button" class="stamp-btn stamp-btn-small" id="strategy-setup-btn">Suggest more initiatives</button>
+    </div>`;
+  }
+
+  let html = banner + '<div class="strategy-lanes">';
   for(const horizon of HORIZON_KEYS){
     const cards = lanes[horizon];
     const meta = HORIZON_META[horizon];
@@ -3154,6 +3380,11 @@ function renderStrategyView(){
   html += '</div>';
   root.innerHTML = html;
   bindStrategyViewEvents(root);
+  document.getElementById('strategy-setup-btn')?.addEventListener('click', openStrategySetupModal);
+  document.getElementById('strategy-doctor-btn')?.addEventListener('click', ()=>{
+    document.getElementById('vault-doctor-panel')?.classList.add('open');
+    document.getElementById('vault-doctor-wrap')?.classList.remove('hidden');
+  });
 }
 
 let strategyDragId = null;
@@ -5320,6 +5551,7 @@ async function loadCards(){
 
     initState();
     syncInitiativeFilterOptions();
+    await loadVaultDoctor();
     setViewMode(viewMode);
 
     const route = parseCardRoute();
@@ -5893,6 +6125,50 @@ document.getElementById('suggestion-copy-btn').addEventListener('click', async (
   } catch(err){
     console.error('Failed to copy suggestion prompt:', err);
     alert('Could not copy to clipboard.');
+  }
+});
+
+/* ── Strategy setup modal ───────────────────── */
+const strategySetupModal = document.getElementById('strategy-setup-modal');
+document.getElementById('strategy-setup-modal-close')?.addEventListener('click', closeStrategySetupModal);
+strategySetupModal?.addEventListener('click', (e) => {
+  if(e.target === strategySetupModal) closeStrategySetupModal();
+});
+document.getElementById('strategy-setup-generate-btn')?.addEventListener('click', () => {
+  const contextText = document.getElementById('strategy-setup-context-input').value.trim();
+  const prompt = buildStrategySetupPrompt(contextText);
+  document.getElementById('strategy-setup-prompt-output').value = prompt;
+  document.getElementById('strategy-setup-output-group').style.display = '';
+});
+document.getElementById('strategy-setup-copy-btn')?.addEventListener('click', async () => {
+  const text = document.getElementById('strategy-setup-prompt-output').value;
+  if(!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Prompt copied to clipboard');
+  } catch(err){
+    console.error('Failed to copy strategy setup prompt:', err);
+    alert('Could not copy to clipboard.');
+  }
+});
+
+document.getElementById('vault-doctor-btn')?.addEventListener('click', () => {
+  const panel = document.getElementById('vault-doctor-panel');
+  const open = panel?.classList.toggle('open');
+  document.getElementById('vault-doctor-btn')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('vault-doctor-wrap');
+  if(!wrap || wrap.classList.contains('hidden')) return;
+  if(!wrap.contains(e.target)){
+    document.getElementById('vault-doctor-panel')?.classList.remove('open');
+    document.getElementById('vault-doctor-btn')?.setAttribute('aria-expanded', 'false');
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && strategySetupModal?.classList.contains('open')){
+    closeStrategySetupModal();
   }
 });
 

@@ -1,7 +1,6 @@
-<!-- kando-agent-routing:start -->
 ## Roadmap cards (Kando)
 
-This repo uses Kando for roadmap cards (`release-*.md`, initiatives, epics).
+This repo uses [Kando](https://github.com/mattcrest/kando) for roadmap cards (`release-*.md`, initiatives, epics).
 
 **Start here:** `.kando/kando-for-agents.md` — Board, Strategy, Workbench, card hierarchy, offline workflow.
 
@@ -13,5 +12,3 @@ This repo uses Kando for roadmap cards (`release-*.md`, initiatives, epics).
 **Skills:** `.cursor/skills/kando-roadmap-router`, `release-card-writing`, `kando-strategy-setup`
 
 **Rules:** never use `kind` or `title` frontmatter; follow the vault's `roadmap-conventions.md`; update `agent_*` fields on every slice you touch.
-
-<!-- kando-agent-routing:end -->

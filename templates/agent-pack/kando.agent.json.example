@@ -1,0 +1,10 @@
+{
+  "vaultKey": "myproject",
+  "vaultPathHints": [
+    "docs/roadmap",
+    "../myproject-roadmap"
+  ],
+  "canonicalRepo": "org/myproject-roadmap",
+  "conventionsFile": "roadmap-conventions.md",
+  "indexFile": "roadmap-index.md"
+}

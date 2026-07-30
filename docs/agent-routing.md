@@ -40,9 +40,27 @@ curl -s "http://127.0.0.1:3001/api/routing/resolve?workspaceRoot=/absolute/path/
 
 **Fallback (API down):** Read `vaults.json` from the Kando install directory. For each `routing.<key>.workspaceRoots` entry, match the workspace path (exact prefix or `*` glob). First match wins.
 
-### 2. Load project conventions
+### 2. Load project conventions and card contract
 
 Read `conventionsPath` and `indexPath` from the resolve response. Status values, required card sections, and lifecycle rules **vary by project** — always follow that vault’s `roadmap-conventions.md`, not assumptions from another project.
+
+**Card contract (required before creating cards):**
+
+```bash
+curl -s "http://127.0.0.1:3001/api/vaults/<vaultKey>/card-contract"
+```
+
+The resolve response includes `cardContractPath`. Write only fields the contract names (`release: true`, `initiative: true` / `epic: true`, `plan_anchor`, parent wikilinks). **Never** adopt `kind` or `title` — those are not implemented.
+
+Validate before and after writing:
+
+```bash
+curl -s -X POST "http://127.0.0.1:3001/api/cards/validate?vault=<vaultKey>" \
+  -H 'Content-Type: application/json' \
+  -d '{"cardId": "release-example-slug"}'
+```
+
+Run `GET /api/vaults/<vaultKey>/doctor` after batch edits. Non-zero exit: `./scripts/kando-doctor.sh <vaultKey>` (requires Kando running).
 
 **Queue order:** Kando sorts Active, Prioritized, and Backlog by wiki-link order in `indexPath` (`roadmap-index.md`). When reprioritizing, update that file (or drag in Kando) — not `roadmap_order` on every card. Active cards may still carry auto-synced `roadmap_order` for Tolaria saved views.
 
@@ -118,6 +136,59 @@ context: "Focus on 2 epics at once: Checkout and Admin. Prioritize anything unbl
 - Overwrite the file each time you're asked to re-suggest; it's a snapshot,
   not a log.
 
+### 7. Strategy setup (optional)
+
+When a vault has no initiatives or the user wants to organize Now/Next/Later bets, use the **kando-strategy-setup** skill (or Kando's Strategy view **Set up strategy with AI** helper). Interview the user about focus first; propose 2–5 initiatives at the right altitude; write `initiative-*.md` files per the card contract and place them in strategy horizons.
+
+## Offline and cloud agents
+
+Cursor Cloud, Claude Code cloud, and other remote agents do not have your local `~/.cursor/skills` symlinks or `localhost:3001`. Use the **portable agent pack** vendored into app repos and vaults.
+
+### Sync the pack
+
+From the Kando repo:
+
+```bash
+./scripts/sync-agent-pack.sh --app-repo /path/to/app \
+  --vault-key myproject \
+  --vault-hint docs/roadmap \
+  --vault-hint ../myproject-roadmap \
+  --canonical-repo org/myproject-roadmap
+
+# Also sync into a standalone roadmap vault repo (skills + .kando/, no kando.agent.json):
+./scripts/sync-agent-pack.sh --vault /path/to/roadmap-vault
+```
+
+Or via the installer:
+
+```bash
+./scripts/install-agent-integrations.sh --app-repo /path/to/app --vault /path/to/roadmap-vault
+```
+
+### What gets committed in the app repo
+
+| Path | Purpose |
+|------|---------|
+| `.kando/kando-for-agents.md` | Cold-start: Board, Strategy, Workbench, hierarchy, offline workflow |
+| `.kando/card-contract.json` | Static card write contract (regenerated from `electron/card-contract.js`) |
+| `.kando/templates/{initiative,epic,slice}.md` | Scaffolds for new cards |
+| `.cursor/skills/` + `.claude/skills/` | `kando-roadmap-router`, `release-card-writing`, `kando-strategy-setup` |
+| `kando.agent.json` | Relative vault discovery (`vaultPathHints`) — no absolute paths |
+| `AGENTS.md` / `CLAUDE.md` | Marked entry block pointing at `.kando/` |
+
+### Resolve order (cloud / offline)
+
+1. **`GET /api/routing/resolve`** when Kando is running locally (preferred).
+2. Read **`kando.agent.json`** → try each `vaultPathHints` path relative to the workspace until conventions file exists.
+3. Read **`.kando/card-contract.json`** and the vault's `roadmap-conventions.md`.
+4. Ask the user — do not guess vault paths.
+
+Regenerate the pack contract after changing `electron/card-contract.js`:
+
+```bash
+npm run generate:agent-pack
+```
+
 ## `vaults.json` routing schema
 
 ```json
@@ -154,6 +225,9 @@ context: "Focus on 2 epics at once: Checkout and Admin. Prioritize anything unbl
 | PUT | `/api/roadmap-index?vault=<key>` | Update Active / Prioritized / Backlog order in index |
 | GET | `/api/agent-suggestions?vault=<key>` | Parsed `agent-suggestions.md` (see §6), resolved against cards |
 | GET | `/api/vaults/:name/conventions` | Raw text of that vault's `roadmap-conventions.md` |
+| GET | `/api/vaults/:name/card-contract` | Published card write contract for agents |
+| GET | `/api/vaults/:name/doctor` | Vault contract / placement diagnostics |
+| POST | `/api/cards/validate?vault=<key>` | Validate card frontmatter (dry-run or on disk) |
 
 ## Install for common agents
 
@@ -170,14 +244,18 @@ From the Kando repo:
 | Claude Code | `--claude` | Skills + global `~/.claude/CLAUDE.md` |
 | GitHub Copilot | `--copilot` | `~/.copilot/copilot-instructions.md` |
 | Gemini | `--gemini` | `~/.gemini/GEMINI.md` |
-| App repo | `--app-repo /path/to/app` | Block in that repo’s `AGENTS.md` |
+| App repo | `--app-repo /path/to/app` | Portable agent pack in that repo (`.kando/`, skills, `kando.agent.json`) |
+| Roadmap vault | `--vault /path/to/vault` | `.kando/` + skills in the vault repo |
 
 Examples:
 
 ```bash
 export KANDO_HOME=/path/to/kando
 ./scripts/install-agent-integrations.sh --cursor --codex
-./scripts/install-agent-integrations.sh --app-repo ~/dev/venubase/venubase-web --app-repo ~/dev/playerpath/playerpath-web
+./scripts/sync-agent-pack.sh --app-repo ~/dev/venubase/venubase-web \
+  --vault-key venubase --vault-hint docs/roadmap --vault-hint ../venubase-roadmap \
+  --canonical-repo mattcrest/venubase-roadmap
+./scripts/sync-agent-pack.sh --vault ~/dev/venubase-roadmap
 ```
 
 See [templates/agents/README.md](../templates/agents/README.md) for details.

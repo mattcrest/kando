@@ -8,7 +8,7 @@
 #
 # Skills (Cursor / Codex / Claude Code): symlink .cursor/skills → tool skill dir
 # Memory files (Claude / Copilot / Gemini): append marked block with link to docs/agent-routing.md
-# App repos: optional AGENTS.md snippet via --app-repo (repeatable)
+# App repos / vaults: portable agent pack via --app-repo / --vault (repeatable)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,6 +21,7 @@ DO_CLAUDE_MEMORY=0
 DO_COPILOT=0
 DO_GEMINI=0
 APP_REPOS=()
+VAULTS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -43,6 +44,10 @@ while [[ $# -gt 0 ]]; do
       shift
       APP_REPOS+=("${1:?--app-repo requires path}")
       ;;
+    --vault)
+      shift
+      VAULTS+=("${1:?--vault requires path}")
+      ;;
     -h|--help)
       sed -n '2,20p' "$0"
       exit 0
@@ -55,7 +60,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-if [[ "${DO_CURSOR}${DO_CODEX}${DO_CLAUDE_SKILLS}${DO_CLAUDE_MEMORY}${DO_COPILOT}${DO_GEMINI}" == "000000" && ${#APP_REPOS[@]} -eq 0 ]]; then
+if [[ "${DO_CURSOR}${DO_CODEX}${DO_CLAUDE_SKILLS}${DO_CLAUDE_MEMORY}${DO_COPILOT}${DO_GEMINI}" == "000000" && ${#APP_REPOS[@]} -eq 0 && ${#VAULTS[@]} -eq 0 ]]; then
   echo "No targets selected. Try: $0 --all" >&2
   exit 1
 fi
@@ -73,9 +78,17 @@ run() {
 [[ "${DO_COPILOT}" -eq 1 ]] && run "${ROOT}/scripts/install-copilot-instructions.sh"
 [[ "${DO_GEMINI}" -eq 1 ]] && run "${ROOT}/scripts/install-gemini-memory.sh"
 
-for repo in "${APP_REPOS[@]}"; do
-  run "${ROOT}/scripts/install-app-repo-snippet.sh" "${repo}"
-done
+if [[ ${#APP_REPOS[@]} -gt 0 ]]; then
+  for repo in "${APP_REPOS[@]}"; do
+    run "${ROOT}/scripts/sync-agent-pack.sh" --app-repo "${repo}"
+  done
+fi
+
+if [[ ${#VAULTS[@]} -gt 0 ]]; then
+  for vault in "${VAULTS[@]}"; do
+    run "${ROOT}/scripts/sync-agent-pack.sh" --vault "${vault}"
+  done
+fi
 
 echo "Done. KANDO_HOME=${KANDO_HOME}"
 echo "Canonical routing spec: ${KANDO_HOME}/docs/agent-routing.md"

@@ -11,6 +11,8 @@ description: >-
 
 **Always start with kando-roadmap-router** to resolve the vault, then read that vault's `roadmap-conventions.md`. This skill adds **readability rules** on top of project conventions.
 
+**Offline / cloud:** `.kando/kando-for-agents.md` · `.kando/card-contract.json` · `.kando/templates/{initiative,epic,slice}.md`
+
 The reader is a **product builder** scanning cards in Kando — not an engineer grepping the repo. Write so the modal is scannable in under 60 seconds.
 
 ## Section order (fixed)
@@ -172,7 +174,19 @@ Add the card to the appropriate section in **`roadmap-index.md`** when it enters
 2. Confirm a product builder can answer: **what**, **for whom**, **how we know it's done** without opening the repo.
 3. Confirm Acceptance criteria items are checkbox-ready and distinct from Verification protocol steps.
 
+## Validate before you finish
+
+When Kando is running (port **3001**), **always** validate cards against the published contract — do not invent frontmatter fields from design docs or other vaults.
+
+1. **Before drafting:** `GET /api/vaults/<vaultKey>/card-contract` — write only fields it names.
+2. **Dry run:** `POST /api/cards/validate?vault=<key>` with `{ filename, frontmatter, content }`.
+3. **After writing:** validate again with `{ cardId }`.
+4. **Vault check:** `GET /api/vaults/<vaultKey>/doctor` — fix anything you introduced.
+5. **Report** validation results to the user; do not claim success if errors remain.
+
+**Offline / cloud fallback:** read `.kando/card-contract.json`, the vault's `roadmap-conventions.md`, and copy the frontmatter of an existing card in that vault verbatim. Never adopt a field (`kind`, `title`, etc.) that no existing card in the vault uses.
+
 ## Related skills
 
 - **kando-roadmap-router** — resolve vault + conventions path
-- **venubase-roadmap** — Venubase git workflow and kanban status lifecycle
+- **kando-strategy-setup** — scaffold initiatives for an empty Strategy view

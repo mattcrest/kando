@@ -45,6 +45,16 @@ import {
   ROADMAP_FILENAME,
   LEGACY_FILENAME,
 } from './roadmap-config.js';
+import {
+  extractParentId,
+  parseCardIdentity,
+  validateCard,
+  vaultDoctor,
+  cardContract,
+  loadCardTemplates,
+  detectStorageMode,
+  collectRoadmapJsonIds,
+} from './card-contract.js';
 
 const app = express();
 const PORT = 3001;
@@ -342,141 +352,209 @@ async function setEpicInitiativeLink(vaultDir, epicId, initiativeId) {
   });
 }
 
-/** Parent card id: slices link up via `epic:` wikilink, epics via `initiative:` wikilink. */
-function extractParentId(data) {
-  const wiki = typeof data.epic === 'string' ? data.epic
-    : typeof data.initiative === 'string' ? data.initiative
-    : null;
-  if (!wiki) return null;
-  const m = String(wiki).match(/\[\[([^\]|]+)/);
-  return m ? m[1].trim() : null;
+async function readConventionsText(vaultKey, vaultDir) {
+  const routing = getRoutingForVault(vaultKey, VAULT_ROUTING);
+  const conventionsFile = routing?.conventionsFile || 'roadmap-conventions.md';
+  try {
+    return await fs.readFile(path.join(vaultDir, conventionsFile), 'utf-8');
+  } catch {
+    return '';
+  }
+}
+
+async function loadVaultCards(vaultKey, vaultDir) {
+  const files = await fs.readdir(vaultDir);
+  const markdownFiles = files.filter((f) => f.endsWith('.md'));
+  const cards = [];
+
+  for (const file of markdownFiles) {
+    const filePath = path.join(vaultDir, file);
+    try {
+      if (await isReleaseCard(filePath)) {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const { data } = matter(content);
+        const cardId = getCardId(file);
+        const identity = parseCardIdentity(data, cardId, file);
+
+        cards.push({
+          id: cardId,
+          title: identity.title,
+          status: normalizeStatus(data.status),
+          roadmap_order: data.roadmap_order || null,
+          category: data.category || null,
+          plan_anchor: identity.plan_anchor,
+          path: file,
+          shipped_at: data.shipped_at || null,
+          is_epic: identity.is_epic,
+          is_initiative: identity.is_initiative,
+          kind: identity.kind,
+          horizon: data.horizon || null,
+          milestone: data.milestone || null,
+          parent: identity.parent,
+          contract_warnings: identity.contract_warnings,
+          agent_status: data.agent_status || null,
+          agent_provider: data.agent_provider || null,
+          agent_summary: data.agent_summary || null,
+          agent_next: data.agent_next || null,
+          agent_updated_at: data.agent_updated_at || null,
+        });
+      }
+    } catch (err) {
+      console.error(`Error reading ${file}:`, err.message);
+    }
+  }
+
+  const indexPath = getIndexPath(vaultKey, vaultDir);
+  const indexOrders = await loadIndexOrders(indexPath);
+  const positionMaps = ordersToPositionMaps(indexOrders);
+
+  const legacyMap = new Map(
+    cards.map((c) => [c.id, { status: c.status, order: positionMaps[c.status]?.[c.id] ?? null }])
+  );
+
+  const roadmapCfg = await loadRoadmapConfig(vaultDir);
+  const placement = roadmapCfg ? placementFromConfig(roadmapCfg.raw) : null;
+  const useRoadmapJson = roadmapCfg?.file === ROADMAP_FILENAME && placement.size > 0;
+  let placementDiffs = [];
+  let strategyDiffs = [];
+
+  if (useRoadmapJson) {
+    placementDiffs = placementParity(placement, legacyMap, INDEX_ORDERED_STATUSES);
+    if (placementDiffs.length) {
+      console.warn(
+        `[roadmap.json] placement drift in vault '${vaultKey}' (${placementDiffs.length}):\n  ` +
+          placementDiffs.slice(0, 10).join('\n  ') +
+          (placementDiffs.length > 10 ? `\n  …and ${placementDiffs.length - 10} more` : '')
+      );
+    }
+    for (const card of cards) {
+      const p = placement.get(card.id);
+      if (p) {
+        card.status = p.status;
+        card.index_order = p.order;
+        card.unplaced = false;
+      } else {
+        card.index_order = null;
+        card.unplaced = true;
+      }
+    }
+  } else {
+    attachIndexOrder(cards, positionMaps);
+  }
+
+  if (roadmapCfg?.file === ROADMAP_FILENAME) {
+    const strategyPlacement = strategyPlacementFromConfig(roadmapCfg.raw);
+    if (strategyPlacement.size > 0) {
+      const legacyStrategy = new Map(
+        cards
+          .filter((c) => c.is_initiative)
+          .map((c) => [c.id, { horizon: normalizeHorizon(c.horizon), order: null }])
+      );
+      strategyDiffs = strategyParity(strategyPlacement, legacyStrategy).filter(
+        (d) => d.includes('horizon') || d.includes('unplaced')
+      );
+      if (strategyDiffs.length) {
+        console.warn(
+          `[roadmap.json] strategy drift in vault '${vaultKey}' (${strategyDiffs.length}):\n  ` +
+            strategyDiffs.slice(0, 10).join('\n  ') +
+            (strategyDiffs.length > 10 ? `\n  …and ${strategyDiffs.length - 10} more` : '')
+        );
+      }
+      for (const card of cards) {
+        if (!card.is_initiative) continue;
+        const sp = strategyPlacement.get(card.id);
+        if (sp) {
+          card.horizon = sp.horizon;
+          card.strategy_order = sp.order;
+        }
+      }
+    }
+  }
+
+  for (const card of cards) {
+    if (card.is_initiative) {
+      card.horizon = normalizeHorizon(card.horizon);
+      card.archived = isArchivedHorizon(card.horizon);
+    }
+  }
+
+  cards.sort(compareCardsByIndex);
+
+  const kanbanConfig = await loadKanbanConfig(vaultDir);
+  const columnKeys = (kanbanConfig?.columns || []).map((c) => c.key);
+  const storage = detectStorageMode(roadmapCfg, placement?.size || 0);
+  const placedCardIds = new Set(
+    useRoadmapJson
+      ? Array.from(placement?.keys() || [])
+      : cards.filter((c) => c.index_order != null).map((c) => c.id)
+  );
+  const roadmapJsonIds = roadmapCfg?.raw ? collectRoadmapJsonIds(roadmapCfg.raw) : new Set();
+
+  const strategyInitiativeIds = new Set();
+  for (const lane of roadmapCfg?.raw?.strategy?.horizons || []) {
+    for (const id of lane.initiatives || []) strategyInitiativeIds.add(id);
+  }
+  // Initiatives live in strategy horizons, not kanban columns — not "unplaced".
+  for (const card of cards) {
+    if (card.is_initiative && strategyInitiativeIds.has(card.id)) {
+      card.unplaced = false;
+    }
+  }
+
+  const contractErrorCount = cards.reduce(
+    (n, c) => n + (c.contract_warnings || []).filter((w) => w.severity === 'error').length,
+    0
+  );
+  if (contractErrorCount > 0) {
+    console.warn(
+      `[card-contract] ${contractErrorCount} contract error(s) in vault '${vaultKey}' — run GET /api/vaults/${vaultKey}/doctor`
+    );
+  }
+
+  return {
+    cards,
+    markdownFiles,
+    roadmapCfg,
+    useRoadmapJson,
+    placementDiffs,
+    strategyDiffs,
+    storage,
+    columnKeys,
+    placedCardIds,
+    strategyInitiativeIds,
+    roadmapJsonIds,
+    contractErrorCount,
+  };
+}
+
+function buildValidationContext(vaultState) {
+  return {
+    storage: vaultState.storage,
+    columnKeys: vaultState.columnKeys,
+    cardIds: new Set(vaultState.cards.map((c) => c.id)),
+    placedCardIds: vaultState.placedCardIds,
+    strategyInitiativeIds: vaultState.strategyInitiativeIds,
+  };
+}
+
+async function validateCardOnDisk(vaultKey, vaultDir, cardId, vaultState = null) {
+  const state = vaultState || (await loadVaultCards(vaultKey, vaultDir));
+  const { data, markdownContent } = await readCard(vaultDir, cardId);
+  return validateCard({
+    cardId,
+    filename: `${cardId}.md`,
+    frontmatter: data,
+    content: markdownContent,
+    context: buildValidationContext(state),
+  });
 }
 
 // GET /api/cards - List all release cards with metadata
 app.get('/api/cards', async (req, res) => {
   try {
-    const vaultDir = getVaultDir(req);
-    const files = await fs.readdir(vaultDir);
-    const markdownFiles = files.filter(f => f.endsWith('.md'));
-
-    const cards = [];
-    for (const file of markdownFiles) {
-      const filePath = path.join(vaultDir, file);
-      try {
-        if (await isReleaseCard(filePath)) {
-          const content = await fs.readFile(filePath, 'utf-8');
-          const { data } = matter(content);
-          const cardId = getCardId(file);
-
-          cards.push({
-            id: cardId,
-            title: data.plan_anchor || cardId,
-            status: normalizeStatus(data.status),
-            roadmap_order: data.roadmap_order || null,
-            category: data.category || null,
-            plan_anchor: data.plan_anchor || null,
-            path: file,
-            shipped_at: data.shipped_at || null,
-            is_epic: data.epic === true,
-            is_initiative: data.initiative === true,
-            horizon: data.horizon || null,
-            milestone: data.milestone || null,
-            parent: extractParentId(data),
-            agent_status: data.agent_status || null,
-            agent_provider: data.agent_provider || null,
-            agent_summary: data.agent_summary || null,
-            agent_next: data.agent_next || null,
-            agent_updated_at: data.agent_updated_at || null,
-          });
-        }
-      } catch (err) {
-        console.error(`Error reading ${file}:`, err.message);
-      }
-    }
-
     const vaultKey = getVaultKey(req);
-    const indexPath = getIndexPath(vaultKey, vaultDir);
-    const indexOrders = await loadIndexOrders(indexPath);
-    const positionMaps = ordersToPositionMaps(indexOrders);
-
-    // Legacy placement (frontmatter status + roadmap-index.md order) is always
-    // computed: it's the derivation for un-migrated vaults and the parity
-    // baseline for migrated ones.
-    const legacyMap = new Map(
-      cards.map((c) => [c.id, { status: c.status, order: positionMaps[c.status]?.[c.id] ?? null }])
-    );
-
-    const roadmapCfg = await loadRoadmapConfig(vaultDir);
-    const placement = roadmapCfg ? placementFromConfig(roadmapCfg.raw) : null;
-    // Flip only for a real roadmap.json with actual membership — a legacy
-    // kanban.json (column labels, no `cards`) must stay on the legacy path.
-    const useRoadmapJson = roadmapCfg?.file === ROADMAP_FILENAME && placement.size > 0;
-
-    if (useRoadmapJson) {
-      const diffs = placementParity(placement, legacyMap, INDEX_ORDERED_STATUSES);
-      if (diffs.length) {
-        console.warn(
-          `[roadmap.json] placement drift in vault '${vaultKey}' (${diffs.length}):\n  ` +
-            diffs.slice(0, 10).join('\n  ') +
-            (diffs.length > 10 ? `\n  …and ${diffs.length - 10} more` : '')
-        );
-      }
-      for (const card of cards) {
-        const p = placement.get(card.id);
-        if (p) {
-          card.status = p.status;
-          card.index_order = p.order;
-          card.unplaced = false;
-        } else {
-          // On disk but not in roadmap.json: keep its frontmatter status so it
-          // still renders, and flag it (guardrail 6 — surface, don't lose).
-          card.index_order = null;
-          card.unplaced = true;
-        }
-      }
-    } else {
-      attachIndexOrder(cards, positionMaps);
-    }
-
-    // Strategy placement: when roadmap.json has strategy membership, apply
-    // horizon from it for initiatives and flag Past/Future as archived.
-    if (roadmapCfg?.file === ROADMAP_FILENAME) {
-      const strategyPlacement = strategyPlacementFromConfig(roadmapCfg.raw);
-      if (strategyPlacement.size > 0) {
-        const legacyStrategy = new Map(
-          cards
-            .filter((c) => c.is_initiative)
-            .map((c) => [c.id, { horizon: normalizeHorizon(c.horizon), order: null }])
-        );
-        const strategyDiffs = strategyParity(strategyPlacement, legacyStrategy);
-        // Only warn on horizon mismatches (ignore order — legacy has no stable order).
-        const horizonDiffs = strategyDiffs.filter((d) => d.includes('horizon') || d.includes('unplaced'));
-        if (horizonDiffs.length) {
-          console.warn(
-            `[roadmap.json] strategy drift in vault '${vaultKey}' (${horizonDiffs.length}):\n  ` +
-              horizonDiffs.slice(0, 10).join('\n  ') +
-              (horizonDiffs.length > 10 ? `\n  …and ${horizonDiffs.length - 10} more` : '')
-          );
-        }
-        for (const card of cards) {
-          if (!card.is_initiative) continue;
-          const sp = strategyPlacement.get(card.id);
-          if (sp) {
-            card.horizon = sp.horizon;
-            card.strategy_order = sp.order;
-          }
-        }
-      }
-    }
-    for (const card of cards) {
-      if (card.is_initiative) {
-        card.horizon = normalizeHorizon(card.horizon);
-        card.archived = isArchivedHorizon(card.horizon);
-      }
-    }
-
-    cards.sort(compareCardsByIndex);
-
+    const vaultDir = getVaultDir(req);
+    const { cards } = await loadVaultCards(vaultKey, vaultDir);
     res.json(cards);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -492,7 +570,8 @@ app.get('/api/cards/:cardId', async (req, res) => {
 
     const content = await fs.readFile(cardPath, 'utf-8');
     const { data, content: markdownContent } = matter(content);
-    const isInitiative = data.initiative === true;
+    const identity = parseCardIdentity(data, cardId, `${cardId}.md`);
+    const isInitiative = identity.is_initiative;
     let horizon = data.horizon ? normalizeHorizon(data.horizon) : null;
     if (isInitiative) {
       const roadmapCfg = await loadRoadmapConfig(vaultDir);
@@ -505,18 +584,20 @@ app.get('/api/cards/:cardId', async (req, res) => {
 
     res.json({
       id: cardId,
-      title: data.plan_anchor || cardId,
+      title: identity.title,
       status: normalizeStatus(data.status),
       roadmap_order: data.roadmap_order || null,
       category: data.category || null,
-      plan_anchor: data.plan_anchor || null,
+      plan_anchor: identity.plan_anchor,
       path: `${cardId}.md`,
       shipped_at: data.shipped_at || null,
-      is_epic: data.epic === true,
-      is_initiative: isInitiative,
+      is_epic: identity.is_epic,
+      is_initiative: identity.is_initiative,
+      kind: identity.kind,
       horizon,
       milestone: data.milestone || null,
-      parent: extractParentId(data),
+      parent: identity.parent,
+      contract_warnings: identity.contract_warnings,
       archived: isInitiative && isArchivedHorizon(horizon),
       agent_status: data.agent_status || null,
       agent_provider: data.agent_provider || null,
@@ -572,6 +653,23 @@ app.put('/api/cards/:cardId', async (req, res) => {
     const cleanedData = Object.fromEntries(
       Object.entries(orderedData).filter(([, v]) => v !== undefined)
     );
+
+    const vaultKey = getVaultKey(req);
+    const vaultState = await loadVaultCards(vaultKey, vaultDir);
+    const validation = validateCard({
+      cardId,
+      filename: `${cardId}.md`,
+      frontmatter: cleanedData,
+      content: markdownContent,
+      context: buildValidationContext(vaultState),
+    });
+    if (!validation.ok) {
+      return res.status(400).json({
+        error: 'Card failed contract validation',
+        validation,
+      });
+    }
+
     const updatedContent = matter.stringify(markdownContent, cleanedData);
     await fs.writeFile(cardPath, updatedContent, 'utf-8');
 
@@ -586,10 +684,9 @@ app.put('/api/cards/:cardId', async (req, res) => {
       );
     }
 
-    const vaultKey = getVaultKey(req);
     await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} metadata`);
 
-    res.json({ id: cardId, success: true });
+    res.json({ id: cardId, success: true, validation });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -702,7 +799,8 @@ app.get('/api/agent-suggestions', async (req, res) => {
       try {
         const content = await fs.readFile(cardPath, 'utf-8');
         const { data } = matter(content);
-        if (data.epic === true || data.initiative === true) {
+        const identity = parseCardIdentity(data, item.cardId, `${item.cardId}.md`);
+        if (identity.is_epic || identity.is_initiative) {
           // "Up next" is a slices-only surface, same contract as the
           // Workbench bench — silently including an epic/initiative here
           // would suggest work that isn't a single agent-sized PR.
@@ -794,16 +892,31 @@ app.put('/api/cards/:cardId/content', async (req, res) => {
     const cardPath = getCardPath(cardId, vaultDir);
 
     const existingContent = await fs.readFile(cardPath, 'utf-8');
-    const { data } = matter(existingContent);
+    const { data, content: markdownContent } = matter(existingContent);
+
+    const vaultKey = getVaultKey(req);
+    const vaultState = await loadVaultCards(vaultKey, vaultDir);
+    const validation = validateCard({
+      cardId,
+      filename: `${cardId}.md`,
+      frontmatter: data,
+      content: newContent,
+      context: buildValidationContext(vaultState),
+    });
+    if (!validation.ok) {
+      return res.status(400).json({
+        error: 'Card content failed contract validation',
+        validation,
+      });
+    }
 
     // Reconstruct markdown with preserved frontmatter and new content
     const updatedContent = matter.stringify(newContent, data);
     await fs.writeFile(cardPath, updatedContent, 'utf-8');
 
-    const vaultKey = getVaultKey(req);
     await maybeAutoCommitVault(vaultKey, vaultDir, `roadmap: update ${cardId} content`);
 
-    res.json({ id: cardId, success: true });
+    res.json({ id: cardId, success: true, validation });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -815,7 +928,7 @@ app.get('/api/initiatives/:initiativeId/epics', async (req, res) => {
     const { initiativeId } = req.params;
     const vaultDir = getVaultDir(req);
     const { data, markdownContent } = await readCard(vaultDir, initiativeId);
-    if (data.initiative !== true) {
+    if (!parseCardIdentity(data, initiativeId, `${initiativeId}.md`).is_initiative) {
       return res.status(400).json({ error: 'Not an initiative card' });
     }
     const rows = parseInitiativeEpics(markdownContent);
@@ -837,7 +950,7 @@ app.put('/api/initiatives/:initiativeId/epics', async (req, res) => {
     const vaultDir = getVaultDir(req);
     const vaultKey = getVaultKey(req);
     const { data, markdownContent } = await readCard(vaultDir, initiativeId);
-    if (data.initiative !== true) {
+    if (!parseCardIdentity(data, initiativeId, `${initiativeId}.md`).is_initiative) {
       return res.status(400).json({ error: 'Not an initiative card' });
     }
 
@@ -940,6 +1053,7 @@ app.get('/api/routing/resolve', (req, res) => {
       vaultPath: resolved.vaultPath,
       conventionsPath: path.join(resolved.vaultPath, conventionsFile),
       indexPath: path.join(resolved.vaultPath, indexFile),
+      cardContractPath: `http://127.0.0.1:${PORT}/api/vaults/${resolved.vaultKey}/card-contract`,
       routing: resolved.routing,
       canonicalRepo,
     });
@@ -1168,6 +1282,92 @@ app.get('/api/vaults/:name/conventions', async (req, res) => {
   }
 });
 
+// GET /api/vaults/:name/card-contract - Published card write contract for agents
+app.get('/api/vaults/:name/card-contract', async (req, res) => {
+  try {
+    const name = req.params.name;
+    if (!VAULTS[name]) {
+      return res.status(404).json({ error: `Vault '${name}' not found` });
+    }
+    const vaultDir = VAULTS[name];
+    const vaultState = await loadVaultCards(name, vaultDir);
+    const templates = await loadCardTemplates();
+    res.json(
+      cardContract({
+        vaultKey: name,
+        storage: vaultState.storage,
+        columnKeys: vaultState.columnKeys,
+        templates,
+      })
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/vaults/:name/doctor - Vault health / contract diagnostics
+app.get('/api/vaults/:name/doctor', async (req, res) => {
+  try {
+    const name = req.params.name;
+    if (!VAULTS[name]) {
+      return res.status(404).json({ error: `Vault '${name}' not found` });
+    }
+    const vaultDir = VAULTS[name];
+    const vaultState = await loadVaultCards(name, vaultDir);
+    const conventionsText = await readConventionsText(name, vaultDir);
+    const report = vaultDoctor({
+      vaultKey: name,
+      vaultDir,
+      cards: vaultState.cards,
+      markdownFiles: vaultState.markdownFiles,
+      conventionsText,
+      storage: vaultState.storage,
+      columnKeys: vaultState.columnKeys,
+      placementDiffs: vaultState.placementDiffs,
+      strategyDiffs: vaultState.strategyDiffs,
+      placedCardIds: vaultState.placedCardIds,
+      strategyInitiativeIds: vaultState.strategyInitiativeIds,
+      roadmapJsonIds: vaultState.roadmapJsonIds,
+    });
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/cards/validate - Dry-run or on-disk card validation
+app.post('/api/cards/validate', async (req, res) => {
+  try {
+    const vaultKey = getVaultKey(req);
+    const vaultDir = getVaultDir(req);
+    const vaultState = await loadVaultCards(vaultKey, vaultDir);
+    const { cardId, filename, frontmatter, content } = req.body || {};
+
+    if (cardId && !frontmatter) {
+      const result = await validateCardOnDisk(vaultKey, vaultDir, cardId, vaultState);
+      return res.json(result);
+    }
+
+    const id = cardId || (filename ? path.parse(filename).name : null);
+    if (!id || !frontmatter) {
+      return res.status(400).json({
+        error: 'Provide cardId, or filename + frontmatter for a dry-run validation',
+      });
+    }
+
+    const result = validateCard({
+      cardId: id,
+      filename: filename || `${id}.md`,
+      frontmatter,
+      content: content || '',
+      context: buildValidationContext(vaultState),
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/vaults/:name/git/sync - Commit (optional message) and push
 app.post('/api/vaults/:name/git/sync', async (req, res) => {
   try {
@@ -1248,6 +1448,9 @@ async function start() {
     console.log(`PUT /api/roadmap-index?vault=<name> - Update index section order`);
     console.log(`GET /api/agent-suggestions?vault=<name> - Read agent-suggestions.md`);
     console.log(`GET /api/vaults/:name/conventions - Read roadmap-conventions.md`);
+    console.log(`GET /api/vaults/:name/card-contract - Card write contract for agents`);
+    console.log(`GET /api/vaults/:name/doctor - Vault contract / placement diagnostics`);
+    console.log(`POST /api/cards/validate?vault=<name> - Validate card frontmatter`);
     console.log(`GET /api/strategy?vault=<name> - Read strategy horizon membership`);
     console.log(`PUT /api/strategy?vault=<name> - Update strategy horizon membership`);
     console.log(`GET /api/vaults - List available vaults (includes routing metadata)`);

@@ -1,0 +1,82 @@
+{
+  "vaultKey": "_generic",
+  "storage": "frontmatter-index",
+  "markers": {
+    "initiative": {
+      "field": "initiative",
+      "value": true,
+      "description": "initiative: true"
+    },
+    "epic": {
+      "field": "epic",
+      "value": true,
+      "description": "epic: true"
+    },
+    "slice": {
+      "field": null,
+      "value": null,
+      "description": "(no marker — slices are release-*.md without epic/initiative flags)"
+    }
+  },
+  "titleField": "plan_anchor",
+  "requiredFields": [
+    "release"
+  ],
+  "parentLinks": {
+    "epic": "initiative: '[[initiative-<slug>]]'",
+    "slice": "epic: '[[release-epic-<slug>]]'"
+  },
+  "filenames": {
+    "initiative": "initiative-<slug>.md",
+    "epic": "release-epic-<slug>.md",
+    "slice": "release-<slug>.md"
+  },
+  "rejectedFields": {
+    "kind": {
+      "didYouMean": "Use initiative: true for initiatives and epic: true for epics — kind is not implemented."
+    },
+    "title": {
+      "didYouMean": "Use plan_anchor instead of title."
+    }
+  },
+  "statuses": [
+    "Backlog",
+    "Prioritized",
+    "Active",
+    "Blocked",
+    "Done",
+    "Deferred"
+  ],
+  "columnKeys": [
+    "Backlog",
+    "Prioritized",
+    "Active",
+    "Blocked",
+    "Done",
+    "Deferred"
+  ],
+  "horizons": [
+    "Now",
+    "Next",
+    "Later",
+    "Past",
+    "Future"
+  ],
+  "placement": {
+    "kanban": "roadmap-index.md wiki-link order under ## Active / Prioritized / Backlog",
+    "strategy": "initiative frontmatter horizon + strategy-index.md (if present)"
+  },
+  "templates": {
+    "initiative": "---\nrelease: true\ninitiative: true\nplan_anchor: Short initiative title\n---\n\n# Short initiative title\n\n## Summary\n\nOne to three sentences: the bet you're making and why it matters now.\n\n## Problem / context\n\nWhat user or business pain does this initiative address?\n\n## Product outcome\n\n- Observable result for users or the business\n- Another outcome\n\n## Epics\n\n| Epic | Focus |\n|------|-------|\n| [[release-epic-example]] | One-line theme |\n\n## Initiative acceptance criteria\n\n- [ ] Testable outcome for the whole initiative\n- [ ] Another initiative-level outcome\n",
+    "epic": "---\nrelease: true\nepic: true\nplan_anchor: Short epic title\ninitiative: '[[initiative-example]]'\n---\n\n# Short epic title\n\n## Summary\n\nWhat this workstream delivers — one paragraph, plain language.\n\n## Product outcome\n\n- User-visible result\n- Another result\n\n## Story slices\n\n| Slice | Status |\n|-------|--------|\n| [[release-example-slice]] | Backlog |\n",
+    "slice": "---\nrelease: true\nplan_anchor: Short slice title\nepic: '[[release-epic-example]]'\n---\n\n# Short slice title\n\n## Summary\n\nWhat ships in this slice — outcome first, plain language.\n\n## Problem / context\n\nWhy this slice exists.\n\n## Product outcome\n\n- Observable behavior change\n\n## Acceptance criteria\n\n- [ ] Testable outcome\n- [ ] Another testable outcome\n\n## PRs\n\n- TBD\n"
+  },
+  "rules": [
+    "Never invent frontmatter fields from design docs — only use fields named here.",
+    "Fetch this contract before creating cards; validate before and after writing.",
+    "Copy an existing card in the vault if Kando is not running."
+  ],
+  "generatedAt": "2026-07-30T19:01:07.568Z",
+  "source": "electron/card-contract.js",
+  "note": "Generic export for offline/cloud agents. Vault-specific storage mode and statuses come from the live API when Kando is running."
+}
