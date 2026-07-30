@@ -1,7 +1,7 @@
 {
   "vaults": {
     "venubase": "/absolute/path/to/venubase-roadmap",
-    "playerpath": "/absolute/path/to/playerpath-web/PlayerPath - Tolaria"
+    "playerpath": "/absolute/path/to/playerpath-roadmap"
   },
   "colors": {
     "venubase": "#d27a32",
@@ -41,7 +41,7 @@
       ],
       "conventionsFile": "roadmap-conventions.md",
       "indexFile": "roadmap-index.md",
-      "canonicalRepo": "your-org/playerpath-web"
+      "canonicalRepo": "your-org/playerpath-roadmap"
     }
   }
 }

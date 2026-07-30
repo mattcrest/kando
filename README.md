@@ -85,7 +85,7 @@ Copy [`vaults.example.json`](vaults.example.json) → `vaults.json` (gitignored)
 {
   "vaults": {
     "venubase": "/path/to/venubase-roadmap",
-    "playerpath": "/path/to/playerpath-web/PlayerPath - Tolaria"
+    "playerpath": "/path/to/playerpath-roadmap"
   },
   "routing": {
     "venubase": {
@@ -98,7 +98,7 @@ Copy [`vaults.example.json`](vaults.example.json) → `vaults.json` (gitignored)
       "workspaceRoots": ["/path/to/playerpath-web"],
       "conventionsFile": "roadmap-conventions.md",
       "indexFile": "roadmap-index.md",
-      "canonicalRepo": "your-org/playerpath-web"
+      "canonicalRepo": "your-org/playerpath-roadmap"
     }
   }
 }
