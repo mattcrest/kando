@@ -1432,54 +1432,61 @@ function validateAtlasPayload(atlas) {
   if (!atlas || typeof atlas !== 'object') {
     return 'Invalid atlas payload';
   }
-  if (atlas.version !== 1) {
+  if (atlas.version !== 2) {
     return `Unsupported atlas version: ${atlas.version}`;
   }
-  if (!Array.isArray(atlas.moments)) {
-    return 'atlas.moments must be an array';
+  if (!Array.isArray(atlas.domains)) {
+    return 'atlas.domains must be an array';
   }
-  if (!Array.isArray(atlas.edges)) {
-    return 'atlas.edges must be an array';
+  if (!Array.isArray(atlas.entities)) {
+    return 'atlas.entities must be an array';
+  }
+  if (!Array.isArray(atlas.relations)) {
+    return 'atlas.relations must be an array';
   }
   return null;
 }
 
-function buildMomentCards(atlas, cards) {
-  const cardById = new Map(cards.map((c) => [c.id, c]));
-  const momentCards = {};
-  const warnings = [];
-  const mapping = atlas.prototypeCardMapping || {};
-
-  for (const moment of atlas.moments) {
-    momentCards[moment.id] = [];
-  }
-
-  for (const [cardId, momentIds] of Object.entries(mapping)) {
-    const card = cardById.get(cardId);
-    if (!card) {
-      warnings.push(`Unknown card id in prototypeCardMapping: ${cardId}`);
-      continue;
-    }
-    const summary = {
-      id: card.id,
-      title: card.plan_anchor || card.title || card.id,
-      status: card.status,
-      is_epic: card.is_epic,
-      agent_status: card.agent_status || null,
-    };
-    for (const momentId of momentIds || []) {
-      if (!momentCards[momentId]) {
-        warnings.push(`Unknown moment id "${momentId}" for card ${cardId}`);
-        continue;
-      }
-      momentCards[momentId].push(summary);
-    }
-  }
-
-  return { momentCards, warnings };
+function cardSummary(card) {
+  return {
+    id: card.id,
+    title: card.plan_anchor || card.title || card.id,
+    status: card.status,
+    is_epic: card.is_epic,
+    agent_status: card.agent_status || null,
+  };
 }
 
-// GET /api/atlas - Product journey map + roadmap weather join
+function buildEntityCards(atlas, cards) {
+  const cardById = new Map(cards.map((c) => [c.id, c]));
+  const entityCards = {};
+  const warnings = [];
+  const mapping = atlas.cardMapping || {};
+
+  for (const entity of atlas.entities) {
+    entityCards[entity.id] = [];
+  }
+
+  for (const [cardId, entityIds] of Object.entries(mapping)) {
+    const card = cardById.get(cardId);
+    if (!card) {
+      warnings.push(`Unknown card id in cardMapping: ${cardId}`);
+      continue;
+    }
+    const summary = cardSummary(card);
+    for (const entityId of entityIds || []) {
+      if (!entityCards[entityId]) {
+        warnings.push(`Unknown entity id "${entityId}" for card ${cardId}`);
+        continue;
+      }
+      entityCards[entityId].push(summary);
+    }
+  }
+
+  return { entityCards, warnings };
+}
+
+// GET /api/atlas - Product entity map + roadmap weather join
 app.get('/api/atlas', async (req, res) => {
   try {
     const vaultKey = getVaultKey(req);
@@ -1513,9 +1520,9 @@ app.get('/api/atlas', async (req, res) => {
     }
 
     const { cards } = await loadVaultCards(vaultKey, vaultDir);
-    const { momentCards, warnings } = buildMomentCards(atlas, cards);
+    const { entityCards, warnings } = buildEntityCards(atlas, cards);
 
-    const body = { atlas, momentCards };
+    const body = { atlas, entityCards };
     if (warnings.length > 0) body.warnings = warnings;
     res.json(body);
   } catch (err) {
