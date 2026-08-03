@@ -1,0 +1,145 @@
+{
+  "version": 1,
+  "title": "Venue Guest Journey",
+  "defaultLens": "journey",
+  "actors": [
+    { "id": "guest", "label": "Guest" },
+    { "id": "staff", "label": "Staff" }
+  ],
+  "domains": [
+    { "id": "visits", "label": "Visits" },
+    { "id": "bookings", "label": "Bookings" },
+    { "id": "comms", "label": "Comms" }
+  ],
+  "moments": [
+    {
+      "id": "guest-view-visit-hours",
+      "label": "View visit hours",
+      "kind": "screen",
+      "actors": ["guest"],
+      "domains": ["visits"],
+      "journey": { "lane": "guest", "order": 10 },
+      "meta": {}
+    },
+    {
+      "id": "guest-book-visit",
+      "label": "Book a visit",
+      "kind": "screen",
+      "actors": ["guest"],
+      "domains": ["bookings", "visits"],
+      "journey": { "lane": "guest", "order": 20 },
+      "meta": {}
+    },
+    {
+      "id": "guest-confirm-booking",
+      "label": "Confirm booking",
+      "kind": "decision",
+      "actors": ["guest"],
+      "domains": ["bookings"],
+      "journey": { "lane": "guest", "order": 30 },
+      "meta": {}
+    },
+    {
+      "id": "notify-booking-confirmation",
+      "label": "Booking confirmed email",
+      "kind": "notify",
+      "actors": ["guest"],
+      "domains": ["comms", "bookings"],
+      "journey": { "lane": "guest", "order": 35 },
+      "meta": { "channel": "email", "trigger": "booking.confirmed" }
+    },
+    {
+      "id": "guest-view-ticket",
+      "label": "View visit ticket",
+      "kind": "screen",
+      "actors": ["guest"],
+      "domains": ["visits"],
+      "journey": { "lane": "guest", "order": 40 },
+      "meta": {}
+    },
+    {
+      "id": "guest-check-in",
+      "label": "Check in on arrival",
+      "kind": "pos",
+      "actors": ["guest"],
+      "domains": ["visits"],
+      "journey": { "lane": "guest", "order": 50 },
+      "meta": {}
+    },
+    {
+      "id": "staff-open-dashboard",
+      "label": "Open staff dashboard",
+      "kind": "admin",
+      "actors": ["staff"],
+      "domains": ["visits"],
+      "journey": { "lane": "staff", "order": 10 },
+      "meta": {}
+    },
+    {
+      "id": "staff-review-bookings",
+      "label": "Review today's bookings",
+      "kind": "screen",
+      "actors": ["staff"],
+      "domains": ["bookings"],
+      "journey": { "lane": "staff", "order": 20 },
+      "meta": {}
+    },
+    {
+      "id": "staff-approve-visit",
+      "label": "Approve or deny visit",
+      "kind": "decision",
+      "actors": ["staff"],
+      "domains": ["visits"],
+      "journey": { "lane": "staff", "order": 30 },
+      "meta": {}
+    },
+    {
+      "id": "notify-visit-reminder",
+      "label": "Visit reminder SMS",
+      "kind": "notify",
+      "actors": ["guest"],
+      "domains": ["comms"],
+      "journey": { "lane": "guest", "order": 55 },
+      "meta": { "channel": "sms", "trigger": "visit.reminder_24h" }
+    },
+    {
+      "id": "job-nightly-sync",
+      "label": "Nightly calendar sync",
+      "kind": "job",
+      "actors": ["staff"],
+      "domains": ["bookings"],
+      "journey": { "lane": "staff", "order": 40 },
+      "meta": { "schedule": "0 2 * * *" }
+    },
+    {
+      "id": "guest-pay-deposit",
+      "label": "Pay visit deposit",
+      "kind": "payment",
+      "actors": ["guest"],
+      "domains": ["bookings"],
+      "journey": { "lane": "guest", "order": 25 },
+      "meta": {}
+    }
+  ],
+  "edges": [
+    { "from": "guest-view-visit-hours", "to": "guest-book-visit", "kind": "then" },
+    { "from": "guest-book-visit", "to": "guest-pay-deposit", "kind": "then" },
+    { "from": "guest-pay-deposit", "to": "guest-confirm-booking", "kind": "then" },
+    { "from": "guest-confirm-booking", "to": "notify-booking-confirmation", "kind": "notifies" },
+    { "from": "guest-confirm-booking", "to": "guest-view-ticket", "kind": "then" },
+    { "from": "guest-view-ticket", "to": "guest-check-in", "kind": "then" },
+    { "from": "guest-check-in", "to": "notify-visit-reminder", "kind": "triggers" },
+    { "from": "staff-open-dashboard", "to": "staff-review-bookings", "kind": "then" },
+    { "from": "staff-review-bookings", "to": "staff-approve-visit", "kind": "then" },
+    { "from": "staff-approve-visit", "to": "guest-view-ticket", "kind": "or" },
+    { "from": "staff-approve-visit", "to": "notify-booking-confirmation", "kind": "fails" },
+    { "from": "job-nightly-sync", "to": "staff-review-bookings", "kind": "triggers" }
+  ],
+  "prototypeCardMapping": {
+    "release-guest-booking-flow": ["guest-book-visit", "guest-confirm-booking", "notify-booking-confirmation"],
+    "release-staff-visit-approval": ["staff-approve-visit", "staff-review-bookings"],
+    "release-visit-check-in": ["guest-check-in", "guest-view-ticket"],
+    "release-calendar-sync-job": ["job-nightly-sync"],
+    "release-unknown-slice": ["guest-pay-deposit"]
+  }
+}

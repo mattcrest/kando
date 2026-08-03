@@ -1425,6 +1425,104 @@ app.post('/api/cursor/open', async (req, res) => {
   }
 });
 
+const ATLAS_FILENAME = 'product-atlas.json';
+const ATLAS_FIXTURE_PATH = path.join(__dirname, '../templates/atlas/product-atlas.example.json');
+
+function validateAtlasPayload(atlas) {
+  if (!atlas || typeof atlas !== 'object') {
+    return 'Invalid atlas payload';
+  }
+  if (atlas.version !== 1) {
+    return `Unsupported atlas version: ${atlas.version}`;
+  }
+  if (!Array.isArray(atlas.moments)) {
+    return 'atlas.moments must be an array';
+  }
+  if (!Array.isArray(atlas.edges)) {
+    return 'atlas.edges must be an array';
+  }
+  return null;
+}
+
+function buildMomentCards(atlas, cards) {
+  const cardById = new Map(cards.map((c) => [c.id, c]));
+  const momentCards = {};
+  const warnings = [];
+  const mapping = atlas.prototypeCardMapping || {};
+
+  for (const moment of atlas.moments) {
+    momentCards[moment.id] = [];
+  }
+
+  for (const [cardId, momentIds] of Object.entries(mapping)) {
+    const card = cardById.get(cardId);
+    if (!card) {
+      warnings.push(`Unknown card id in prototypeCardMapping: ${cardId}`);
+      continue;
+    }
+    const summary = {
+      id: card.id,
+      title: card.plan_anchor || card.title || card.id,
+      status: card.status,
+      is_epic: card.is_epic,
+      agent_status: card.agent_status || null,
+    };
+    for (const momentId of momentIds || []) {
+      if (!momentCards[momentId]) {
+        warnings.push(`Unknown moment id "${momentId}" for card ${cardId}`);
+        continue;
+      }
+      momentCards[momentId].push(summary);
+    }
+  }
+
+  return { momentCards, warnings };
+}
+
+// GET /api/atlas - Product journey map + roadmap weather join
+app.get('/api/atlas', async (req, res) => {
+  try {
+    const vaultKey = getVaultKey(req);
+    const vaultDir = getVaultDir(req);
+    let atlasRaw;
+
+    if (req.query.fixture === '1' || req.query.fixture === 'true') {
+      atlasRaw = await fs.readFile(ATLAS_FIXTURE_PATH, 'utf-8');
+    } else {
+      const atlasPath = path.join(vaultDir, ATLAS_FILENAME);
+      try {
+        atlasRaw = await fs.readFile(atlasPath, 'utf-8');
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          return res.status(404).json({ error: `No ${ATLAS_FILENAME} in vault` });
+        }
+        throw err;
+      }
+    }
+
+    let atlas;
+    try {
+      atlas = JSON.parse(atlasRaw);
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON in product-atlas.json' });
+    }
+
+    const validationError = validateAtlasPayload(atlas);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
+    const { cards } = await loadVaultCards(vaultKey, vaultDir);
+    const { momentCards, warnings } = buildMomentCards(atlas, cards);
+
+    const body = { atlas, momentCards };
+    if (warnings.length > 0) body.warnings = warnings;
+    res.json(body);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Serve static files from electron directory
 app.use(express.static(__dirname));
 
