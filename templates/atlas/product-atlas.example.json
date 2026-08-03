@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "title": "Venue Domain Map",
+  "domains": [
+    { "id": "visits", "label": "Visits" },
+    { "id": "bookings", "label": "Bookings" },
+    { "id": "commerce", "label": "Commerce" },
+    { "id": "comms", "label": "Comms" }
+  ],
+  "entities": [
+    { "id": "visit", "label": "Visit", "domain": "visits", "kind": "core" },
+    { "id": "visit-hours", "label": "Visit hours", "domain": "visits", "kind": "supporting" },
+    { "id": "check-in", "label": "Check-in", "domain": "visits", "kind": "supporting" },
+    { "id": "booking", "label": "Booking", "domain": "bookings", "kind": "core" },
+    { "id": "party-inquiry", "label": "Party inquiry", "domain": "bookings", "kind": "core" },
+    { "id": "deposit", "label": "Deposit", "domain": "commerce", "kind": "supporting" },
+    { "id": "payment", "label": "Payment", "domain": "commerce", "kind": "core" },
+    { "id": "ticket", "label": "Ticket", "domain": "commerce", "kind": "supporting" },
+    { "id": "email", "label": "Email", "domain": "comms", "kind": "channel" },
+    { "id": "sms", "label": "SMS", "domain": "comms", "kind": "channel" },
+    { "id": "calendar-sync", "label": "Calendar sync", "domain": "comms", "kind": "job" }
+  ],
+  "relations": [
+    { "from": "visit", "to": "visit-hours", "kind": "references" },
+    { "from": "booking", "to": "visit", "kind": "references" },
+    { "from": "party-inquiry", "to": "booking", "kind": "flows-into" },
+    { "from": "booking", "to": "deposit", "kind": "flows-into" },
+    { "from": "deposit", "to": "payment", "kind": "flows-into" },
+    { "from": "payment", "to": "ticket", "kind": "flows-into" },
+    { "from": "check-in", "to": "visit", "kind": "references" },
+    { "from": "ticket", "to": "check-in", "kind": "references" },
+    { "from": "booking", "to": "email", "kind": "notifies" },
+    { "from": "visit", "to": "sms", "kind": "notifies" },
+    { "from": "calendar-sync", "to": "booking", "kind": "references" }
+  ],
+  "cardMapping": {
+    "release-guest-booking-flow": ["booking", "visit", "email"],
+    "release-staff-visit-approval": ["visit", "booking"],
+    "release-visit-check-in": ["check-in", "ticket"],
+    "release-calendar-sync-job": ["calendar-sync"],
+    "release-unknown-slice": ["deposit", "payment"]
+  }
+}
