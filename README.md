@@ -8,7 +8,7 @@ Use it to plan releasable slices, drag cards across columns, and let coding agen
 
 - **Multi-vault** — Venubase, PlayerPath, or any project; switch vaults in the UI
 - **Three-layer hierarchy** — initiatives (`initiative: true`) → epics (`epic: true`) → story slices, linked by frontmatter wikilinks (`initiative:` on epics, `epic:` on slices)
-- **Board + Strategy + Workbench views** — kanban board for execution; a Now/Next/Later roadmap of initiative rows with per-epic slice progress; a Workbench view showing which slices agents are actively working on (and why), an AI-suggested "up next" queue, and one-click prompts to hand a slice to a coding agent (header toggle)
+- **Board + Strategy + Atlas + Workbench views** — kanban board for execution; a Now/Next/Later roadmap of initiative rows with per-epic slice progress; an optional **Atlas** entity mind-map (`product-atlas.json`) with card-driven highlighting; a Workbench view showing which slices agents are actively working on (and why), an AI-suggested "up next" queue, and one-click prompts to hand a slice to a coding agent (header toggle)
 - **Card-type filter** — All / Initiatives / Epics / Slices dropdown in the header
 - **Initiative epic manager** — drag-to-reorder, add/remove, and annotate an initiative's epics from the card modal; writes the card's `## Epics` table and each epic's `initiative:` link
 - **Cross-project routing** — `vaults.json` maps app repo paths → roadmap vault + convention files
@@ -125,6 +125,7 @@ export VENUBASE_ROADMAP_DIR=/path/to/roadmap-vault
 | `GET/PUT /api/initiatives/:id/epics` | Read/reorder/add/remove an initiative's epics (syncs `## Epics` table + epic `initiative:` frontmatter) |
 | `GET/PUT /api/roadmap-index?vault=<key>` | Read/update queue order in `roadmap-index.md` |
 | `GET /api/agent-suggestions?vault=<key>` | Parsed `agent-suggestions.md`, resolved against cards (Workbench "up next") |
+| `GET /api/atlas?vault=<key>` | Product entity map + `entityCards` join (`product-atlas.json` v2); `?fixture=1` for dev template |
 | `GET /api/vaults/:name/conventions` | Raw text of the vault's `roadmap-conventions.md` |
 | `GET /api/vaults/:name/card-contract` | Published card write contract for agents |
 | `GET /api/vaults/:name/doctor` | Vault contract / placement diagnostics |
@@ -183,6 +184,8 @@ npm run install:agents
 | `kando-dev-server` | Start/stop Kando on port 3001 |
 | `release-card-writing` | Draft readable card bodies (vendored in pack) |
 | `kando-strategy-setup` | Scaffold Strategy initiatives (vendored in pack) |
+| `kando-atlas-setup` | Scaffold `product-atlas.json` for Atlas (vendored in pack) |
+| `kando-atlas-maintain` | Keep Atlas `cardMapping` current (vendored in pack) |
 | `venubase-roadmap` | Venubase-specific paths only (not vendored) |
 | `venubase-roadmap-submodule` | Venubase `docs/roadmap` submodule bump (Venubase only) |
 

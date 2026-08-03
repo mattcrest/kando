@@ -1,0 +1,17 @@
+---
+description: >-
+  Scaffold or maintain product-atlas.json when the user mentions Atlas, product map,
+  entity mind-map, or cardMapping. Use kando-atlas-setup or kando-atlas-maintain skills.
+alwaysApply: false
+---
+
+# Kando Product Atlas
+
+When the user mentions **Atlas**, **`product-atlas.json`**, product entities, or **`cardMapping`**:
+
+1. Use **kando-atlas-setup** for first-time scaffold (missing file / new project).
+2. Use **kando-atlas-maintain** when editing slices that touch product areas.
+3. Schema reference: `templates/atlas/README.md` or `.kando/atlas/README.md` after pack sync.
+4. Validate with `GET /api/atlas?vault=<key>` before committing.
+
+Atlas is optional — vaults without `product-atlas.json` hide the Atlas tab.

@@ -70,9 +70,12 @@ sync_kando_dir() {
   local KANDO_DIR="${DEST_ROOT}/.kando"
 
   mkdir -p "${KANDO_DIR}/templates"
+  mkdir -p "${KANDO_DIR}/atlas"
   cp "${PACK}/docs/kando-for-agents.md" "${KANDO_DIR}/kando-for-agents.md"
   cp "${PACK}/card-contract.json" "${KANDO_DIR}/card-contract.json"
   cp "${PACK}/templates/"*.md "${KANDO_DIR}/templates/"
+  cp "${ROOT}/templates/atlas/product-atlas.example.json" "${KANDO_DIR}/atlas/product-atlas.example.json"
+  cp "${ROOT}/templates/atlas/README.md" "${KANDO_DIR}/atlas/README.md"
   echo "Synced .kando/ → ${KANDO_DIR}"
 }
 
@@ -80,7 +83,7 @@ sync_skills() {
   local DEST_ROOT="$1"
   local skill
 
-  for skill in kando-roadmap-router release-card-writing kando-strategy-setup; do
+  for skill in kando-roadmap-router release-card-writing kando-strategy-setup kando-atlas-setup kando-atlas-maintain; do
     if [[ -d "${PACK}/skills/${skill}" ]]; then
       mkdir -p "${DEST_ROOT}/.cursor/skills/${skill}"
       mkdir -p "${DEST_ROOT}/.claude/skills/${skill}"

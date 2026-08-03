@@ -78,3 +78,5 @@ https://github.com/<canonicalRepo>/blob/main/release-<slug>.md
 
 - **release-card-writing** — readable card bodies + validation gate
 - **kando-strategy-setup** — scaffold Strategy initiatives (Now/Next/Later)
+- **kando-atlas-setup** — scaffold `product-atlas.json` for Atlas
+- **kando-atlas-maintain** — keep Atlas `cardMapping` aligned with slices

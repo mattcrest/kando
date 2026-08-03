@@ -76,7 +76,7 @@
     "Fetch this contract before creating cards; validate before and after writing.",
     "Copy an existing card in the vault if Kando is not running."
   ],
-  "generatedAt": "2026-07-30T19:05:30.398Z",
+  "generatedAt": "2026-08-03T03:28:30.463Z",
   "source": "electron/card-contract.js",
   "note": "Generic export for offline/cloud agents. Vault-specific storage mode and statuses come from the live API when Kando is running."
 }

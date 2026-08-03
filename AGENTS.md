@@ -1,6 +1,6 @@
 # Kando — agent guidance
 
-Kando is a local kanban UI + API over Markdown roadmap cards in Tolaria-style vaults. Cards form a three-layer hierarchy: **initiatives** (`initiative-*.md`, `initiative: true`) → **epics** (`release-epic-*.md`, `epic: true`, `initiative:` wikilink) → **story slices** (`release-*.md`, `epic:` wikilink). The UI has a kanban **Board** and a Now/Next/Later **Strategy** view; the API exposes `is_epic` / `is_initiative` / `horizon` / `milestone` / `parent` per card plus `GET/PUT /api/initiatives/:id/epics` for managing an initiative's epic list.
+Kando is a local kanban UI + API over Markdown roadmap cards in Tolaria-style vaults. Cards form a three-layer hierarchy: **initiatives** (`initiative-*.md`, `initiative: true`) → **epics** (`release-epic-*.md`, `epic: true`, `initiative:` wikilink) → **story slices** (`release-*.md`, `epic:` wikilink). The UI has a kanban **Board**, a Now/Next/Later **Strategy** view, an optional **Atlas** entity mind-map (`product-atlas.json`), and a **Workbench** view for agent progress; the API exposes `is_epic` / `is_initiative` / `horizon` / `milestone` / `parent` per card plus `GET/PUT /api/initiatives/:id/epics` and `GET /api/atlas` for the product map join.
 
 ## Agent-agnostic routing (canonical)
 
@@ -44,6 +44,8 @@ Installs Cursor, Codex, and Claude Code **skills** (global symlinks), plus memor
 | **kando-dev-server** | Start or stop Kando locally |
 | **release-card-writing** | Draft or rewrite cards for product-builder readability |
 | **kando-strategy-setup** | Interview user and scaffold Strategy initiatives (Now/Next/Later) |
+| **kando-atlas-setup** | Scaffold `product-atlas.json` for a new project's Atlas view |
+| **kando-atlas-maintain** | Keep Atlas entities and `cardMapping` aligned with slices |
 | **venubase-roadmap** | Venubase-specific paths only (not vendored to other repos) |
 | **venubase-roadmap-submodule** | Venubase `docs/roadmap` submodule bump (Venubase only) |
 

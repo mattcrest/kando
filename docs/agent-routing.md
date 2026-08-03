@@ -140,6 +140,27 @@ context: "Focus on 2 epics at once: Checkout and Admin. Prioritize anything unbl
 
 When a vault has no initiatives or the user wants to organize Now/Next/Later bets, use the **kando-strategy-setup** skill (or Kando's Strategy view **Set up strategy with AI** helper). Interview the user about focus first; propose 2–5 initiatives at the right altitude; write `initiative-*.md` files per the card contract and place them in strategy horizons.
 
+### 8. Product Atlas (optional)
+
+Kando's **Atlas** view visualizes product **entities** (nouns) in domain clusters, with roadmap **weather** joined from slice cards. It is enabled only when the vault contains **`product-atlas.json`** (schema **v2**).
+
+| Piece | Location |
+|-------|----------|
+| Map file | `<vaultPath>/product-atlas.json` |
+| Schema reference | Kando `templates/atlas/README.md` or `.kando/atlas/README.md` after pack sync |
+| Example seed | `.kando/atlas/product-atlas.example.json` |
+| API | `GET /api/atlas?vault=<vaultKey>` → `{ atlas, entityCards, warnings? }` |
+
+**cardMapping** links slice ids to entity ids:
+
+```json
+"cardMapping": {
+  "release-checkout-refunds": ["order", "payment"]
+}
+```
+
+When creating Atlas for a new project, use **kando-atlas-setup**. When editing slices that touch product areas, use **kando-atlas-maintain** to keep `cardMapping` and entities current. Target **25–50 entities**; no x/y coordinates in the file.
+
 ## Offline and cloud agents
 
 Cursor Cloud, Claude Code cloud, and other remote agents do not have your local `~/.cursor/skills` symlinks or `localhost:3001`. Use the **portable agent pack** vendored into app repos and vaults.
@@ -169,10 +190,11 @@ Or via the installer:
 
 | Path | Purpose |
 |------|---------|
-| `.kando/kando-for-agents.md` | Cold-start: Board, Strategy, Workbench, hierarchy, offline workflow |
+| `.kando/kando-for-agents.md` | Cold-start: Board, Strategy, Atlas, Workbench, hierarchy, offline workflow |
 | `.kando/card-contract.json` | Static card write contract (regenerated from `electron/card-contract.js`) |
 | `.kando/templates/{initiative,epic,slice}.md` | Scaffolds for new cards |
-| `.cursor/skills/` + `.claude/skills/` | `kando-roadmap-router`, `release-card-writing`, `kando-strategy-setup` |
+| `.kando/atlas/` | Atlas schema README + `product-atlas.example.json` |
+| `.cursor/skills/` + `.claude/skills/` | `kando-roadmap-router`, `release-card-writing`, `kando-strategy-setup`, `kando-atlas-setup`, `kando-atlas-maintain` |
 | `kando.agent.json` | Relative vault discovery (`vaultPathHints`) — no absolute paths |
 | `AGENTS.md` / `CLAUDE.md` | Marked entry block pointing at `.kando/` |
 

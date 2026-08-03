@@ -94,4 +94,6 @@ Restart Kando after edits. No changes to this skill are required.
 - **kando-dev-server** — start/stop Kando on port 3001
 - **release-card-writing** — readable card bodies + validation gate
 - **kando-strategy-setup** — interview user and scaffold Strategy initiatives
+- **kando-atlas-setup** — scaffold `product-atlas.json` for Atlas
+- **kando-atlas-maintain** — keep Atlas `cardMapping` aligned with slices
 - **venubase-roadmap** — Venubase-specific paths only (Kando repo / Venubase workspaces)

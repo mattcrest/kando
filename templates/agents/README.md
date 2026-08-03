@@ -57,6 +57,8 @@ Or copy [`kando-agents-pack-snippet.md`](kando-agents-pack-snippet.md) into your
 | `kando-roadmap-router` | Resolve vault; API-first, offline fallback |
 | `release-card-writing` | Readable card bodies + validation |
 | `kando-strategy-setup` | Scaffold Now/Next/Later initiatives |
+| `kando-atlas-setup` | Scaffold `product-atlas.json` for Atlas |
+| `kando-atlas-maintain` | Keep Atlas entities and `cardMapping` current |
 
 **Not vendored:** `venubase-roadmap`, `venubase-roadmap-submodule`, `kando-dev-server` (local-only).
 

@@ -4,12 +4,13 @@ Cold-start guide for coding agents working with a Kando roadmap — including **
 
 ## What Kando is
 
-Kando is a local kanban UI + HTTP API over Markdown roadmap cards in Tolaria-style vaults. Humans use three views:
+Kando is a local kanban UI + HTTP API over Markdown roadmap cards in Tolaria-style vaults. Humans use four views (Atlas is optional):
 
 | View | Purpose |
 |------|---------|
 | **Board** | Kanban columns (Backlog → Prioritized → Active → Shipped). Epics and slices appear here by `status`. |
 | **Strategy** | Now / Next / Later horizons for **initiatives** — big bets that group epics. |
+| **Atlas** | Optional **entity mind-map** (`product-atlas.json`) — domain clusters, relations, roadmap weather; select a card to trace what it touches. |
 | **Workbench** | What agents are working on now (`agent_*` fields on slices) plus ranked "up next" suggestions (`agent-suggestions.md`). |
 
 You edit cards as Markdown files in the **vault** (a git repo). The vault may be a sibling repo, a submodule inside the app repo (e.g. `docs/roadmap/`), or a folder — see `kando.agent.json` in the app repo.
@@ -128,6 +129,27 @@ context: "Focus on 2 epics at once. Prioritize POS launch blockers."
 
 Overwrite each time; it's a snapshot.
 
+## Atlas (optional product map)
+
+Vaults may include **`product-atlas.json`** at the vault root (schema v2). When present, Kando shows the **Atlas** tab: entities grouped by domain, relation edges, and a weather rail of in-flight cards. Selecting a card highlights every entity it touches.
+
+| Field | Purpose |
+|-------|---------|
+| `domains` | Cluster labels |
+| `entities` | Product nouns (`kind`: `core`, `supporting`, `channel`, `job`) |
+| `relations` | Entity graph (`owns`, `references`, `flows-into`, `notifies`) |
+| `cardMapping` | `{ "<slice-id>": ["entity-id", ...] }` |
+
+**Bootstrap:** copy `.kando/atlas/product-atlas.example.json` → `<vaultPath>/product-atlas.json` and edit. Full reference: `.kando/atlas/README.md`.
+
+**Validate:**
+
+```bash
+curl -s "http://127.0.0.1:3001/api/atlas?vault=<vaultKey>"
+```
+
+Fix `warnings` before committing. When you edit slices that change product areas, update `cardMapping` — see **kando-atlas-maintain**.
+
 ## Validate before you finish
 
 **When Kando is running:**
@@ -168,3 +190,5 @@ git push origin main
 | **kando-roadmap-router** | Resolve vault; follow conventions |
 | **release-card-writing** | Draft readable card bodies |
 | **kando-strategy-setup** | Scaffold Now/Next/Later initiatives |
+| **kando-atlas-setup** | Scaffold `product-atlas.json` for Atlas |
+| **kando-atlas-maintain** | Keep Atlas entities and `cardMapping` current |
