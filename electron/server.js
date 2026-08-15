@@ -5,7 +5,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { commitAll, getGitStatus, syncVault } from './git-vault.js';
+import { commitAll, getGitStatus, getGitLog, syncVault } from './git-vault.js';
 import {
   getRoutingForVault,
   resolveVaultForWorkspace,
@@ -1253,6 +1253,33 @@ app.get('/api/vaults/:name/git/status', async (req, res) => {
       autoCommit: gitOptions.autoCommit,
       autoPush: gitOptions.autoPush,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/vaults/:name/git/log - Commit history, with best-effort PR merge detection
+app.get('/api/vaults/:name/git/log', async (req, res) => {
+  try {
+    const name = req.params.name;
+    if (!VAULTS[name]) {
+      return res.status(404).json({ error: `Vault '${name}' not found` });
+    }
+    const limit = Math.min(Math.max(Number(req.query.limit) || 400, 1), 2000);
+    const log = await getGitLog(VAULTS[name], { limit });
+
+    const status = await getGitStatus(VAULTS[name], { fetchRemote: false });
+    const routing = getRoutingForVault(name, VAULT_ROUTING);
+    const canonicalRepo = routing?.canonicalRepo || null;
+    let repoName = status.repoName;
+    let repoWebUrl = status.repoWebUrl;
+    if (canonicalRepo) {
+      const short = canonicalRepo.split('/').pop();
+      if (short) repoName = short;
+      if (!repoWebUrl) repoWebUrl = `https://github.com/${canonicalRepo}`;
+    }
+
+    res.json({ ...log, canonicalRepo, repoName, repoWebUrl });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
