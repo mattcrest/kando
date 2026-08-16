@@ -268,3 +268,103 @@ export async function commitAndPush(dir, message, { remote = 'origin', branch } 
   const pushResult = await push(dir, remote, branch);
   return { ...commitResult, ...pushResult };
 }
+
+const LOG_START = '\x02';
+const LOG_FIELD_SEP = '\x1f';
+const LOG_END = '\x03';
+
+/** GitHub "Create a merge commit" style: "Merge pull request #4 from owner/branch". */
+const MERGE_COMMIT_RE = /^Merge pull request #(\d+) from (\S+)/i;
+/** GitHub "Squash and merge" style: commit subject ends with " (#4)". */
+const SQUASH_MERGE_RE = /^(.*)\(#(\d+)\)\s*$/;
+
+/** Best-effort PR merge detection from a commit's own message — no GitHub API call. */
+export function detectMergeInfo({ parents, subject, body }) {
+  if (parents.length > 1) {
+    const m = subject.match(MERGE_COMMIT_RE);
+    if (m) {
+      const bodyTitle = body.split('\n').map((l) => l.trim()).find(Boolean);
+      return {
+        prNumber: Number(m[1]),
+        sourceBranch: m[2],
+        title: bodyTitle || subject,
+      };
+    }
+  }
+  const sq = subject.match(SQUASH_MERGE_RE);
+  if (sq) {
+    return {
+      prNumber: Number(sq[2]),
+      sourceBranch: null,
+      title: sq[1].trim() || subject,
+    };
+  }
+  return null;
+}
+
+export async function getGitLog(dir, { limit = 400 } = {}) {
+  if (!(await isGitRepo(dir))) {
+    return { isRepo: false, branch: null, commits: [], total: 0, truncated: false };
+  }
+
+  const branch = await git(dir, 'rev-parse', '--abbrev-ref', 'HEAD').catch(() => null);
+
+  const format =
+    `${LOG_START}%H${LOG_FIELD_SEP}%h${LOG_FIELD_SEP}%P${LOG_FIELD_SEP}` +
+    `%an${LOG_FIELD_SEP}%ae${LOG_FIELD_SEP}%ad${LOG_FIELD_SEP}%B${LOG_END}`;
+
+  let raw;
+  try {
+    raw = await git(
+      dir,
+      'log',
+      `--max-count=${limit + 1}`,
+      `--pretty=format:${format}`,
+      '--date=iso-strict',
+      '--name-only'
+    );
+  } catch {
+    // empty repo (no commits yet)
+    return { isRepo: true, branch, commits: [], total: 0, truncated: false };
+  }
+
+  const chunks = raw.split(LOG_START).filter(Boolean);
+  const parsed = [];
+  for (const chunk of chunks) {
+    const endIdx = chunk.indexOf(LOG_END);
+    if (endIdx === -1) continue;
+    const meta = chunk.slice(0, endIdx);
+    const filesRaw = chunk.slice(endIdx + 1);
+    const [hash, shortHash, parentsRaw, authorName, authorEmail, date, rawBody] =
+      meta.split(LOG_FIELD_SEP);
+    if (!hash) continue;
+
+    const parents = (parentsRaw || '').trim().split(/\s+/).filter(Boolean);
+    const fullMessage = (rawBody || '').replace(/\n+$/, '');
+    const subject = fullMessage.split('\n')[0] || '';
+    const body = fullMessage.slice(subject.length).trim();
+    const files = filesRaw
+      .split('\n')
+      .map((f) => f.trim())
+      .filter(Boolean);
+
+    parsed.push({
+      hash,
+      shortHash,
+      parents,
+      isMerge: parents.length > 1,
+      authorName,
+      authorEmail,
+      date,
+      subject,
+      body,
+      files,
+      mergeInfo: detectMergeInfo({ parents, subject, body }),
+    });
+  }
+
+  const truncated = parsed.length > limit;
+  const commits = truncated ? parsed.slice(0, limit) : parsed;
+
+  return { isRepo: true, branch, commits, total: commits.length, truncated };
+}
