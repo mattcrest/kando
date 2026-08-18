@@ -99,6 +99,8 @@ agent_updated_at: 2026-07-25T14:32:00Z   # ISO 8601, set to "now" on every updat
   on something outside your control, `needs_review` once you've opened a PR
   or otherwise handed it off, `idle` (or omit the field) once you've
   stopped working on it for now.
+- **Done / Deferred cards never appear on the Workbench**, even if leftover
+  `agent_*` fields remain. When you mark a slice `Done`, clear those fields.
 - `agent_summary`: one or two sentences — current state, in plain language.
   This is the "why" a human sees first.
 - `agent_next`: one sentence — what you (or whoever picks this up) would do

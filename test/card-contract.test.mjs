@@ -95,6 +95,35 @@ describe('card-contract', () => {
     assert.equal(report.ok, false);
   });
 
+  it('doctor warns on leftover agent fields on Done cards', () => {
+    const report = vaultDoctor({
+      vaultKey: 'test',
+      vaultDir: '/tmp',
+      cards: [
+        {
+          id: 'release-shipped',
+          title: 'Shipped slice',
+          status: 'Done',
+          is_initiative: false,
+          is_epic: false,
+          agent_status: 'idle',
+          agent_summary: 'Merged last week',
+        },
+      ],
+      markdownFiles: [],
+      conventionsText: '',
+      storage: 'roadmap-json',
+      columnKeys: [],
+      placementDiffs: [],
+      strategyDiffs: [],
+      placedCardIds: new Set(['release-shipped']),
+      strategyInitiativeIds: new Set(),
+      roadmapJsonIds: new Set(['release-shipped']),
+    });
+    assert.equal(report.ok, true);
+    assert.ok(report.warnings.some((w) => w.category === 'leftover_agent'));
+  });
+
   it('serializes card contract', () => {
     const contract = cardContract({
       vaultKey: 'venubase',

@@ -428,7 +428,17 @@ export function vaultDoctor({
   );
 
   for (const card of cards) {
-    if (card.agent_updated_at) {
+    const hasAgentFields = Boolean(
+      card.agent_status || card.agent_summary || card.agent_next || card.agent_provider || card.agent_updated_at
+    );
+    if ((card.status === 'Done' || card.status === 'Deferred') && hasAgentFields) {
+      warnings.push({
+        id: card.id,
+        category: 'leftover_agent',
+        message: `agent_* fields remain on a ${card.status} card (Workbench hides it, but the fields are stale).`,
+        fix: 'Clear agent_status / agent_provider / agent_summary / agent_next / agent_updated_at.',
+      });
+    } else if (card.agent_updated_at) {
       const then = new Date(card.agent_updated_at).getTime();
       if (!Number.isNaN(then) && Date.now() - then > AGENT_STALE_MS) {
         warnings.push({
