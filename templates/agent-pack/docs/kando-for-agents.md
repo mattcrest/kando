@@ -100,7 +100,8 @@ Project-specific fields (`category`, `milestone`, `related_to`, etc.) — follow
 
 ## Workbench: keep progress current
 
-Update these on **every slice you touch** — Kando's Workbench surfaces them to the human:
+Update these on **every slice you touch** — Kando's Workbench surfaces them to the human.
+**Done** and **Deferred** slices never appear on the bench; clear `agent_*` when you ship.
 
 ```yaml
 agent_status: in_progress   # in_progress | blocked | needs_review | idle

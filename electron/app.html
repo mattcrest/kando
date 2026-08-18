@@ -3684,8 +3684,16 @@ function agentStatusLabel(card){
   return AGENT_STATUS_LABELS[agentStatusKey(card)] || 'Idle';
 }
 
+function isOnBench(card){
+  // Keep in sync with electron/workbench.js — Done/Deferred never stay on the bench,
+  // even if leftover agent_* fields remain on the card.
+  if(!card || card.is_epic || card.is_initiative) return false;
+  if(card.status === 'Done' || card.status === 'Deferred') return false;
+  return Boolean(card.agent_status || card.status === 'Active');
+}
+
 function benchCards(){
-  return state.cards.filter(c => !c.is_epic && !c.is_initiative && (c.agent_status || c.status === 'Active'));
+  return state.cards.filter(isOnBench);
 }
 
 function renderBenchCard(card){
