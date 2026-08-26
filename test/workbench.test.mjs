@@ -33,6 +33,21 @@ describe('workbench membership', () => {
     );
   });
 
+  it('excludes slices whose agent_status is done or complete', () => {
+    assert.equal(
+      isOnBench({ id: 'release-foo', status: 'Active', agent_status: 'done' }),
+      false
+    );
+    assert.equal(
+      isOnBench({ id: 'release-foo', status: 'Prioritized', agent_status: 'complete' }),
+      false
+    );
+    assert.equal(
+      isOnBench({ id: 'release-foo', status: 'Backlog', agent_status: 'Completed' }),
+      false
+    );
+  });
+
   it('excludes epics and initiatives even when Active', () => {
     assert.equal(isOnBench({ id: 'release-epic-foo', status: 'Active', is_epic: true }), false);
     assert.equal(
@@ -47,6 +62,7 @@ describe('workbench membership', () => {
       { id: 'release-active', status: 'Active' },
       { id: 'release-epic-x', status: 'Active', is_epic: true },
       { id: 'release-idle-backlog', status: 'Backlog' },
+      { id: 'release-agent-complete', status: 'Active', agent_status: 'complete' },
     ];
     assert.deepEqual(
       benchCardsFrom(cards).map((c) => c.id),

@@ -124,6 +124,48 @@ describe('card-contract', () => {
     assert.ok(report.warnings.some((w) => w.category === 'leftover_agent'));
   });
 
+  it('doctor does not warn when agent_status is done or complete', () => {
+    const report = vaultDoctor({
+      vaultKey: 'test',
+      vaultDir: '/tmp',
+      cards: [
+        {
+          id: 'release-agent-done',
+          title: 'Closed out',
+          status: 'Active',
+          is_initiative: false,
+          is_epic: false,
+          agent_status: 'done',
+          agent_summary: 'Shipped.',
+          agent_updated_at: '2020-01-01T00:00:00Z',
+        },
+        {
+          id: 'release-agent-complete',
+          title: 'Also closed',
+          status: 'Done',
+          is_initiative: false,
+          is_epic: false,
+          agent_status: 'Complete',
+          agent_summary: 'Merged.',
+        },
+      ],
+      markdownFiles: [],
+      conventionsText: '',
+      storage: 'roadmap-json',
+      columnKeys: [],
+      placementDiffs: [],
+      strategyDiffs: [],
+      placedCardIds: new Set(['release-agent-done', 'release-agent-complete']),
+      strategyInitiativeIds: new Set(),
+      roadmapJsonIds: new Set(['release-agent-done', 'release-agent-complete']),
+    });
+    assert.equal(report.ok, true);
+    assert.equal(
+      report.warnings.some((w) => w.category === 'leftover_agent' || w.category === 'stale_agent'),
+      false
+    );
+  });
+
   it('serializes card contract', () => {
     const contract = cardContract({
       vaultKey: 'venubase',

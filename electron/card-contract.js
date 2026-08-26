@@ -10,6 +10,7 @@ import {
   ROADMAP_FILENAME,
   normalizeStatus,
 } from './roadmap-config.js';
+import { isSettledAgentStatus } from './workbench.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../templates/cards');
@@ -431,6 +432,10 @@ export function vaultDoctor({
     const hasAgentFields = Boolean(
       card.agent_status || card.agent_summary || card.agent_next || card.agent_provider || card.agent_updated_at
     );
+    if (isSettledAgentStatus(card.agent_status)) {
+      // Agent closed out (done/complete) — Workbench hides these; don't nag.
+      continue;
+    }
     if ((card.status === 'Done' || card.status === 'Deferred') && hasAgentFields) {
       warnings.push({
         id: card.id,
