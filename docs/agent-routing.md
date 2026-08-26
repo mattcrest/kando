@@ -101,6 +101,8 @@ agent_updated_at: 2026-07-25T14:32:00Z   # ISO 8601, set to "now" on every updat
   stopped working on it for now.
 - **Done / Deferred cards never appear on the Workbench**, even if leftover
   `agent_*` fields remain. When you mark a slice `Done`, clear those fields.
+  Slices whose `agent_status` is `done` or `complete` are also off the bench
+  (agents sometimes close out that way instead of clearing the fields).
 - `agent_summary`: one or two sentences — current state, in plain language.
   This is the "why" a human sees first.
 - `agent_next`: one sentence — what you (or whoever picks this up) would do

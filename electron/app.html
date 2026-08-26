@@ -3639,6 +3639,11 @@ const AGENT_STATUS_LABELS = {
   needs_review: 'Needs review',
   idle: 'Idle',
 };
+const SETTLED_AGENT_STATUSES = new Set(['done', 'complete', 'completed']);
+
+function isSettledAgentStatus(value){
+  return typeof value === 'string' && SETTLED_AGENT_STATUSES.has(value.trim().toLowerCase());
+}
 
 /**
  * Small deterministic hash → a stable, non-jittery rotation per card —
@@ -3686,9 +3691,10 @@ function agentStatusLabel(card){
 
 function isOnBench(card){
   // Keep in sync with electron/workbench.js — Done/Deferred never stay on the bench,
-  // even if leftover agent_* fields remain on the card.
+  // even if leftover agent_* fields remain. agent_status done/complete is also off.
   if(!card || card.is_epic || card.is_initiative) return false;
   if(card.status === 'Done' || card.status === 'Deferred') return false;
+  if(isSettledAgentStatus(card.agent_status)) return false;
   return Boolean(card.agent_status || card.status === 'Active');
 }
 
@@ -3910,6 +3916,7 @@ function buildAgentPrompt(card, conventionsText){
     '',
     'Keep this card\'s frontmatter updated in the roadmap vault as you work — this is what Kando\'s Workbench view shows the user, so it must reflect reality:',
     '  agent_status: in_progress | blocked | needs_review | idle',
+    '  (done or complete also takes the card off the Workbench)',
     '  agent_provider: cursor | claude | codex | manual',
     '  agent_summary: one or two sentences on current state (the "why")',
     '  agent_next: one sentence on what happens next',
