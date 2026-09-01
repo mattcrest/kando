@@ -65,6 +65,18 @@ git add -A && git commit -m "roadmap: <description>"
 git push origin main
 ```
 
+### When a slice ships (required — do not stop at frontmatter)
+
+Card `status: Done` alone will **not** fix stale Kando UI if `roadmap-index.md` still says `— Active`. On merge to main, in one vault commit:
+
+1. Slice: `status: Done`, `shipped_at`, `agent_status: done`, check off met acceptance criteria, PR link.
+2. Parent epic **Story slices** table → Done + PR.
+3. **`roadmap-index.md`** under that epic’s Story slices (reference) → trailing status `— Done (PR #N, …)`.
+4. Epic queue one-liner if it still lists that slice as “next”.
+5. Rewrite **`agent-suggestions.md`** when it still points at the shipped slice.
+
+Full list: vault `roadmap-conventions.md` → **When something ships** (projects should keep that section in their conventions).
+
 ## PR links
 
 When `canonicalRepo` is set (resolve response or `kando.agent.json`):
