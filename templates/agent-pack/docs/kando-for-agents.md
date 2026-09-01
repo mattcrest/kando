@@ -105,12 +105,24 @@ Update these on **every slice you touch** — Kando's Workbench surfaces them to
 `agent_status: done` or `complete` is also off the bench.
 
 ```yaml
-agent_status: in_progress   # in_progress | blocked | needs_review | idle
+agent_status: in_progress   # in_progress | blocked | needs_review | idle | done
 agent_provider: cursor      # cursor | claude | codex | manual
 agent_summary: "Wired the discount modal; validating edge cases."
 agent_next: "Add server-side validation, then update acceptance criteria."
 agent_updated_at: 2026-07-25T14:32:00Z
 ```
+
+## When a slice ships (merge to main)
+
+Do **all** of these in the same vault commit — card frontmatter alone is not enough:
+
+1. Slice file: `status: Done`, `shipped_at`, `agent_status: done`, acceptance criteria checked, PR link.
+2. Parent epic **Story slices** table row → Done + PR.
+3. **`roadmap-index.md`** Story slices (reference) bullet for that slice → `— Done (PR #…)` (not Active/Prioritized).
+4. Epic one-liner in the Prioritized/Active queue if it still names the shipped slice as “next”.
+5. Refresh **`agent-suggestions.md`** if it still recommends the shipped slice.
+
+Conventions detail: vault `roadmap-conventions.md` → **When something ships**. Also enforced by **kando-roadmap-router**.
 
 ## Suggesting what to work on next
 

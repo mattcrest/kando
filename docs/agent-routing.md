@@ -110,7 +110,24 @@ agent_updated_at: 2026-07-25T14:32:00Z   # ISO 8601, set to "now" on every updat
 - All five fields are optional and additive to the existing frontmatter
   contract; omit them entirely on cards with no agent activity.
 
-### 6. Suggesting what to work on next (optional)
+### 6. When a slice ships (required)
+
+Card `status: Done` alone is **not** enough. Stale trailing annotations in
+`roadmap-index.md` (e.g. `— Active`) make the Board look wrong even when the
+card file is Done. On merge to main, in **one vault commit**:
+
+1. Slice: `status: Done`, `shipped_at`, `agent_status: done`, check off met
+   acceptance criteria, PR link.
+2. Parent epic **Story slices** table → Done + PR.
+3. **`roadmap-index.md`** Story slices (reference) bullet → `— Done (PR #N, …)`.
+4. Epic queue one-liner if it still lists that slice as “next”.
+5. Rewrite **`agent-suggestions.md`** when it still points at the shipped slice.
+
+Vaults should keep a **When something ships** section in
+`roadmap-conventions.md`. Portable skills (`kando-roadmap-router`,
+`release-card-writing`) and `.kando/kando-for-agents.md` repeat this checklist.
+
+### 7. Suggesting what to work on next (optional)
 
 If asked to suggest the next slices to prioritize, write your ranked list
 to `agent-suggestions.md` in the vault root (sibling to `roadmap-index.md`)
@@ -140,11 +157,11 @@ context: "Focus on 2 epics at once: Checkout and Admin. Prioritize anything unbl
 - Overwrite the file each time you're asked to re-suggest; it's a snapshot,
   not a log.
 
-### 7. Strategy setup (optional)
+### 8. Strategy setup (optional)
 
 When a vault has no initiatives or the user wants to organize Now/Next/Later bets, use the **kando-strategy-setup** skill (or Kando's Strategy view **Set up strategy with AI** helper). Interview the user about focus first; propose 2–5 initiatives at the right altitude; write `initiative-*.md` files per the card contract and place them in strategy horizons.
 
-### 8. Product Atlas (optional)
+### 9. Product Atlas (optional)
 
 Kando's **Atlas** view visualizes product **entities** (nouns) in domain clusters, with roadmap **weather** joined from slice cards. It is enabled only when the vault contains **`product-atlas.json`** (schema **v2**).
 

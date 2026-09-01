@@ -87,6 +87,8 @@ epic: '[[release-epic-example]]'
 
 Add the card to the appropriate section in **`roadmap-index.md`** when it enters Prioritized, Active, or Backlog.
 
+When marking a card **Done**, also update the matching Story slices (reference) annotation in **`roadmap-index.md`** — see vault **When something ships** / **kando-roadmap-router**. Card frontmatter alone leaves stale `— Active` labels in the index.
+
 ## Validate before you finish
 
 **When Kando is running (port 3001):**
