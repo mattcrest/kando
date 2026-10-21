@@ -22,6 +22,7 @@ import {
   replaceInitiativeEpics,
 } from './initiative-epics.js';
 import { loadAgentSuggestions } from './agent-suggestions.js';
+import { buildAgentPrompt, parseAgentPromptFile } from './agent-prompt.js';
 import {
   loadRoadmapConfig,
   resolveConfigFile,
@@ -1304,6 +1305,60 @@ app.get('/api/vaults/:name/conventions', async (req, res) => {
       }
       throw err;
     }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/cards/:cardId/agent-prompt - Self-contained implementer prompt for a card
+app.get('/api/cards/:cardId/agent-prompt', async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const vaultKey = getVaultKey(req);
+    const vaultDir = getVaultDir(req);
+    const { cards } = await loadVaultCards(vaultKey, vaultDir);
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const card = byId.get(cardId);
+    if (!card) {
+      return res.status(404).json({ error: `Card '${cardId}' not found` });
+    }
+
+    const readRaw = (id) => fs.readFile(getCardPath(id, vaultDir), 'utf-8');
+    const ancestors = [];
+    const seen = new Set([card.id]);
+    for (let cur = card; cur?.parent && !seen.has(cur.parent); cur = byId.get(cur.parent)) {
+      const parent = byId.get(cur.parent);
+      if (!parent) break;
+      seen.add(parent.id);
+      ancestors.unshift({ card: parent, raw: await readRaw(parent.id) });
+    }
+
+    const routing = getRoutingForVault(vaultKey, VAULT_ROUTING);
+    const agentPromptFile = routing?.agentPromptFile || 'agent-prompt.md';
+    let agentPromptRaw = '';
+    try {
+      agentPromptRaw = await fs.readFile(path.join(vaultDir, agentPromptFile), 'utf-8');
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+    const projectFile = parseAgentPromptFile(agentPromptRaw);
+    const implementationRepos = routing?.implementationRepo
+      ? [routing.implementationRepo]
+      : projectFile.implementationRepos;
+
+    const prompt = buildAgentPrompt({
+      card,
+      cardRaw: await readRaw(card.id),
+      ancestors,
+      vaultKey,
+      canonicalRepo: routing?.canonicalRepo || null,
+      implementationRepos,
+      conventionsText: await readConventionsText(vaultKey, vaultDir),
+      conventionsFile: routing?.conventionsFile || 'roadmap-conventions.md',
+      projectNotes: projectFile.notes,
+      agentPromptFile,
+    });
+    res.json({ cardId, prompt, implementationRepos, hasProjectNotes: Boolean(projectFile.notes) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

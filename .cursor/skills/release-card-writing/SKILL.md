@@ -74,6 +74,15 @@ Merge **Implementation hints** into **Technical references** unless the vault co
 - Concrete links to `venubase-web` (or the app repo) on GitHub.
 - This is where migrations, RPCs, and file paths belong — not in Summary or Problem.
 
+**Verify against the code before you write this section.** Kando copies the card into every agent prompt, so this section is the implementer's starting map:
+
+- Open every file you cite and confirm it exists at that path today. Name functions and components; give line numbers only as hints ("around line 120").
+- Say what **already exists** versus what's missing (for example, "the save RPC already accepts the field; only the editor input is missing"). This is often the difference between a one-day and a one-week slice.
+- List the gotchas an implementer will hit: generated files to regenerate, shared components that change other products too, flags the behavior must ship behind.
+- Leave out repo-wide rules (test commands, migration style). Those belong in the vault's `agent-prompt.md`, which Kando appends to every prompt.
+
+**Record decisions on the parent epic.** Kando copies the epic's **Summary**, **Out of scope** and **Notes** into every slice's agent prompt. Owner decisions and open questions belong there, not only in chat.
+
 ## Formatting rules (Kando modal)
 
 These map to how Kando renders the card:
@@ -173,6 +182,7 @@ Add the card to the appropriate section in **`roadmap-index.md`** when it enters
 1. Read the card aloud — if you stumble in the first paragraph, rewrite Summary.
 2. Confirm a product builder can answer: **what**, **for whom**, **how we know it's done** without opening the repo.
 3. Confirm Acceptance criteria items are checkbox-ready and distinct from Verification protocol steps.
+4. Confirm every path, function and "already exists" claim in Technical references was checked against the current code.
 
 ## Validate before you finish
 

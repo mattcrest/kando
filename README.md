@@ -74,7 +74,7 @@ Copy [`vaults.example.json`](vaults.example.json) → `vaults.json` (gitignored)
 | Key | Purpose |
 |-----|---------|
 | `vaults` | Vault id → filesystem path to markdown root |
-| `routing` | Vault id → `workspaceRoots`, convention filenames, optional `canonicalRepo` |
+| `routing` | Vault id → `workspaceRoots`, convention filenames, optional `canonicalRepo` (roadmap repo), `implementationRepo` (app repo), `agentPromptFile` |
 | `default` | Default vault in the UI |
 | `git` | Per-vault auto-commit / push settings |
 | `colors` | UI accent per vault |
@@ -92,7 +92,8 @@ Copy [`vaults.example.json`](vaults.example.json) → `vaults.json` (gitignored)
       "workspaceRoots": ["/path/to/venubase-web", "/path/to/venubase/worktrees/*"],
       "conventionsFile": "roadmap-conventions.md",
       "indexFile": "roadmap-index.md",
-      "canonicalRepo": "your-org/venubase-roadmap"
+      "canonicalRepo": "your-org/venubase-roadmap",
+      "implementationRepo": "your-org/venubase-web"
     },
     "playerpath": {
       "workspaceRoots": ["/path/to/playerpath-web"],
@@ -126,6 +127,7 @@ export VENUBASE_ROADMAP_DIR=/path/to/roadmap-vault
 | `GET/PUT /api/roadmap-index?vault=<key>` | Read/update queue order in `roadmap-index.md` |
 | `GET /api/agent-suggestions?vault=<key>` | Parsed `agent-suggestions.md`, resolved against cards (Workbench "up next") |
 | `GET /api/atlas?vault=<key>` | Product entity map + `entityCards` join (`product-atlas.json` v2); `?fixture=1` for dev template |
+| `GET /api/cards/:id/agent-prompt?vault=<key>` | Self-contained implementer prompt for a card (what **Copy agent prompt** copies) |
 | `GET /api/vaults/:name/conventions` | Raw text of the vault's `roadmap-conventions.md` |
 | `GET /api/vaults/:name/card-contract` | Published card write contract for agents |
 | `GET /api/vaults/:name/doctor` | Vault contract / placement diagnostics |
@@ -140,6 +142,16 @@ curl -s "http://127.0.0.1:3001/api/routing/resolve?workspaceRoot=$PWD"
 Full agent workflow: **[docs/agent-routing.md](docs/agent-routing.md)**. Entry point for tools that read **`AGENTS.md`** / **`CLAUDE.md`** in this repo.
 
 ## Coding agents
+
+### Copy agent prompt
+
+The card modal's **Copy agent prompt** button copies a self-contained prompt a cloud or local coding agent can start from. Kando assembles it from:
+
+- the card itself (frontmatter and body), and its parents' **Summary**, **Out of scope** and **Notes** (decisions recorded on the epic travel with every slice);
+- where the work happens: `implementationRepo` (app repo) and `canonicalRepo` (roadmap repo);
+- a **verify-first** step: the agent checks the card's Technical references against the current code and writes a plan before coding;
+- delivery steps (checks, PR with a `## Roadmap` link, report back), the Workbench `agent_*` field rules, and only the **When something ships** section of the vault's conventions;
+- the vault's **`agent-prompt.md`** if present: project notes for implementers (check commands, migration rules, gotchas). Its frontmatter may set `implementation_repo` when routing doesn't; HTML comments are left out. Starter: [`templates/agent-prompt.example.md`](templates/agent-prompt.example.md).
 
 ### Portable pack (app repos + cloud)
 

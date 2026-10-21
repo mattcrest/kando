@@ -31,7 +31,8 @@
       ],
       "conventionsFile": "roadmap-conventions.md",
       "indexFile": "roadmap-index.md",
-      "canonicalRepo": "your-org/venubase-roadmap"
+      "canonicalRepo": "your-org/venubase-roadmap",
+      "implementationRepo": "your-org/venubase-web"
     },
     "playerpath": {
       "workspaceRoots": [
