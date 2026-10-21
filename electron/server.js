@@ -24,6 +24,14 @@ import {
 import { loadAgentSuggestions } from './agent-suggestions.js';
 import { buildAgentPrompt, parseAgentPromptFile } from './agent-prompt.js';
 import {
+  buildGeneratorInstruction,
+  gitHead,
+  resolveLocalCheckout,
+  runClaude,
+  spliceFindings,
+} from './agent-prompt-generator.js';
+import { randomUUID } from 'crypto';
+import {
   loadRoadmapConfig,
   resolveConfigFile,
   normalizeConfig,
@@ -1310,58 +1318,141 @@ app.get('/api/vaults/:name/conventions', async (req, res) => {
   }
 });
 
+/** Gather a card, its parents, conventions and agent-prompt.md; null when the card is missing. */
+async function assembleAgentPrompt(vaultKey, vaultDir, cardId) {
+  const { cards } = await loadVaultCards(vaultKey, vaultDir);
+  const byId = new Map(cards.map((c) => [c.id, c]));
+  const card = byId.get(cardId);
+  if (!card) return null;
+
+  const readRaw = (id) => fs.readFile(getCardPath(id, vaultDir), 'utf-8');
+  const ancestors = [];
+  const seen = new Set([card.id]);
+  for (let cur = card; cur?.parent && !seen.has(cur.parent); cur = byId.get(cur.parent)) {
+    const parent = byId.get(cur.parent);
+    if (!parent) break;
+    seen.add(parent.id);
+    ancestors.unshift({ card: parent, raw: await readRaw(parent.id) });
+  }
+
+  const routing = getRoutingForVault(vaultKey, VAULT_ROUTING);
+  const agentPromptFile = routing?.agentPromptFile || 'agent-prompt.md';
+  let agentPromptRaw = '';
+  try {
+    agentPromptRaw = await fs.readFile(path.join(vaultDir, agentPromptFile), 'utf-8');
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  const projectFile = parseAgentPromptFile(agentPromptRaw);
+  const implementationRepos = routing?.implementationRepo
+    ? [routing.implementationRepo]
+    : projectFile.implementationRepos;
+
+  const prompt = buildAgentPrompt({
+    card,
+    cardRaw: await readRaw(card.id),
+    ancestors,
+    vaultKey,
+    canonicalRepo: routing?.canonicalRepo || null,
+    implementationRepos,
+    conventionsText: await readConventionsText(vaultKey, vaultDir),
+    conventionsFile: routing?.conventionsFile || 'roadmap-conventions.md',
+    projectNotes: projectFile.notes,
+    agentPromptFile,
+  });
+  return { prompt, implementationRepos, hasProjectNotes: Boolean(projectFile.notes), routing };
+}
+
 // GET /api/cards/:cardId/agent-prompt - Self-contained implementer prompt for a card
 app.get('/api/cards/:cardId/agent-prompt', async (req, res) => {
   try {
     const { cardId } = req.params;
-    const vaultKey = getVaultKey(req);
-    const vaultDir = getVaultDir(req);
-    const { cards } = await loadVaultCards(vaultKey, vaultDir);
-    const byId = new Map(cards.map((c) => [c.id, c]));
-    const card = byId.get(cardId);
-    if (!card) {
+    const assembled = await assembleAgentPrompt(getVaultKey(req), getVaultDir(req), cardId);
+    if (!assembled) {
       return res.status(404).json({ error: `Card '${cardId}' not found` });
     }
-
-    const readRaw = (id) => fs.readFile(getCardPath(id, vaultDir), 'utf-8');
-    const ancestors = [];
-    const seen = new Set([card.id]);
-    for (let cur = card; cur?.parent && !seen.has(cur.parent); cur = byId.get(cur.parent)) {
-      const parent = byId.get(cur.parent);
-      if (!parent) break;
-      seen.add(parent.id);
-      ancestors.unshift({ card: parent, raw: await readRaw(parent.id) });
-    }
-
-    const routing = getRoutingForVault(vaultKey, VAULT_ROUTING);
-    const agentPromptFile = routing?.agentPromptFile || 'agent-prompt.md';
-    let agentPromptRaw = '';
-    try {
-      agentPromptRaw = await fs.readFile(path.join(vaultDir, agentPromptFile), 'utf-8');
-    } catch (err) {
-      if (err.code !== 'ENOENT') throw err;
-    }
-    const projectFile = parseAgentPromptFile(agentPromptRaw);
-    const implementationRepos = routing?.implementationRepo
-      ? [routing.implementationRepo]
-      : projectFile.implementationRepos;
-
-    const prompt = buildAgentPrompt({
-      card,
-      cardRaw: await readRaw(card.id),
-      ancestors,
-      vaultKey,
-      canonicalRepo: routing?.canonicalRepo || null,
-      implementationRepos,
-      conventionsText: await readConventionsText(vaultKey, vaultDir),
-      conventionsFile: routing?.conventionsFile || 'roadmap-conventions.md',
-      projectNotes: projectFile.notes,
-      agentPromptFile,
-    });
-    res.json({ cardId, prompt, implementationRepos, hasProjectNotes: Boolean(projectFile.notes) });
+    const { prompt, implementationRepos, hasProjectNotes } = assembled;
+    res.json({ cardId, prompt, implementationRepos, hasProjectNotes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// "Generate with Claude" jobs: in-memory, newest per card kept for the session.
+const AGENT_PROMPT_JOBS = new Map();
+const LATEST_JOB_BY_CARD = new Map();
+
+// POST /api/cards/:cardId/agent-prompt/generate - Verify the card against a local checkout with Claude Code
+app.post('/api/cards/:cardId/agent-prompt/generate', async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const vaultKey = getVaultKey(req);
+    const cardKey = `${vaultKey}:${cardId}`;
+    const running = AGENT_PROMPT_JOBS.get(LATEST_JOB_BY_CARD.get(cardKey));
+    if (running?.status === 'running') {
+      return res.json(running);
+    }
+
+    const assembled = await assembleAgentPrompt(vaultKey, getVaultDir(req), cardId);
+    if (!assembled) {
+      return res.status(404).json({ error: `Card '${cardId}' not found` });
+    }
+    const cwd = await resolveLocalCheckout(assembled.routing?.workspaceRoots || []);
+    if (!cwd) {
+      return res.status(409).json({
+        error: `No local checkout found for vault '${vaultKey}'. Add the app repo's path (no wildcards) to routing.${vaultKey}.workspaceRoots in vaults.json.`,
+      });
+    }
+
+    const head = await gitHead(cwd);
+    const repoLabel = assembled.implementationRepos[0] || path.basename(cwd);
+    const job = {
+      id: randomUUID(),
+      cardId,
+      vault: vaultKey,
+      status: 'running',
+      cwd,
+      head,
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      prompt: null,
+      error: null,
+      costUsd: null,
+    };
+    AGENT_PROMPT_JOBS.set(job.id, job);
+    LATEST_JOB_BY_CARD.set(cardKey, job.id);
+
+    runClaude({ cwd, input: buildGeneratorInstruction(assembled.prompt, { repoLabel, head }) })
+      .then(({ text, costUsd }) => {
+        job.finishedAt = new Date().toISOString();
+        job.prompt = spliceFindings(assembled.prompt, text, { repoLabel, head, generatedAt: job.finishedAt });
+        job.costUsd = costUsd;
+        job.status = 'done';
+      })
+      .catch((err) => {
+        job.finishedAt = new Date().toISOString();
+        job.error = err.message;
+        job.status = 'error';
+      });
+
+    res.status(202).json(job);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/agent-prompt-jobs/:jobId - Poll a "Generate with Claude" job
+app.get('/api/agent-prompt-jobs/:jobId', (req, res) => {
+  const job = AGENT_PROMPT_JOBS.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json(job);
+});
+
+// GET /api/cards/:cardId/agent-prompt/latest - Newest generated prompt for a card this session
+app.get('/api/cards/:cardId/agent-prompt/latest', (req, res) => {
+  const job = AGENT_PROMPT_JOBS.get(LATEST_JOB_BY_CARD.get(`${getVaultKey(req)}:${req.params.cardId}`));
+  if (!job) return res.status(404).json({ error: 'No generated prompt yet' });
+  res.json(job);
 });
 
 // GET /api/vaults/:name/card-contract - Published card write contract for agents
