@@ -3877,9 +3877,13 @@ function buildSuggestionPrompt(contextText, count){
 
 async function fetchAgentPrompt(cardId){
   const resp = await fetch(`${API_URL}/api/cards/${encodeURIComponent(cardId)}/agent-prompt?vault=${encodeURIComponent(currentVault)}`);
-  const data = await resp.json().catch(() => ({}));
-  if(!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-  return data.prompt;
+  const data = await resp.json().catch(() => null);
+  if(resp.ok && typeof data?.prompt === 'string') return data.prompt;
+  if(resp.ok || (resp.status === 404 && !data?.error?.startsWith('Card '))){
+    // An older Kando server still holds port 3001 and doesn't know this endpoint.
+    throw new Error("Kando's server is older than this window. Quit Kando, stop whatever is on port 3001 (lsof -ti :3001 | xargs kill), and start Kando again.");
+  }
+  throw new Error(data?.error || `HTTP ${resp.status}`);
 }
 
 async function copyAgentPromptForCard(cardId){

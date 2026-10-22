@@ -1,9 +1,9 @@
-import { app, BrowserWindow, Menu } from 'electron';
+import { app, BrowserWindow, Menu, dialog } from 'electron';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import http from 'http';
 import fs from 'fs';
+import { waitForServer, describeStartFailure } from './server-health.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,27 +14,6 @@ let serverProcess;
 const PORT = 3001;
 const MAX_RETRIES = 30;
 const RETRY_INTERVAL = 100;
-
-// Check if server is ready by polling /api/health
-function waitForServer(retries = 0) {
-  return new Promise((resolve, reject) => {
-    if (retries > MAX_RETRIES) {
-      reject(new Error('Server failed to start'));
-      return;
-    }
-
-    http.get(`http://localhost:${PORT}/api/health`, (res) => {
-      if (res.statusCode === 200) {
-        console.log('Server is ready');
-        resolve();
-      } else {
-        setTimeout(() => waitForServer(retries + 1).then(resolve).catch(reject), RETRY_INTERVAL);
-      }
-    }).on('error', () => {
-      setTimeout(() => waitForServer(retries + 1).then(resolve).catch(reject), RETRY_INTERVAL);
-    });
-  });
-}
 
 // Start the Node.js server
 function startServer() {
@@ -53,13 +32,15 @@ function startServer() {
       reject(err);
     });
 
+    let ready = false;
     serverProcess.on('exit', (code) => {
       console.log(`Server exited with code ${code}`);
+      if (!ready) describeStartFailure(code, { port: PORT }).then((msg) => reject(new Error(msg)));
     });
 
     // Wait for server to be ready
-    waitForServer()
-      .then(resolve)
+    waitForServer(serverProcess.pid, { port: PORT, retries: MAX_RETRIES, intervalMs: RETRY_INTERVAL })
+      .then(() => { ready = true; resolve(); })
       .catch(reject);
   });
 }
@@ -134,6 +115,7 @@ app.on('ready', async () => {
     createMenu();
   } catch (err) {
     console.error('Failed to start app:', err);
+    dialog.showErrorBox("Kando can't start", err.message);
     app.quit();
   }
 });

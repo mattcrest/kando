@@ -991,7 +991,7 @@ app.put('/api/initiatives/:initiativeId/epics', async (req, res) => {
 
 // Health check & vault info
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', vaults: Object.keys(VAULTS) });
+  res.json({ status: 'ok', vaults: Object.keys(VAULTS), pid: process.pid });
 });
 
 app.get('/api/vaults', async (req, res) => {
@@ -1615,6 +1615,11 @@ app.get('/api/atlas', async (req, res) => {
 // Serve static files from electron directory
 app.use(express.static(__dirname));
 
+// Unknown API routes are JSON 404s, never the app page (a 200 HTML reply hides a stale server)
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: `Unknown API route: ${req.method} ${req.path}` });
+});
+
 // Catch-all route for client-side routing - serve app.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'app.html'));
@@ -1624,7 +1629,7 @@ app.get('*', (req, res) => {
 async function start() {
   await loadVaultsConfig();
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Kanban API server running on http://localhost:${PORT}`);
     console.log(`Available vaults: ${Object.keys(VAULTS).join(', ')}`);
     console.log(`GET /api/cards?vault=<name> - List all cards`);
@@ -1644,6 +1649,15 @@ async function start() {
     console.log(`GET /api/routing/resolve?workspaceRoot=<path> - Resolve vault for workspace`);
     console.log(`POST /api/vaults/add - Add new vault`);
     console.log(`DELETE /api/vaults/:name - Remove vault`);
+  });
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `Port ${PORT} is already in use — probably an older Kando server. Stop it (lsof -ti :${PORT} | xargs kill) and start again.`
+      );
+      process.exit(1);
+    }
+    throw err;
   });
 }
 
