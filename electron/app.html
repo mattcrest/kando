@@ -966,7 +966,9 @@ a.git-tooltip-repo:hover {
 .agent-prompt-modal { z-index: 400; }
 .agent-prompt-modal-content { max-width: 860px; max-height: 86vh; }
 .agent-prompt-modal-body { display: flex; flex-direction: column; gap: 12px; }
-.agent-prompt-status { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.agent-prompt-status { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+/* .btn sets display, which would otherwise override the hidden attribute */
+.agent-prompt-modal [hidden] { display: none !important; }
 .agent-prompt-status.error { color: var(--danger, #c0392b); }
 .agent-prompt-text {
   width: 100%; min-height: 52vh; flex: 1; resize: vertical;

@@ -10,6 +10,8 @@
 import { spawn as nodeSpawn, execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
 
 const execFileAsync = promisify(execFile);
 
@@ -35,6 +37,96 @@ async function defaultIsDir(p) {
   } catch {
     return false;
   }
+}
+
+/** Where Claude Code commonly lives when it isn't on a GUI app's PATH. */
+export function claudeFallbackDirs(home = os.homedir()) {
+  return [
+    path.join(home, '.local', 'bin'), // native installer
+    path.join(home, '.claude', 'local'), // older local install, usually reached via a shell alias
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    path.join(home, '.npm-global', 'bin'),
+    path.join(home, '.volta', 'bin'),
+    path.join(home, '.bun', 'bin'),
+  ];
+}
+
+const PATH_MARKER = '__KANDO_PATH__';
+
+/**
+ * PATH as the user's login shell sets it (.zprofile/.zshrc etc.). Apps started
+ * from the Dock or Finder only get a minimal PATH, which hides claude and node.
+ */
+export async function loginShellPath({
+  shell = process.env.SHELL || '/bin/zsh',
+  execFileFn = execFileAsync,
+  timeoutMs = 5000,
+} = {}) {
+  try {
+    const { stdout } = await execFileFn(shell, ['-ilc', `printf '${PATH_MARKER}%s${PATH_MARKER}' "$PATH"`], {
+      timeout: timeoutMs,
+      env: process.env,
+    });
+    const m = new RegExp(`${PATH_MARKER}(.*?)${PATH_MARKER}`, 's').exec(String(stdout));
+    return m && m[1].trim() ? m[1].trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function defaultIsExecutable(p) {
+  try {
+    await fs.access(p, fs.constants.X_OK);
+    return (await fs.stat(p)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function mergePaths(...lists) {
+  const seen = new Set();
+  return lists
+    .flatMap((l) => (Array.isArray(l) ? l : String(l || '').split(path.delimiter)))
+    .filter((d) => d && !seen.has(d) && seen.add(d));
+}
+
+/**
+ * Find the claude binary and the PATH to run it with.
+ * Order: KANDO_CLAUDE_BIN, then the process PATH, the login shell PATH, and
+ * common install dirs. Returns { bin, env, searched } with bin null when missing.
+ */
+export async function resolveClaude({
+  env = process.env,
+  home = os.homedir(),
+  shellPath = loginShellPath,
+  isExecutable = defaultIsExecutable,
+} = {}) {
+  const fromShell = await shellPath();
+  const dirs = mergePaths(env.PATH, fromShell, claudeFallbackDirs(home));
+  const runEnv = { ...env, PATH: dirs.join(path.delimiter) };
+
+  if (env.KANDO_CLAUDE_BIN) {
+    const bin = env.KANDO_CLAUDE_BIN;
+    return { bin: (await isExecutable(bin)) ? bin : null, env: runEnv, searched: [bin] };
+  }
+  for (const dir of dirs) {
+    const candidate = path.join(dir, 'claude');
+    if (await isExecutable(candidate)) return { bin: candidate, env: runEnv, searched: dirs };
+  }
+  return { bin: null, env: runEnv, searched: dirs };
+}
+
+export function claudeNotFoundMessage({ searched = [], fromOverride = false } = {}) {
+  if (fromOverride) {
+    return `KANDO_CLAUDE_BIN is set to "${searched[0]}", but that isn't an executable file. Fix the path (run "which claude" in Terminal) and restart Kando.`;
+  }
+  return [
+    "Kando couldn't find Claude Code (the claude command).",
+    'If it works in Terminal, run "which claude" there and start Kando with KANDO_CLAUDE_BIN set to that path. If "which" shows an alias, use the path the alias points to.',
+    'Otherwise install it: https://code.claude.com',
+    `Looked in: ${searched.join(', ')}`,
+  ].join('\n');
 }
 
 export async function gitHead(cwd) {
@@ -117,6 +209,7 @@ export function runClaude({
   cwd,
   input,
   bin = process.env.KANDO_CLAUDE_BIN || 'claude',
+  env = process.env,
   model = process.env.KANDO_CLAUDE_MODEL || null,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   spawnFn = nodeSpawn,
@@ -132,7 +225,7 @@ export function runClaude({
   return new Promise((resolve, reject) => {
     let child;
     try {
-      child = spawnFn(bin, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+      child = spawnFn(bin, args, { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
     } catch (err) {
       reject(new Error(`Could not start ${bin}: ${err.message}`));
       return;

@@ -25,7 +25,9 @@ import { loadAgentSuggestions } from './agent-suggestions.js';
 import { buildAgentPrompt, parseAgentPromptFile } from './agent-prompt.js';
 import {
   buildGeneratorInstruction,
+  claudeNotFoundMessage,
   gitHead,
+  resolveClaude,
   resolveLocalCheckout,
   runClaude,
   spliceFindings,
@@ -1380,6 +1382,18 @@ app.get('/api/cards/:cardId/agent-prompt', async (req, res) => {
 
 // "Generate with Claude" jobs: in-memory, newest per card kept for the session.
 const AGENT_PROMPT_JOBS = new Map();
+let claudeResolution = null; // cached once found; a miss is retried on the next click
+
+async function findClaude() {
+  if (claudeResolution) return claudeResolution;
+  const found = await resolveClaude();
+  if (found.bin) {
+    claudeResolution = found;
+    console.log(`Generate with Claude: using ${found.bin}`);
+  }
+  return found;
+}
+
 const LATEST_JOB_BY_CARD = new Map();
 
 // POST /api/cards/:cardId/agent-prompt/generate - Verify the card against a local checkout with Claude Code
@@ -1404,6 +1418,13 @@ app.post('/api/cards/:cardId/agent-prompt/generate', async (req, res) => {
       });
     }
 
+    const claude = await findClaude();
+    if (!claude.bin) {
+      return res.status(422).json({
+        error: claudeNotFoundMessage({ searched: claude.searched, fromOverride: Boolean(process.env.KANDO_CLAUDE_BIN) }),
+      });
+    }
+
     const head = await gitHead(cwd);
     const repoLabel = assembled.implementationRepos[0] || path.basename(cwd);
     const job = {
@@ -1422,7 +1443,12 @@ app.post('/api/cards/:cardId/agent-prompt/generate', async (req, res) => {
     AGENT_PROMPT_JOBS.set(job.id, job);
     LATEST_JOB_BY_CARD.set(cardKey, job.id);
 
-    runClaude({ cwd, input: buildGeneratorInstruction(assembled.prompt, { repoLabel, head }) })
+    runClaude({
+      cwd,
+      bin: claude.bin,
+      env: claude.env,
+      input: buildGeneratorInstruction(assembled.prompt, { repoLabel, head }),
+    })
       .then(({ text, costUsd }) => {
         job.finishedAt = new Date().toISOString();
         job.prompt = spliceFindings(assembled.prompt, text, { repoLabel, head, generatedAt: job.finishedAt });
