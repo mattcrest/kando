@@ -963,6 +963,23 @@ a.git-tooltip-repo:hover {
   flex: 1; overflow-y: auto; padding: 20px 24px;
 }
 
+.agent-prompt-modal { z-index: 400; }
+.agent-prompt-modal-content { max-width: 860px; max-height: 86vh; }
+.agent-prompt-modal-body { display: flex; flex-direction: column; gap: 12px; }
+.agent-prompt-status { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.agent-prompt-status.error { color: var(--danger, #c0392b); }
+.agent-prompt-text {
+  width: 100%; min-height: 52vh; flex: 1; resize: vertical;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 12px; line-height: 1.5;
+  color: var(--text-1); background: var(--bg); border: 1px solid var(--border-md); border-radius: var(--r-sm);
+  padding: 12px; box-sizing: border-box;
+}
+.agent-prompt-modal-footer {
+  display: flex; align-items: center; gap: 8px; justify-content: flex-end;
+  padding: 14px 24px; border-top: 1px solid var(--border);
+}
+.agent-prompt-meta { margin-right: auto; font-size: 11px; color: var(--text-3); }
+
 .vault-list {
   margin-bottom: 24px;
 }
@@ -2652,7 +2669,27 @@ body:has(.overlay.open) { overflow: hidden; }
       <div class="modal-footer-actions">
         <button class="modal-footer-link" id="modal-open-cursor" type="button">Open in Cursor</button>
         <button class="modal-footer-link" id="modal-copy-agent-prompt" type="button">Copy agent prompt</button>
+        <button class="modal-footer-link" id="modal-generate-agent-prompt" type="button" title="Claude Code reads your local checkout (read-only) and checks the card against the code">Generate with Claude</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Generate agent prompt (Claude Code) -->
+<div class="vault-modal agent-prompt-modal" id="agent-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="agent-prompt-modal-title">
+  <div class="vault-modal-content agent-prompt-modal-content">
+    <div class="vault-modal-header">
+      <div class="vault-modal-title" id="agent-prompt-modal-title">Agent prompt</div>
+      <button class="vault-modal-close" id="agent-prompt-modal-close" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="vault-modal-body agent-prompt-modal-body">
+      <p class="agent-prompt-status" id="agent-prompt-status" aria-live="polite"></p>
+      <textarea class="agent-prompt-text" id="agent-prompt-text" spellcheck="false" hidden></textarea>
+    </div>
+    <div class="agent-prompt-modal-footer">
+      <span class="agent-prompt-meta" id="agent-prompt-meta"></span>
+      <button class="btn btn-ghost" id="agent-prompt-regenerate" type="button" hidden>Regenerate</button>
+      <button class="btn btn-primary" id="agent-prompt-copy" type="button" hidden>Copy prompt</button>
     </div>
   </div>
 </div>
@@ -3901,6 +3938,142 @@ async function copyAgentPromptForCard(cardId){
     alert('Could not copy to clipboard.');
   }
 }
+
+/* ── Generate with Claude ─────────────────────── */
+const agentPromptModal = document.getElementById('agent-prompt-modal');
+let agentPromptCardId = null;
+let agentPromptPollTimer = null;
+
+function setAgentPromptStatus(msg, isError){
+  const el = document.getElementById('agent-prompt-status');
+  el.textContent = msg;
+  el.classList.toggle('error', Boolean(isError));
+}
+
+function renderAgentPromptJob(job){
+  const text = document.getElementById('agent-prompt-text');
+  const copyBtn = document.getElementById('agent-prompt-copy');
+  const regenBtn = document.getElementById('agent-prompt-regenerate');
+  const meta = document.getElementById('agent-prompt-meta');
+  const commit = [job.head?.branch, job.head?.sha].filter(Boolean).join(' @ ');
+  if(job.status === 'running'){
+    const secs = Math.round((Date.now() - Date.parse(job.startedAt)) / 1000);
+    setAgentPromptStatus(`Claude Code is reading ${commit ? `your checkout (${commit})` : 'your checkout'} to check this card against the code… ${secs}s. This usually takes one to two minutes.`);
+    text.hidden = true; copyBtn.hidden = true; regenBtn.hidden = true; meta.textContent = '';
+    return;
+  }
+  regenBtn.hidden = false;
+  if(job.status === 'error'){
+    setAgentPromptStatus(job.error || 'Generation failed.', true);
+    text.hidden = true; copyBtn.hidden = true; meta.textContent = '';
+    return;
+  }
+  setAgentPromptStatus('Review and edit before copying. The "Checked against the code" section is from Claude; everything else is the card as written.');
+  text.value = job.prompt || '';
+  text.hidden = false; copyBtn.hidden = false;
+  const when = job.finishedAt ? new Date(job.finishedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  const hasCost = typeof job.costUsd === 'number';
+  const cost = hasCost ? ` · ≈ $${job.costUsd.toFixed(2)} at API rates` : '';
+  meta.textContent = `Generated ${when}${commit ? ` · ${commit}` : ''}${cost}`;
+  meta.title = hasCost
+    ? "Claude Code's estimate of what this run would cost at API prices. With a Claude subscription it counts toward your plan's usage instead of being billed; with an API key it's billed to that Console organization."
+    : '';
+}
+
+function stopAgentPromptPolling(){
+  clearTimeout(agentPromptPollTimer);
+  agentPromptPollTimer = null;
+}
+
+async function pollAgentPromptJob(jobId, cardId){
+  stopAgentPromptPolling();
+  try {
+    const resp = await fetch(`${API_URL}/api/agent-prompt-jobs/${encodeURIComponent(jobId)}`);
+    const job = await resp.json();
+    if(!resp.ok) throw new Error(job.error || `HTTP ${resp.status}`);
+    if(agentPromptCardId !== cardId) return;
+    renderAgentPromptJob(job);
+    if(job.status === 'running'){
+      agentPromptPollTimer = setTimeout(() => pollAgentPromptJob(jobId, cardId), 2000);
+    }
+  } catch(err){
+    if(agentPromptCardId === cardId) setAgentPromptStatus(`Lost track of the job: ${err.message}`, true);
+  }
+}
+
+async function startAgentPromptJob(cardId){
+  setAgentPromptStatus('Starting Claude Code…');
+  document.getElementById('agent-prompt-text').hidden = true;
+  document.getElementById('agent-prompt-copy').hidden = true;
+  document.getElementById('agent-prompt-regenerate').hidden = true;
+  try {
+    const resp = await fetch(`${API_URL}/api/cards/${encodeURIComponent(cardId)}/agent-prompt/generate?vault=${encodeURIComponent(currentVault)}`, { method: 'POST' });
+    const job = await resp.json();
+    if(!resp.ok) throw new Error(job.error || `HTTP ${resp.status}`);
+    if(agentPromptCardId !== cardId) return;
+    renderAgentPromptJob(job);
+    if(job.status === 'running') pollAgentPromptJob(job.id, cardId);
+  } catch(err){
+    if(agentPromptCardId !== cardId) return;
+    setAgentPromptStatus(err.message, true);
+    document.getElementById('agent-prompt-regenerate').hidden = false;
+  }
+}
+
+async function openGeneratedAgentPrompt(cardId){
+  const card = getCard(cardId);
+  if(!card) return;
+  agentPromptCardId = cardId;
+  document.getElementById('agent-prompt-modal-title').textContent = `Agent prompt — ${breadcrumbLabel(card)}`;
+  agentPromptModal.classList.add('open');
+  // Reuse this session's result for the card (running or finished) instead of paying again.
+  try {
+    const resp = await fetch(`${API_URL}/api/cards/${encodeURIComponent(cardId)}/agent-prompt/latest?vault=${encodeURIComponent(currentVault)}`);
+    if(resp.ok){
+      const job = await resp.json();
+      if(job.status !== 'error'){
+        renderAgentPromptJob(job);
+        if(job.status === 'running') pollAgentPromptJob(job.id, cardId);
+        return;
+      }
+    }
+  } catch(err){
+    console.error('Failed to load previous agent prompt:', err);
+  }
+  startAgentPromptJob(cardId);
+}
+
+function closeAgentPromptModal(){
+  stopAgentPromptPolling();
+  agentPromptCardId = null;
+  agentPromptModal.classList.remove('open');
+}
+
+document.getElementById('agent-prompt-modal-close').addEventListener('click', closeAgentPromptModal);
+agentPromptModal.addEventListener('click', e => { if(e.target === agentPromptModal) closeAgentPromptModal(); });
+document.getElementById('agent-prompt-regenerate').addEventListener('click', () => {
+  if(agentPromptCardId) startAgentPromptJob(agentPromptCardId);
+});
+document.getElementById('agent-prompt-copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(document.getElementById('agent-prompt-text').value);
+    showToast('Agent prompt copied to clipboard');
+  } catch(err){
+    console.error('Failed to copy agent prompt:', err);
+    alert('Could not copy to clipboard.');
+  }
+});
+// Capture phase so Escape / arrows don't also close or page the card modal underneath.
+document.addEventListener('keydown', e => {
+  if(!agentPromptModal.classList.contains('open')) return;
+  if(e.key === 'Escape'){
+    e.preventDefault();
+    e.stopPropagation();
+    closeAgentPromptModal();
+  } else if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+    e.stopPropagation();
+  }
+}, true);
 
 function setInitiativeEpicsStatus(msg, isError){
   const el = document.getElementById('initiative-epics-status');
@@ -5169,6 +5342,11 @@ document.getElementById('modal-open-cursor').addEventListener('click', ()=>{
 document.getElementById('modal-copy-agent-prompt').addEventListener('click', ()=>{
   if(!modalCardId) return;
   copyAgentPromptForCard(modalCardId);
+});
+
+document.getElementById('modal-generate-agent-prompt').addEventListener('click', ()=>{
+  if(!modalCardId) return;
+  openGeneratedAgentPrompt(modalCardId);
 });
 
 document.getElementById('modal-copy-path').addEventListener('click', async () => {
