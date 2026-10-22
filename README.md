@@ -161,7 +161,8 @@ The card modal's **Copy agent prompt** button copies a self-contained prompt a c
 **Generate with Claude** (next to Copy agent prompt) runs [Claude Code](https://code.claude.com) headless and **read-only** (`Read`, `Grep`, `Glob` only) in your local checkout of the app repo. Claude checks the card's Technical references against the code and writes four sections: **Verified against the code**, **Files and tests to touch**, **Watch out for**, and **Open questions**. Kando inserts them into the prompt above the card. The card text itself is never rewritten. You review and edit the result before copying it.
 
 - **Needs:** the `claude` CLI signed in on this machine, and a literal path (no `*`) to the app checkout in `routing.<vault>.workspaceRoots`. Claude reads whatever that checkout has; pull first if it's behind.
-- **Cost and time:** usually one to two minutes, about $0.30 for a typical slice on API billing in testing (the dialog shows the actual cost); a Claude subscription covers it otherwise. The result is kept for the session, so reopening the dialog doesn't run it again; **Regenerate** does.
+- **Cost and time:** usually one to two minutes. The dialog shows Claude Code's estimate at API rates (about $0.30 for a typical slice in testing). Where it's actually billed depends on how `claude` is signed in: a Claude subscription counts it toward plan usage with no separate charge; an API key or Console login bills that Console organization; Bedrock/Vertex bill your cloud account. Kando passes its own environment to `claude`, so an `ANTHROPIC_API_KEY` in the shell that started Kando takes precedence over a subscription login.
+- **Reuse:** the result is kept for the session, so reopening the dialog doesn't run it again; **Regenerate** does.
 - **Settings:** `KANDO_CLAUDE_BIN` (path to `claude`), `KANDO_CLAUDE_MODEL` (for example `sonnet`).
 
 ### Portable pack (app repos + cloud)

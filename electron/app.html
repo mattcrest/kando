@@ -3972,8 +3972,12 @@ function renderAgentPromptJob(job){
   text.value = job.prompt || '';
   text.hidden = false; copyBtn.hidden = false;
   const when = job.finishedAt ? new Date(job.finishedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-  const cost = typeof job.costUsd === 'number' ? ` · $${job.costUsd.toFixed(2)}` : '';
+  const hasCost = typeof job.costUsd === 'number';
+  const cost = hasCost ? ` · ≈ $${job.costUsd.toFixed(2)} at API rates` : '';
   meta.textContent = `Generated ${when}${commit ? ` · ${commit}` : ''}${cost}`;
+  meta.title = hasCost
+    ? "Claude Code's estimate of what this run would cost at API prices. With a Claude subscription it counts toward your plan's usage instead of being billed; with an API key it's billed to that Console organization."
+    : '';
 }
 
 function stopAgentPromptPolling(){
