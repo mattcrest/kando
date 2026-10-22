@@ -34,7 +34,9 @@ curl -s "http://127.0.0.1:3001/api/routing/resolve?workspaceRoot=/absolute/path/
 | `vaultPath` | Directory containing `release-*.md` |
 | `conventionsPath` | Project-specific rules file |
 | `indexPath` | Active queue / index |
-| `canonicalRepo` | Optional `org/repo` for PR roadmap links |
+| `canonicalRepo` | Optional `org/repo` of the roadmap vault, for PR roadmap links |
+| `routing.implementationRepo` | Optional `org/repo` where slices are implemented (falls back to `implementation_repo` in the vault's `agent-prompt.md`) |
+| `routing.agentPromptFile` | Vault file appended to **Copy agent prompt** (default `agent-prompt.md`) |
 
 **When `matched` is `false`**, do not guess paths. Ask the user to add `routing.<vaultKey>.workspaceRoots` in `vaults.json`, or read the hint in the JSON response.
 

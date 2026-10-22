@@ -3875,62 +3875,24 @@ function buildSuggestionPrompt(contextText, count){
   ].join('\n');
 }
 
-async function fetchVaultConventions(){
-  try {
-    const resp = await fetch(`${API_URL}/api/vaults/${encodeURIComponent(currentVault)}/conventions`);
-    if(resp.ok){
-      const data = await resp.json();
-      return data.content || '';
-    }
-  } catch(err){
-    console.error('Failed to fetch vault conventions:', err);
-  }
-  return '';
-}
-
-function buildAgentPrompt(card, conventionsText){
-  const vaultMeta = currentVaultMeta();
-  const canonicalRepo = vaultMeta?.routing?.canonicalRepo;
-  const crumb = ancestorChain(card).concat([card]).map(breadcrumbLabel).join(' › ');
-  const content = getContent(card.id);
-
-  return [
-    `Task: Implement roadmap slice "${card.title || card.id}" (${card.id})`,
-    '',
-    `This is self-contained — don't assume you can reach my local machine or Kando's server (http://127.0.0.1:3001). Everything you need is below.`,
-    '',
-    `Vault: ${currentVault}${vaultMeta?.path ? ` (${vaultMeta.path})` : ''}`,
-    `Card file: ${card.path || (card.id + '.md')}`,
-    canonicalRepo ? `Canonical repo for this vault: ${canonicalRepo}` : null,
-    `Breadcrumb: ${crumb}`,
-    `Current status: ${card.status}`,
-    '',
-    '--- Vault conventions (roadmap-conventions.md) ---',
-    conventionsText.trim() || '(No conventions file found for this vault — use standard practice.)',
-    '',
-    `--- Card content (${card.path || card.id + '.md'}) ---`,
-    content || '(No body content found.)',
-    '',
-    '--- Your task ---',
-    'Implement this slice: read the Problem/context, Behavior & requirements, and Acceptance criteria sections above, and do the implementation work in the app repository this slice belongs to (not the roadmap vault) unless the card says otherwise.',
-    '',
-    'Keep this card\'s frontmatter updated in the roadmap vault as you work — this is what Kando\'s Workbench view shows the user, so it must reflect reality:',
-    '  agent_status: in_progress | blocked | needs_review | idle',
-    '  (done or complete also takes the card off the Workbench)',
-    '  agent_provider: cursor | claude | codex | manual',
-    '  agent_summary: one or two sentences on current state (the "why")',
-    '  agent_next: one sentence on what happens next',
-    '  agent_updated_at: current ISO 8601 timestamp, updated every time you touch this card',
-    '',
-    'Update these on every meaningful change, not just at the end. Don\'t remove or reformat other frontmatter fields. If the roadmap vault is a separate git repo from the one you\'re implementing in, edit and commit the card file there directly.',
-  ].filter(line => line !== null).join('\n');
+async function fetchAgentPrompt(cardId){
+  const resp = await fetch(`${API_URL}/api/cards/${encodeURIComponent(cardId)}/agent-prompt?vault=${encodeURIComponent(currentVault)}`);
+  const data = await resp.json().catch(() => ({}));
+  if(!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  return data.prompt;
 }
 
 async function copyAgentPromptForCard(cardId){
   const card = getCard(cardId);
   if(!card) return;
-  const conventionsText = await fetchVaultConventions();
-  const prompt = buildAgentPrompt(card, conventionsText);
+  let prompt;
+  try {
+    prompt = await fetchAgentPrompt(cardId);
+  } catch(err){
+    console.error('Failed to build agent prompt:', err);
+    alert(`Could not build the agent prompt: ${err.message}`);
+    return;
+  }
   try {
     await navigator.clipboard.writeText(prompt);
     showToast('Agent prompt copied to clipboard');

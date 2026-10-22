@@ -2,6 +2,7 @@ import path from 'path';
 
 const DEFAULT_CONVENTIONS_FILE = 'roadmap-conventions.md';
 const DEFAULT_INDEX_FILE = 'roadmap-index.md';
+const DEFAULT_AGENT_PROMPT_FILE = 'agent-prompt.md';
 
 /**
  * Convert a glob-style path pattern (* segments) to a RegExp anchored to full path.
@@ -63,6 +64,8 @@ export function normalizeRoutingEntry(entry = {}) {
     conventionsFile: entry.conventionsFile || DEFAULT_CONVENTIONS_FILE,
     indexFile: entry.indexFile || DEFAULT_INDEX_FILE,
     canonicalRepo: entry.canonicalRepo || null,
+    implementationRepo: entry.implementationRepo || null,
+    agentPromptFile: entry.agentPromptFile || DEFAULT_AGENT_PROMPT_FILE,
   };
 }
 
