@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'events';
 import {
   buildGeneratorInstruction,
+  claudeNotFoundMessage,
   cleanFindings,
+  loginShellPath,
+  resolveClaude,
   resolveLocalCheckout,
   runClaude,
   spliceFindings,
@@ -112,6 +115,13 @@ describe('runClaude', () => {
     for (const tool of ['Edit', 'Write', 'Bash']) assert.ok(args.includes(tool), tool);
   });
 
+  it('runs with the env it is given (so claude and node resolve from the login PATH)', async () => {
+    const { spawnFn, calls } = fakeSpawn({ stdout: JSON.stringify({ result: 'x', is_error: false }) });
+    await runClaude({ cwd: '/w', input: '', bin: '/u/.local/bin/claude', env: { PATH: '/u/.local/bin:/usr/bin' }, spawnFn });
+    assert.equal(calls[0].bin, '/u/.local/bin/claude');
+    assert.equal(calls[0].opts.env.PATH, '/u/.local/bin:/usr/bin');
+  });
+
   it('passes a model override when set', async () => {
     const { spawnFn, calls } = fakeSpawn({ stdout: JSON.stringify({ result: 'x', is_error: false }) });
     await runClaude({ cwd: '/w', input: '', bin: 'claude', model: 'sonnet', spawnFn });
@@ -132,5 +142,66 @@ describe('runClaude', () => {
   it('times out and kills a hung process', async () => {
     const { spawnFn } = fakeSpawn({ hang: true });
     await assert.rejects(runClaude({ cwd: '/w', input: '', bin: 'claude', spawnFn, timeoutMs: 20 }), /did not finish/);
+  });
+});
+
+describe('loginShellPath', () => {
+  it('extracts PATH between markers, ignoring shell startup noise', async () => {
+    let call;
+    const execFileFn = async (shell, args) => {
+      call = { shell, args };
+      return { stdout: 'Welcome back!\n__KANDO_PATH__/u/.local/bin:/opt/homebrew/bin:/usr/bin__KANDO_PATH__' };
+    };
+    assert.equal(await loginShellPath({ shell: '/bin/zsh', execFileFn }), '/u/.local/bin:/opt/homebrew/bin:/usr/bin');
+    assert.equal(call.shell, '/bin/zsh');
+    assert.equal(call.args[0], '-ilc');
+  });
+
+  it('returns null when the shell fails or prints no marker', async () => {
+    assert.equal(await loginShellPath({ execFileFn: async () => { throw new Error('boom'); } }), null);
+    assert.equal(await loginShellPath({ execFileFn: async () => ({ stdout: 'nothing' }) }), null);
+  });
+});
+
+describe('resolveClaude', () => {
+  const exists = (...paths) => async (p) => paths.includes(p);
+
+  it('finds claude on the login shell PATH when the app PATH is minimal (Dock/Finder launch)', async () => {
+    const out = await resolveClaude({
+      env: { PATH: '/usr/bin:/bin' },
+      home: '/u',
+      shellPath: async () => '/u/.nvm/versions/node/v22/bin:/usr/bin',
+      isExecutable: exists('/u/.nvm/versions/node/v22/bin/claude'),
+    });
+    assert.equal(out.bin, '/u/.nvm/versions/node/v22/bin/claude');
+    assert.equal(out.env.PATH.split(':')[0], '/usr/bin');
+    assert.ok(out.env.PATH.includes('/u/.nvm/versions/node/v22/bin'), 'node for npm-installed claude');
+  });
+
+  it('falls back to common install dirs, e.g. the alias-only ~/.claude/local', async () => {
+    const out = await resolveClaude({
+      env: { PATH: '/usr/bin' },
+      home: '/u',
+      shellPath: async () => null,
+      isExecutable: exists('/u/.claude/local/claude'),
+    });
+    assert.equal(out.bin, '/u/.claude/local/claude');
+  });
+
+  it('honors KANDO_CLAUDE_BIN, and reports a bad override', async () => {
+    const good = await resolveClaude({ env: { PATH: '', KANDO_CLAUDE_BIN: '/x/claude' }, shellPath: async () => null, isExecutable: exists('/x/claude') });
+    assert.equal(good.bin, '/x/claude');
+    const bad = await resolveClaude({ env: { PATH: '', KANDO_CLAUDE_BIN: '/x/nope' }, shellPath: async () => null, isExecutable: exists() });
+    assert.equal(bad.bin, null);
+    assert.match(claudeNotFoundMessage({ searched: bad.searched, fromOverride: true }), /KANDO_CLAUDE_BIN is set to "\/x\/nope"/);
+  });
+
+  it('returns null with everywhere it looked when claude is missing', async () => {
+    const out = await resolveClaude({ env: { PATH: '/usr/bin' }, home: '/u', shellPath: async () => null, isExecutable: exists() });
+    assert.equal(out.bin, null);
+    const msg = claudeNotFoundMessage({ searched: out.searched });
+    assert.match(msg, /couldn't find Claude Code/);
+    assert.match(msg, /which claude/);
+    assert.match(msg, /\/u\/\.local\/bin/);
   });
 });
