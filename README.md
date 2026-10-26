@@ -8,7 +8,7 @@ Use it to plan releasable slices, drag cards across columns, and let coding agen
 
 - **Multi-vault** — Venubase, PlayerPath, or any project; switch vaults in the UI
 - **Three-layer hierarchy** — initiatives (`initiative: true`) → epics (`epic: true`) → story slices, linked by frontmatter wikilinks (`initiative:` on epics, `epic:` on slices)
-- **Board + Strategy + Atlas + Workbench views** — kanban board for execution; a Now/Next/Later roadmap of initiative rows with per-epic slice progress; an optional **Atlas** entity mind-map (`product-atlas.json`) with card-driven highlighting; a Workbench view showing which slices agents are actively working on (and why), an AI-suggested "up next" queue, and one-click prompts to hand a slice to a coding agent (header toggle)
+- **Board + Strategy + Atlas + Workbench + Waves views** — kanban board for execution; a Now/Next/Later roadmap of initiative rows with per-epic slice progress; an optional **Atlas** entity mind-map (`product-atlas.json`) with card-driven highlighting; a Workbench view showing which slices agents are actively working on (and why), an AI-suggested "up next" queue, and one-click prompts to hand a slice to a coding agent; a **Waves** view that stacks an epic's slices into sequenced delivery waves (header toggle)
 - **Card-type filter** — All / Initiatives / Epics / Slices dropdown in the header
 - **Initiative epic manager** — drag-to-reorder, add/remove, and annotate an initiative's epics from the card modal; writes the card's `## Epics` table and each epic's `initiative:` link
 - **Cross-project routing** — `vaults.json` maps app repo paths → roadmap vault + convention files
@@ -66,6 +66,8 @@ Slices also carry an optional set of **agent progress fields** —
 `agent_updated_at` — written by coding agents as they work, never by hand.
 They power the **Workbench** view (see below) and are documented in
 [docs/agent-routing.md](docs/agent-routing.md#5-keep-progress-tracking-current).
+
+Slices may also carry an optional **`wave`** — a positive integer (`wave: 2`) saying which delivery wave of the epic they belong to. The **Waves** view (header toggle, or "View as waves" in an epic's modal) draws one epic as stacked, segmented bars: a block per slice, grouped into waves. Hover a block to preview the slice and light up the rest of its wave; click to open it. Without `wave:`, waves are derived from each slice's `## Dependencies` (a slice lands one wave after the latest slice it depends on); slices with neither are shown as unscheduled.
 
 ## Configuration (`vaults.json`)
 
