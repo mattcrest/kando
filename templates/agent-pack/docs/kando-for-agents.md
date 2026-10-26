@@ -95,6 +95,7 @@ When reprioritizing: edit the list under the right `##` section in `roadmap-inde
 | `initiative` | `true` on initiative cards; `'[[initiative-<slug>]]'` wikilink on epics |
 | `epic` | `true` on epic cards; `'[[release-epic-<slug>]]'` wikilink on slices |
 | `horizon` | Initiatives only: `Now`, `Next`, `Later` |
+| `wave` | Optional, slices only: positive integer delivery wave within the epic (`wave: 2`). Drives Kando's **Waves** view; falls back to `## Dependencies` ordering when omitted |
 
 Project-specific fields (`category`, `milestone`, `related_to`, etc.) — follow that vault's `roadmap-conventions.md` and copy existing cards.
 

@@ -1855,6 +1855,13 @@ body:has(.overlay.open) { overflow: hidden; }
   font-size: var(--fs-sm);
 }
 
+/* Waves view */
+.waves-view {
+  display: none;
+  min-height: calc(100vh - var(--header-h));
+}
+.waves-view.visible { display: block; }
+
 /* Atlas view */
 .atlas-view {
   display: none;
@@ -2285,6 +2292,12 @@ body:has(.overlay.open) { overflow: hidden; }
 }
 .prop-link:hover { text-decoration: underline; }
 .prop-empty { font-size: 12.5px; color: var(--text-3); }
+.prop-link-btn {
+  display: block; margin: 0 0 8px; padding: 0;
+  font: inherit; font-size: 12.5px; font-weight: 500; color: var(--accent);
+  background: none; border: none; cursor: pointer;
+}
+.prop-link-btn:hover { text-decoration: underline; }
 
 /* acceptance criteria — sidebar */
 .prop-group-ac { margin-top: 4px; }
@@ -2507,6 +2520,7 @@ body:has(.overlay.open) { overflow: hidden; }
         <button type="button" class="view-mode-btn" data-view="strategy">Strategy</button>
         <button type="button" class="view-mode-btn" data-view="board">Board</button>
         <button type="button" class="view-mode-btn" data-view="workbench">Workbench</button>
+        <button type="button" class="view-mode-btn" data-view="waves">Waves</button>
         <button type="button" class="view-mode-btn hidden" data-view="history" id="history-view-btn">History</button>
         <button type="button" class="view-mode-btn hidden" data-view="atlas" id="atlas-view-btn">Atlas</button>
       </div>
@@ -2603,6 +2617,7 @@ body:has(.overlay.open) { overflow: hidden; }
 </div>
 <div class="strategy-view" id="strategy-view" aria-label="Strategy initiatives"></div>
 <div class="workbench-view" id="workbench-view" aria-label="Workbench"></div>
+<div class="waves-view" id="waves-view" aria-label="Epic waves"></div>
 <div class="history-view" id="history-view" aria-label="Vault git history"></div>
 <div class="atlas-view" id="atlas-view" aria-label="Atlas product map"></div>
 
@@ -2784,6 +2799,8 @@ body:has(.overlay.open) { overflow: hidden; }
   </div>
 </div>
 
+<script src="epic-waves.js"></script>
+<script src="waves-view.js"></script>
 <script src="history-view.js"></script>
 <script src="atlas-view.js"></script>
 <script>
@@ -3098,7 +3115,7 @@ function stripEpicsSectionFromMd(md){
 
 function setViewMode(mode){
   if(mode === 'atlas' && !atlasAvailable) mode = 'strategy';
-  viewMode = (mode === 'strategy' || mode === 'workbench' || mode === 'history' || mode === 'atlas') ? mode : 'board';
+  viewMode = (mode === 'strategy' || mode === 'workbench' || mode === 'waves' || mode === 'history' || mode === 'atlas') ? mode : 'board';
   localStorage.setItem(VIEW_MODE_KEY, viewMode);
   document.querySelectorAll('.view-mode-btn').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.view === viewMode);
@@ -3106,17 +3123,88 @@ function setViewMode(mode){
   document.getElementById('board-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   document.getElementById('strategy-view')?.classList.toggle('visible', viewMode === 'strategy');
   document.getElementById('workbench-view')?.classList.toggle('visible', viewMode === 'workbench');
+  document.getElementById('waves-view')?.classList.toggle('visible', viewMode === 'waves');
   document.getElementById('history-view')?.classList.toggle('visible', viewMode === 'history');
   document.getElementById('atlas-view')?.classList.toggle('visible', viewMode === 'atlas');
-  document.getElementById('content-toolbar')?.classList.toggle('hidden', viewMode === 'workbench' || viewMode === 'history' || viewMode === 'atlas');
+  document.getElementById('content-toolbar')?.classList.toggle('hidden', viewMode === 'workbench' || viewMode === 'waves' || viewMode === 'history' || viewMode === 'atlas');
   document.getElementById('card-type-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   document.getElementById('initiative-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
   if(viewMode === 'strategy') renderStrategyView();
   else if(viewMode === 'workbench') renderWorkbenchView();
+  else if(viewMode === 'waves') renderWavesViewMode();
   else if(viewMode === 'history') loadHistoryView();
   else if(viewMode === 'atlas') renderAtlasViewMode();
   else renderBoard();
   filterCards(searchInput?.value || '');
+}
+
+/* ── Waves view ──────────────────────────────── */
+const WAVES_EPIC_KEY = 'kando-waves-epic';
+let wavesEpicId = localStorage.getItem(WAVES_EPIC_KEY) || null;
+
+function epicSlices(epicId){
+  return state.cards
+    .filter(c=>c.parent === epicId && !c.is_epic && !c.is_initiative)
+    .sort(compareCardOrder);
+}
+
+function wavesPayload(){
+  const epics = state.cards
+    .filter(c=>c.is_epic)
+    .map(epic=>{
+      const initiative = epic.parent ? getCard(epic.parent) : null;
+      const slices = epicSlices(epic.id).map((c, i)=>{
+        const content = getContent(c.id);
+        return {
+          id: c.id,
+          title: c.plan_anchor || c.title || c.id,
+          status: c.status,
+          wave: c.wave,
+          deps: parseDeps(content),
+          summary: stripInlineMd(getSummary(content)),
+          ac: countAC(content),
+          order: i,
+          agentStatus: c.agent_status || null,
+          agentNext: c.agent_next || null,
+        };
+      });
+      return {
+        id: epic.id,
+        title: epic.plan_anchor || epic.title || epic.id,
+        initiativeTitle: initiative ? (initiative.plan_anchor || initiative.title || initiative.id) : null,
+        slices,
+        status: epic.status,
+      };
+    });
+  const open = e => e.slices.some(s=>s.status !== 'Done' && s.status !== 'Deferred');
+  epics.sort((a,b)=>
+    (open(b) - open(a)) ||
+    (b.slices.length > 0) - (a.slices.length > 0) ||
+    a.title.localeCompare(b.title)
+  );
+  return { epics };
+}
+
+function renderWavesViewMode(){
+  const root = document.getElementById('waves-view');
+  if(!root || typeof renderWavesView !== 'function') return;
+  const payload = wavesPayload();
+  if(!payload.epics.some(e=>e.id === wavesEpicId)){
+    wavesEpicId = (payload.epics.find(e=>e.slices.length) || payload.epics[0])?.id || null;
+  }
+  renderWavesView(root, payload, {
+    accentColor: currentVaultMeta()?.color || null,
+    selectedEpicId: wavesEpicId,
+    onSelectEpic: id => selectWavesEpic(id),
+    onOpenCard: id => showModal(id),
+  });
+}
+
+function selectWavesEpic(epicId){
+  wavesEpicId = epicId;
+  if(epicId) localStorage.setItem(WAVES_EPIC_KEY, epicId);
+  if(viewMode === 'waves') renderWavesViewMode();
+  else setViewMode('waves');
 }
 
 let historyPayload = null;
@@ -4474,6 +4562,7 @@ function initState(){
       card.is_initiative = meta.is_initiative === true;
       card.horizon = meta.horizon || null;
       card.milestone = meta.milestone || null;
+      card.wave = meta.wave ?? null;
       card.parent = meta.parent || null;
       card.agent_status = meta.agent_status || null;
       card.agent_provider = meta.agent_provider || null;
@@ -5025,6 +5114,9 @@ function renderSidebar(card, deps, prs){
       ? `<span class="prop-value-muted">#${pos} in roadmap-index.md</span>`
       : `<span class="prop-value-muted">Not in index</span>`);
   }
+  if(!card.is_epic && !card.is_initiative && KandoEpicWaves.normalizeWave(card.wave) != null){
+    html += propRow('Wave', `<span class="prop-value">Wave ${KandoEpicWaves.normalizeWave(card.wave)}</span>`);
+  }
   if(card.shipped_at){
     html += propRow('Shipped', `<span class="prop-value">${formatDate(card.shipped_at)}</span>`);
   }
@@ -5039,6 +5131,7 @@ function renderSidebar(card, deps, prs){
         <span class="prop-group-label">Story slices</span>
         <span class="prop-ac-count">${doneKids} of ${children.length} shipped</span>
       </div>
+      <button type="button" class="prop-link-btn" id="modal-view-waves">View as waves →</button>
       <div class="sidebar-children">${children.map(c=>
         `<button type="button" class="sidebar-child" data-dep="${esc(c.id)}" title="${esc(c.title)} — ${esc(c.status)}">
           <span class="sidebar-child-dot" style="${statusDotStyle(c.status)}"></span>
@@ -5077,6 +5170,11 @@ function renderSidebar(card, deps, prs){
   bindSidebarInputs();
   bindDepChips();
   bindAcItems();
+  document.getElementById('modal-view-waves')?.addEventListener('click', ()=>{
+    const epicId = card.id;
+    closeModal();
+    selectWavesEpic(epicId);
+  });
 }
 
 function bindSidebarInputs(){
@@ -5624,7 +5722,7 @@ if(epicAddPickerTrigger && epicAddPickerMenu){
     }
   });
 }
-document.getElementById('content-toolbar')?.classList.toggle('hidden', viewMode === 'workbench' || viewMode === 'atlas');
+document.getElementById('content-toolbar')?.classList.toggle('hidden', viewMode === 'workbench' || viewMode === 'waves' || viewMode === 'atlas');
 document.getElementById('card-type-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
 document.getElementById('initiative-filter-wrap')?.classList.toggle('hidden', viewMode !== 'board');
 

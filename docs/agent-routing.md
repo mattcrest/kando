@@ -159,6 +159,16 @@ context: "Focus on 2 epics at once: Checkout and Admin. Prioritize anything unbl
 - Overwrite the file each time you're asked to re-suggest; it's a snapshot,
   not a log.
 
+### Sequencing slices into waves (optional)
+
+Kando's **Waves** view groups an epic's slices into delivery waves. To place a slice in a wave, add a positive integer to its frontmatter:
+
+```yaml
+wave: 2   # 1 = first wave to ship; slices sharing a number can be built in parallel
+```
+
+If no slice in the epic has `wave:`, Kando derives waves from each slice's `## Dependencies` section (`[[release-…]]` links to other slices of the same epic): a slice lands one wave after the latest slice it depends on. Slices with neither a `wave:` nor in-epic dependencies appear as unscheduled. Only set `wave:` when the user has asked for waves or the sequencing is already stated in the epic.
+
 ### 8. Strategy setup (optional)
 
 When a vault has no initiatives or the user wants to organize Now/Next/Later bets, use the **kando-strategy-setup** skill (or Kando's Strategy view **Set up strategy with AI** helper). Interview the user about focus first; propose 2–5 initiatives at the right altitude; write `initiative-*.md` files per the card contract and place them in strategy horizons.
