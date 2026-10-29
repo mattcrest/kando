@@ -11,6 +11,7 @@ Use it to plan releasable slices, drag cards across columns, and let coding agen
 - **Board + Strategy + Atlas + Workbench views** — kanban board for execution; a Now/Next/Later roadmap of initiative rows with per-epic slice progress; an optional **Atlas** entity mind-map (`product-atlas.json`) with card-driven highlighting; a Workbench view showing which slices agents are actively working on (and why), an AI-suggested "up next" queue, and one-click prompts to hand a slice to a coding agent (header toggle)
 - **Card-type filter** — All / Initiatives / Epics / Slices dropdown in the header
 - **Initiative epic manager** — drag-to-reorder, add/remove, and annotate an initiative's epics from the card modal; writes the card's `## Epics` table and each epic's `initiative:` link
+- **Epic wave chart** — an epic card stacks its slices into horizontal bars, one bar per wave. Hover a segment for that slice and the others in the same wave. Waves are read from the Story slices table: a `### Wave N` heading, or a note that starts with `Wave N`
 - **Cross-project routing** — `vaults.json` maps app repo paths → roadmap vault + convention files
 - **Agent-agnostic API** — `GET /api/routing/resolve` for Cursor, Claude Code, Codex, Copilot, Gemini, or custom tools
 - **Bundled agent integrations** — optional install scripts for common assistants ([templates/agents/README.md](templates/agents/README.md))
