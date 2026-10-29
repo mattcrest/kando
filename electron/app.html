@@ -2327,13 +2327,14 @@ body:has(.overlay.open) { overflow: hidden; }
 .epic-wave-meta { font-size: 11px; color: var(--text-3); letter-spacing: .02em; white-space: nowrap; }
 .epic-wave-rows { display: flex; flex-direction: column; gap: 8px; }
 .epic-wave-row {
-  display: grid; grid-template-columns: minmax(88px, 148px) minmax(0, 1fr);
+  display: grid; grid-template-columns: minmax(112px, 176px) minmax(0, 1fr);
   gap: 10px; align-items: center;
 }
+.epic-wave-row.is-sole { grid-template-columns: minmax(0, 1fr); }
 .epic-wave-label-name { display: block; font-size: 12px; font-weight: 700; color: var(--text-1); line-height: 1.3; }
 .epic-wave-label-title {
-  display: block; font-size: 11px; color: var(--text-3); line-height: 1.3;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: -webkit-box; font-size: 11px; color: var(--text-3); line-height: 1.3;
+  overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .epic-wave-bar {
   display: flex; gap: 3px; min-width: 0;
@@ -2366,7 +2367,7 @@ body:has(.overlay.open) { overflow: hidden; }
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 11px; color: var(--text-3);
 }
-.epic-wave-swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.epic-wave-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 .epic-wave-peek {
   position: fixed; z-index: 400; width: 320px;
   padding: 12px 12px 10px;
@@ -2382,6 +2383,11 @@ body:has(.overlay.open) { overflow: hidden; }
   text-transform: uppercase; color: rgba(232,226,217,.55); margin-bottom: 6px;
 }
 .epic-wave-peek-title { font-size: 14px; font-weight: 700; line-height: 1.35; margin: 0 0 6px; }
+.epic-wave-peek-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: rgba(232,226,217,.78);
+}
 .epic-wave-peek-summary {
   font-size: 12px; line-height: 1.45; color: rgba(232,226,217,.78); margin: 8px 0 0;
 }
@@ -4990,7 +4996,7 @@ function showWavePeek(anchor){
     : '';
   peek.innerHTML = `<div class="epic-wave-peek-kicker">${esc(where)}</div>
     <p class="epic-wave-peek-title">${esc(entry.title)}</p>
-    <span class="meta-pill" style="${statusStyle(entry.status)}">${esc(status)}</span>
+    <span class="epic-wave-peek-status"><span class="epic-wave-peek-dot" style="${statusDotStyle(entry.status)}"></span>${esc(status)}</span>
     ${entry.summary ? `<p class="epic-wave-peek-summary">${esc(entry.summary)}</p>` : ''}
     ${mates}`;
   peek.hidden = false;
@@ -5049,14 +5055,17 @@ function renderEpicWaveChart(card){
       });
       return `<button type="button" class="epic-wave-seg" data-wave-slice="${esc(mate.id)}" data-status="${esc(mate.status)}" aria-label="${esc(`${mate.title}, ${status}. ${where}${also}`)}">${esc(mate.title)}</button>`;
     }).join('');
+    const sole = grouped.groups.length === 1 && group.key === 'slices';
     const labelId = `epic-wave-label-${groupIndex}`;
     const title = group.title ? `<span class="epic-wave-label-title">${esc(group.title)}</span>` : '';
-    return `<div class="epic-wave-row">
-      <div class="epic-wave-label" id="${labelId}">
+    const label = sole ? '' : `<div class="epic-wave-label" id="${labelId}">
         <span class="epic-wave-label-name">${esc(group.label)}</span>
         ${title}
-      </div>
-      <div class="epic-wave-bar" style="--count:${group.ids.length};--max:${max}" role="group" aria-labelledby="${labelId}">${segs}</div>
+      </div>`;
+    const labelled = sole ? `aria-label="${esc(group.label)}"` : `aria-labelledby="${labelId}"`;
+    return `<div class="epic-wave-row${sole ? ' is-sole' : ''}">
+      ${label}
+      <div class="epic-wave-bar" style="--count:${group.ids.length};--max:${max}" role="group" ${labelled}>${segs}</div>
     </div>`;
   }).join('');
   const legend = WAVE_LEGEND_ORDER.filter(status => present.has(status)).map(status =>
