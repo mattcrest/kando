@@ -2313,6 +2313,105 @@ body:has(.overlay.open) { overflow: hidden; }
 .modal-pane-props .ac-item.checked .ac-text { color: var(--text-3); }
 .modal-pane-props .ac-box { width: 15px; height: 15px; margin-top: 1px; }
 
+/* Epic slice chart — one bar per wave */
+.epic-wave-chart { margin: 0 0 22px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+.epic-wave-chart.hidden { display: none; }
+.epic-wave-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 10px;
+}
+.epic-wave-head h2 {
+  font-size: 10px; font-weight: 800; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .12em; margin: 0;
+}
+.epic-wave-meta { font-size: 11px; color: var(--text-3); letter-spacing: .02em; white-space: nowrap; }
+.epic-wave-rows { display: flex; flex-direction: column; gap: 8px; }
+.epic-wave-row {
+  display: grid; grid-template-columns: minmax(112px, 176px) minmax(0, 1fr);
+  gap: 10px; align-items: center;
+}
+.epic-wave-row.is-sole { grid-template-columns: minmax(0, 1fr); }
+.epic-wave-label-name { display: block; font-size: 12px; font-weight: 700; color: var(--text-1); line-height: 1.3; }
+.epic-wave-label-title {
+  display: -webkit-box; font-size: 11px; color: var(--text-3); line-height: 1.3;
+  overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.epic-wave-bar {
+  display: flex; gap: 3px; min-width: 0;
+  width: calc(100% * var(--count) / var(--max));
+}
+.epic-wave-seg {
+  appearance: none; border: none; font: inherit;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em; text-align: left;
+  padding: 0 7px; height: 28px; border-radius: 4px; cursor: pointer;
+  flex: 1 1 0; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #fff8ef;
+}
+.epic-wave-seg[data-status="Done"], .epic-wave-swatch[data-status="Done"] { background: #7a9a6e; }
+.epic-wave-seg[data-status="Active"], .epic-wave-swatch[data-status="Active"] { background: #c4873b; }
+.epic-wave-seg[data-status="Prioritized"], .epic-wave-swatch[data-status="Prioritized"] { background: #c4b06a; }
+.epic-wave-seg[data-status="Prioritized"] { color: #2a2420; }
+.epic-wave-seg[data-status="Backlog"], .epic-wave-swatch[data-status="Backlog"] { background: #a3988c; }
+.epic-wave-seg[data-status="Blocked"], .epic-wave-swatch[data-status="Blocked"] { background: #b84233; }
+.epic-wave-seg[data-status="Deferred"], .epic-wave-swatch[data-status="Deferred"] { background: #8a8076; }
+.epic-wave-seg:not([data-status]), .epic-wave-swatch:not([data-status]),
+.epic-wave-seg[data-status=""], .epic-wave-swatch[data-status=""] { background: #8a7f72; }
+.epic-wave-seg:hover, .epic-wave-seg:focus-visible {
+  filter: brightness(1.08);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.epic-wave-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; }
+.epic-wave-legend-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-3);
+}
+.epic-wave-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.epic-wave-peek {
+  position: fixed; z-index: 400; width: 320px;
+  padding: 12px 12px 10px;
+  background: #2a2420;
+  border: 1px solid rgba(232,226,217,.18);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 24px rgba(10,8,5,.45);
+  color: rgba(232,226,217,.92);
+}
+.epic-wave-peek[hidden] { display: none; }
+.epic-wave-peek-kicker {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: rgba(232,226,217,.55); margin-bottom: 6px;
+}
+.epic-wave-peek-title { font-size: 14px; font-weight: 700; line-height: 1.35; margin: 0 0 6px; }
+.epic-wave-peek-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: rgba(232,226,217,.78);
+}
+.epic-wave-peek-summary {
+  font-size: 12px; line-height: 1.45; color: rgba(232,226,217,.78); margin: 8px 0 0;
+}
+.epic-wave-peek-mates {
+  margin-top: 10px; padding-top: 8px;
+  border-top: 1px solid rgba(232,226,217,.12);
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 220px; overflow-y: auto;
+}
+.epic-wave-peek-mates-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: rgba(232,226,217,.45); margin-bottom: 4px;
+}
+.epic-wave-peek-mate {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  text-align: left; border: none; background: transparent;
+  color: rgba(232,226,217,.88); font: inherit; font-size: 12px;
+  padding: 4px 6px; border-radius: 4px; cursor: pointer;
+}
+.epic-wave-peek-mate:hover, .epic-wave-peek-mate:focus-visible { background: rgba(232,226,217,.08); }
+.epic-wave-peek-mate.is-current { background: rgba(232,226,217,.1); font-weight: 700; }
+.epic-wave-peek-dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; }
+.epic-wave-peek-mate-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* scrollable description */
 .modal-content-scroll {
   flex: 1; overflow-y: auto; min-height: 0;
@@ -2629,6 +2728,7 @@ body:has(.overlay.open) { overflow: hidden; }
         </div>
         <div class="modal-header-meta" id="modal-header-meta"></div>
         <div class="modal-content-scroll" id="modal-content-scroll">
+          <div id="epic-wave-chart" class="epic-wave-chart hidden" aria-label="Slices by wave"></div>
           <div id="initiative-epics-panel" class="initiative-epics-panel hidden" aria-label="Initiative epics">
             <div class="initiative-epics-header">
               <h2>Epics</h2>
@@ -2783,6 +2883,8 @@ body:has(.overlay.open) { overflow: hidden; }
     </div>
   </div>
 </div>
+
+<div id="epic-wave-peek" class="epic-wave-peek" hidden></div>
 
 <script src="history-view.js"></script>
 <script src="atlas-view.js"></script>
@@ -4821,6 +4923,164 @@ function bindColumnEvents(){
   });
 }
 
+/* ── Epic wave chart ─────────────────────────── */
+const WAVE_LEGEND_ORDER = ['Active', 'Prioritized', 'Blocked', 'Backlog', 'Deferred', 'Done'];
+let wavePeekModel = null;
+let wavePeekTimer = null;
+let wavePeekAnchor = null;
+
+function waveChartMeta(grouped){
+  const pieces = `${grouped.total} slice${grouped.total === 1 ? '' : 's'}`;
+  if(grouped.waveCount > 0){
+    return `${pieces} · ${grouped.waveCount} wave${grouped.waveCount === 1 ? '' : 's'}`;
+  }
+  return pieces;
+}
+
+function wavePeekSummary(card){
+  const raw = stripInlineMd(getSummary(getContent(card.id)));
+  if(!raw) return '';
+  if(raw.length <= 220) return raw;
+  return raw.slice(0, 217).replace(/\s+\S*$/, '').trimEnd() + '…';
+}
+
+function hideWavePeek(){
+  clearTimeout(wavePeekTimer);
+  wavePeekTimer = null;
+  wavePeekAnchor = null;
+  const peek = document.getElementById('epic-wave-peek');
+  if(!peek) return;
+  peek.hidden = true;
+  peek.innerHTML = '';
+}
+
+function scheduleHideWavePeek(){
+  clearTimeout(wavePeekTimer);
+  wavePeekTimer = setTimeout(hideWavePeek, 140);
+}
+
+function positionWavePeek(anchor){
+  const peek = document.getElementById('epic-wave-peek');
+  if(!peek || peek.hidden) return;
+  const rect = anchor.getBoundingClientRect();
+  const peekRect = peek.getBoundingClientRect();
+  const margin = 8;
+  let left = Math.min(rect.left, window.innerWidth - peekRect.width - margin);
+  left = Math.max(margin, left);
+  let top = rect.bottom + 8;
+  if(top + peekRect.height > window.innerHeight - margin){
+    top = rect.top - peekRect.height - 8;
+  }
+  if(top < margin) top = margin;
+  peek.style.top = `${top}px`;
+  peek.style.left = `${left}px`;
+}
+
+function showWavePeek(anchor){
+  const peek = document.getElementById('epic-wave-peek');
+  const id = anchor?.dataset?.waveSlice;
+  const entry = id && wavePeekModel?.get(id);
+  if(!peek || !entry) return;
+  clearTimeout(wavePeekTimer);
+  wavePeekAnchor = anchor;
+  const where = entry.groupTitle ? `${entry.groupLabel} · ${entry.groupTitle}` : entry.groupLabel;
+  const status = STATUS_LABELS[entry.status] || entry.status || 'Unset';
+  const mates = entry.mates.length > 1
+    ? `<div class="epic-wave-peek-mates">
+        <div class="epic-wave-peek-mates-label">${esc(entry.matesLabel)}</div>
+        ${entry.mates.map(mate => `<button type="button" class="epic-wave-peek-mate${mate.id === id ? ' is-current' : ''}" data-wave-slice="${esc(mate.id)}">
+          <span class="epic-wave-peek-dot" style="${statusDotStyle(mate.status)}"></span>
+          <span class="epic-wave-peek-mate-label">${esc(mate.title)}</span>
+        </button>`).join('')}
+      </div>`
+    : '';
+  peek.innerHTML = `<div class="epic-wave-peek-kicker">${esc(where)}</div>
+    <p class="epic-wave-peek-title">${esc(entry.title)}</p>
+    <span class="epic-wave-peek-status"><span class="epic-wave-peek-dot" style="${statusDotStyle(entry.status)}"></span>${esc(status)}</span>
+    ${entry.summary ? `<p class="epic-wave-peek-summary">${esc(entry.summary)}</p>` : ''}
+    ${mates}`;
+  peek.hidden = false;
+  positionWavePeek(anchor);
+}
+
+function renderEpicWaveChart(card){
+  const host = document.getElementById('epic-wave-chart');
+  hideWavePeek();
+  wavePeekModel = null;
+  if(!host) return;
+  const slices = card?.is_epic ? childCards(card) : [];
+  if(!slices.length || typeof window.groupEpicSlices !== 'function'){
+    host.innerHTML = '';
+    host.classList.add('hidden');
+    return;
+  }
+  const grouped = window.groupEpicSlices(getContent(card.id), slices.map(slice => slice.id));
+  if(!grouped.groups.length){
+    host.innerHTML = '';
+    host.classList.add('hidden');
+    return;
+  }
+  const byId = new Map(slices.map(slice => [slice.id, slice]));
+  const max = Math.max(...grouped.groups.map(group => group.ids.length));
+  const present = new Set();
+  const model = new Map();
+  const rows = grouped.groups.map((group, groupIndex) => {
+    const matesLabel = /^\d/.test(group.key) ? 'In this wave'
+      : group.key === 'later' ? 'Also later'
+      : 'Other slices';
+    const mates = group.ids.map(id => {
+      const slice = byId.get(id);
+      return {
+        id,
+        title: slice?.title || id,
+        status: slice?.status || '',
+      };
+    });
+    const segs = mates.map(mate => {
+      const slice = byId.get(mate.id);
+      present.add(mate.status);
+      const summary = slice ? wavePeekSummary(slice) : '';
+      const where = group.title ? `${group.label}: ${group.title}` : group.label;
+      const others = mates.filter(item => item.id !== mate.id).map(item => item.title);
+      const also = others.length ? `. ${matesLabel}: ${others.join(', ')}` : '';
+      const status = STATUS_LABELS[mate.status] || mate.status || 'Unset';
+      model.set(mate.id, {
+        title: mate.title,
+        status: mate.status,
+        summary,
+        groupLabel: group.label,
+        groupTitle: group.title,
+        matesLabel,
+        mates,
+      });
+      return `<button type="button" class="epic-wave-seg" data-wave-slice="${esc(mate.id)}" data-status="${esc(mate.status)}" aria-label="${esc(`${mate.title}, ${status}. ${where}${also}`)}">${esc(mate.title)}</button>`;
+    }).join('');
+    const sole = grouped.groups.length === 1 && group.key === 'slices';
+    const labelId = `epic-wave-label-${groupIndex}`;
+    const title = group.title ? `<span class="epic-wave-label-title">${esc(group.title)}</span>` : '';
+    const label = sole ? '' : `<div class="epic-wave-label" id="${labelId}">
+        <span class="epic-wave-label-name">${esc(group.label)}</span>
+        ${title}
+      </div>`;
+    const labelled = sole ? `aria-label="${esc(group.label)}"` : `aria-labelledby="${labelId}"`;
+    return `<div class="epic-wave-row${sole ? ' is-sole' : ''}">
+      ${label}
+      <div class="epic-wave-bar" style="--count:${group.ids.length};--max:${max}" role="group" ${labelled}>${segs}</div>
+    </div>`;
+  }).join('');
+  const legend = WAVE_LEGEND_ORDER.filter(status => present.has(status)).map(status =>
+    `<span class="epic-wave-legend-item"><span class="epic-wave-swatch" data-status="${esc(status)}"></span>${esc(STATUS_LABELS[status] || status)}</span>`
+  ).join('');
+  wavePeekModel = model;
+  host.classList.remove('hidden');
+  host.innerHTML = `<div class="epic-wave-head">
+      <h2>Slices</h2>
+      <span class="epic-wave-meta">${esc(waveChartMeta(grouped))}</span>
+    </div>
+    <div class="epic-wave-rows">${rows}</div>
+    ${legend ? `<div class="epic-wave-legend">${legend}</div>` : ''}`;
+}
+
 /* ── Modal ───────────────────────────────────── */
 function visibleCards(){
   return state.cards.filter(cardMatchesTypeFilter);
@@ -4870,6 +5130,7 @@ function showModal(id){
   }
 
   document.getElementById('modal-content').innerHTML = renderMd(contentForMd);
+  renderEpicWaveChart(card);
 
   document.getElementById('modal-path').textContent = card.path;
 
@@ -5188,6 +5449,7 @@ function hideModal(){
   document.getElementById('overlay').classList.remove('open');
   document.getElementById('modal')?.classList.remove('modal-initiative');
   hideInitiativeEpicsPanel();
+  hideWavePeek();
   modalCardId = null;
 }
 
@@ -5274,6 +5536,7 @@ async function saveModalChanges(){
   modalUnsaved = false;
   document.getElementById('unsaved-dot').classList.remove('visible');
   document.getElementById('modal-save').style.display = 'none';
+  if(card.is_epic) renderEpicWaveChart(card);
   renderBoard();
   showToast('Saved');
   refreshGitStatus();
@@ -6701,6 +6964,61 @@ async function syncVaultGit(){
 }
 
 document.getElementById('git-sync-btn')?.addEventListener('click', syncVaultGit);
+
+function epicWavesModuleUrl(){
+  if(location.protocol === 'file:') return new URL('epic-waves.js', document.baseURI).href;
+  return '/epic-waves.js';
+}
+import(epicWavesModuleUrl()).then((mod) => {
+  window.groupEpicSlices = mod.groupEpicSlices;
+  if(modalCardId){
+    const open = getCard(modalCardId);
+    if(open) renderEpicWaveChart(open);
+  }
+}).catch((err) => {
+  console.error('Epic wave chart failed to load', err);
+});
+
+const epicWaveChart = document.getElementById('epic-wave-chart');
+const epicWavePeek = document.getElementById('epic-wave-peek');
+epicWaveChart?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-wave-slice]');
+  if(btn) navigateToCard(btn.dataset.waveSlice);
+});
+epicWaveChart?.addEventListener('mouseover', (e) => {
+  const btn = e.target.closest('[data-wave-slice]');
+  if(btn) showWavePeek(btn);
+});
+epicWaveChart?.addEventListener('mouseout', (e) => {
+  const btn = e.target.closest('[data-wave-slice]');
+  if(!btn) return;
+  const next = e.relatedTarget;
+  if(next && (btn.contains(next) || epicWavePeek?.contains(next))) return;
+  scheduleHideWavePeek();
+});
+epicWaveChart?.addEventListener('focusin', (e) => {
+  const btn = e.target.closest('[data-wave-slice]');
+  if(btn) showWavePeek(btn);
+});
+epicWaveChart?.addEventListener('focusout', (e) => {
+  const next = e.relatedTarget;
+  if(next && (epicWaveChart.contains(next) || epicWavePeek?.contains(next))) return;
+  scheduleHideWavePeek();
+});
+epicWavePeek?.addEventListener('mouseenter', () => clearTimeout(wavePeekTimer));
+epicWavePeek?.addEventListener('mouseleave', () => scheduleHideWavePeek());
+epicWavePeek?.addEventListener('focusin', () => clearTimeout(wavePeekTimer));
+epicWavePeek?.addEventListener('focusout', (e) => {
+  const next = e.relatedTarget;
+  if(next && (epicWaveChart?.contains(next) || epicWavePeek.contains(next))) return;
+  scheduleHideWavePeek();
+});
+epicWavePeek?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-wave-slice]');
+  if(btn) navigateToCard(btn.dataset.waveSlice);
+});
+document.getElementById('modal-content-scroll')?.addEventListener('scroll', hideWavePeek);
+window.addEventListener('resize', hideWavePeek);
 
 initVaultFromUrl();
 initializeVaultSelector();
